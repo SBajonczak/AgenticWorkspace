@@ -1,3 +1,4 @@
+import 'openai/shims/node'
 import { AgentResponseSchema } from '../src/ai/llmClient'
 
 describe('AgentResponseSchema', () => {
