@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import Link from 'next/link'
+import { useTranslations } from 'next-intl'
+import { Link } from '@/i18n/routing'
 import MeetingSummaryCard from '@/components/cards/MeetingSummaryCard'
 import TodoList from '@/components/cards/TodoList'
+import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
 
 interface Meeting {
   id: string
@@ -37,6 +39,8 @@ interface JiraSync {
 }
 
 export default function DashboardPage() {
+  const tCommon = useTranslations('common')
+  const tDashboard = useTranslations('dashboard')
   const [meeting, setMeeting] = useState<Meeting | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -61,7 +65,7 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center">
-        <div className="text-white text-2xl">Loading...</div>
+        <div className="text-white text-2xl">{tCommon('labels.loading')}</div>
       </div>
     )
   }
@@ -73,15 +77,16 @@ export default function DashboardPage() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 text-transparent bg-clip-text">
-              Agentic Workplace
+              {tCommon('brand.name')}
             </Link>
-            <nav className="flex gap-6">
+            <nav className="flex gap-6 items-center">
               <Link href="/dashboard" className="text-purple-400 font-semibold">
-                Dashboard
+                {tCommon('navigation.dashboard')}
               </Link>
               <Link href="/" className="text-gray-400 hover:text-white transition-colors">
-                Home
+                {tCommon('navigation.home')}
               </Link>
+              <LanguageSwitcher />
             </nav>
           </div>
         </div>
@@ -96,15 +101,15 @@ export default function DashboardPage() {
             className="text-center py-16"
           >
             <div className="text-6xl mb-4">🤖</div>
-            <h2 className="text-3xl font-bold text-white mb-4">No meetings processed yet</h2>
+            <h2 className="text-3xl font-bold text-white mb-4">{tDashboard('emptyState.title')}</h2>
             <p className="text-gray-400 mb-8 max-w-md mx-auto">
-              Run the agent to process your latest Microsoft Teams meeting and see results here.
+              {tDashboard('emptyState.description')}
             </p>
             <button
-              onClick={() => alert('Configure your environment and run: npm run agent')}
+              onClick={() => alert(tDashboard('emptyState.configMessage'))}
               className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold transition-colors"
             >
-              Run Agent
+              {tCommon('buttons.runAgent')}
             </button>
           </motion.div>
         ) : (
@@ -119,25 +124,25 @@ export default function DashboardPage() {
                 <div className="text-3xl font-bold text-white">
                   {meeting.todos.length}
                 </div>
-                <div className="text-purple-200 text-sm">TODOs Extracted</div>
+                <div className="text-purple-200 text-sm">{tDashboard('stats.todosExtracted')}</div>
               </div>
               <div className="bg-gradient-to-br from-pink-600 to-pink-800 p-6 rounded-xl">
                 <div className="text-3xl font-bold text-white">
                   {JSON.parse(meeting.decisions).length}
                 </div>
-                <div className="text-pink-200 text-sm">Decisions Made</div>
+                <div className="text-pink-200 text-sm">{tDashboard('stats.decisionsMade')}</div>
               </div>
               <div className="bg-gradient-to-br from-blue-600 to-blue-800 p-6 rounded-xl">
                 <div className="text-3xl font-bold text-white">
                   {meeting.todos.filter(t => t.jiraSync?.status === 'synced').length}
                 </div>
-                <div className="text-blue-200 text-sm">Synced to Jira</div>
+                <div className="text-blue-200 text-sm">{tDashboard('stats.syncedToJira')}</div>
               </div>
               <div className="bg-gradient-to-br from-green-600 to-green-800 p-6 rounded-xl">
                 <div className="text-3xl font-bold text-white">
                   {(meeting.todos.reduce((sum, t) => sum + t.confidence, 0) / meeting.todos.length * 100).toFixed(0)}%
                 </div>
-                <div className="text-green-200 text-sm">Avg Confidence</div>
+                <div className="text-green-200 text-sm">{tDashboard('stats.avgConfidence')}</div>
               </div>
             </motion.div>
 

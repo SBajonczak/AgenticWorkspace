@@ -1,0 +1,54 @@
+{
+  "common": {
+    "navigation": {
+      "home": "Startseite",
+      "dashboard": "Dashboard",
+      "meetings": "Besprechungen"
+    },
+    "brand": {
+      "name": "Agentic Workplace"
+    },
+    "buttons": {
+      "viewDetails": "Details anzeigen",
+      "runAgent": "Agent ausführen",
+      "showOptions": "Optionen anzeigen",
+      "rescheduleAutomatically": "Automatisch verschieben"
+    },
+    "labels": {
+      "loading": "Lädt...",
+      "status": "Status",
+      "confidence": "Konfidenz",
+      "high": "Hoch",
+      "medium": "Mittel",
+      "low": "Niedrig",
+      "minutes": "Minuten",
+      "language": "Sprache"
+    },
+    "empty": {
+      "noData": "Keine Daten verfügbar"
+    },
+    "home": {
+      "hero": {
+        "subtitle": "Ihr KI-gestützter Arbeitsplatz-Agent, der Besprechungen in umsetzbare Ergebnisse verwandelt",
+        "description": "Verarbeiten Sie automatisch Microsoft Teams-Besprechungen, extrahieren Sie Entscheidungen und Aufgaben und synchronisieren Sie diese mit Jira – während Sie sich auf das Wesentliche konzentrieren."
+      },
+      "features": {
+        "autonomous": {
+          "title": "Autonomer Agent",
+          "description": "Arbeitet im Hintergrund, keine manuelle Intervention erforderlich"
+        },
+        "extraction": {
+          "title": "Intelligente Extraktion",
+          "description": "Identifiziert Entscheidungen und umsetzbare Aufgaben aus Gesprächen"
+        },
+        "sync": {
+          "title": "Automatische Synchronisierung",
+          "description": "Überträgt Aufgaben direkt an Jira mit korrekten Zuweisungen"
+        }
+      },
+      "alerts": {
+        "configRequired": "Agent-Konfiguration erforderlich. Siehe README.md für Einrichtungsanweisungen."
+      }
+    }
+  }
+}

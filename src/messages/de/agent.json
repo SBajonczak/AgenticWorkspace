@@ -1,0 +1,31 @@
+{
+  "agent": {
+    "suggestions": {
+      "upcomingMeetings": {
+        "title": "Agent-Vorschlag",
+        "description": "Ich habe bemerkt, dass Sie morgen eine Besprechung geplant haben, die mit einer anderen wichtigen Verpflichtung kollidiert. Soll ich beim Verschieben helfen?",
+        "explanation": "Der Agent überwacht Ihren Kalender und schlägt proaktiv Terminoptimierungen vor, basierend auf Besprechungsprioritäten, Teilnehmerverfügbarkeit und Ihren typischen Arbeitsmustern."
+      },
+      "actionItems": {
+        "explanation": "Aktionspunkte werden automatisch aus Besprechungstranskripten mittels KI extrahiert. Der Agent identifiziert konkrete Aufgaben mit hoher Konfidenz und kann diese mit Ihren Projektmanagement-Tools synchronisieren."
+      },
+      "projectInsights": {
+        "explanation": "Der Agent verfolgt Projekterwähnungen über Besprechungen hinweg und korreliert sie mit Ihrem Aufgabenverwaltungssystem, um Echtzeit-Einblicke in die Projektgesundheit zu bieten."
+      },
+      "goalAlignment": {
+        "explanation": "Durch die Analyse von Unternehmenszielen und Marktsignalen hilft der Agent sicherzustellen, dass Ihre tägliche Arbeit mit strategischen Prioritäten übereinstimmt."
+      }
+    },
+    "processing": {
+      "analyzing": "Besprechung wird analysiert...",
+      "extracting": "Aktionspunkte werden extrahiert...",
+      "syncing": "Synchronisierung mit Jira...",
+      "complete": "Verarbeitung abgeschlossen"
+    },
+    "confidence": {
+      "high": "Hohe Konfidenz - explizit in der Besprechung erwähnt",
+      "medium": "Mittlere Konfidenz - aus dem Diskussionskontext abgeleitet",
+      "low": "Niedrige Konfidenz - möglicher Aktionspunkt, benötigt Überprüfung"
+    }
+  }
+}

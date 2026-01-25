@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { motion } from 'framer-motion'
-import Link from 'next/link'
+import { Link } from '@/i18n/routing'
 
 interface Meeting {
   id: string

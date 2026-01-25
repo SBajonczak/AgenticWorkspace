@@ -1,0 +1,20 @@
+{
+  "goals": {
+    "title": "Unternehmensziele & Marktsignale",
+    "labels": {
+      "goal": "Ziel",
+      "marketSignal": "Marktsignal",
+      "agentInsight": "Agent-Erkenntnis",
+      "progress": "Fortschritt",
+      "deadline": "Frist"
+    },
+    "insights": {
+      "analyzing": "Analysiere Markttrends und Unternehmensziele...",
+      "recommendation": "Empfehlung"
+    },
+    "emptyState": {
+      "title": "Noch keine Ziele erfasst",
+      "description": "Der Agent wird strategische Ziele aus Führungsbesprechungen identifizieren."
+    }
+  }
+}
