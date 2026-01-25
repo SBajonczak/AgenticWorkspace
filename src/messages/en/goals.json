@@ -1,20 +1,50 @@
 {
   "goals": {
     "title": "Company Goals & Market Signals",
+    "subtitle": "Strategic direction and market intelligence",
     "labels": {
       "goal": "Goal",
       "marketSignal": "Market Signal",
       "agentInsight": "Agent Insight",
       "progress": "Progress",
-      "deadline": "Deadline"
+      "deadline": "Deadline",
+      "owner": "Owner",
+      "category": "Category",
+      "relatedProjects": "Related Projects"
+    },
+    "categories": {
+      "revenue": "Revenue",
+      "product": "Product",
+      "customer": "Customer",
+      "operational": "Operational"
+    },
+    "signals": {
+      "title": "Market Signals",
+      "types": {
+        "competitor": "Competitor",
+        "trend": "Market Trend",
+        "regulation": "Regulation",
+        "technology": "Technology"
+      },
+      "impact": {
+        "high": "High Impact",
+        "medium": "Medium Impact",
+        "low": "Low Impact"
+      },
+      "source": "Source"
+    },
+    "metrics": {
+      "current": "Current",
+      "target": "Target"
     },
     "insights": {
       "analyzing": "Analyzing market trends and company objectives...",
-      "recommendation": "Recommendation"
+      "recommendation": "Agent Recommendation"
     },
     "emptyState": {
       "title": "No goals tracked yet",
-      "description": "The agent will identify strategic goals from executive meetings."
+      "description": "The agent will identify strategic goals from executive meetings.",
+      "noSignals": "No market signals detected"
     }
   }
 }

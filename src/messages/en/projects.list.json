@@ -1,0 +1,30 @@
+{
+  "projects": {
+    "list": {
+      "title": "Active Projects",
+      "subtitle": "Current initiatives and progress",
+      "filters": {
+        "all": "All",
+        "active": "Active",
+        "on_hold": "On Hold",
+        "completed": "Completed"
+      },
+      "card": {
+        "owner": "Owner",
+        "progress": "Progress",
+        "openActions": "open action",
+        "openActions_plural": "open actions",
+        "targetDate": "Target Date",
+        "team": "Team",
+        "viewDetails": "View Details"
+      },
+      "status": {
+        "active": "Active",
+        "on_hold": "On Hold",
+        "completed": "Completed"
+      },
+      "empty": "No projects found",
+      "aiSummary": "AI Summary"
+    }
+  }
+}

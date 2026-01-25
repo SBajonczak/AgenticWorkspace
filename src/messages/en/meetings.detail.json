@@ -1,0 +1,52 @@
+{
+  "meetings": {
+    "detail": {
+      "backToList": "Back to meetings",
+      "tabs": {
+        "summary": "Summary",
+        "decisions": "Decisions",
+        "actions": "Actions",
+        "transcript": "Transcript"
+      },
+      "summary": {
+        "title": "Executive Summary",
+        "metadata": {
+          "organizer": "Organizer",
+          "date": "Date",
+          "duration": "Duration",
+          "status": "Status"
+        }
+      },
+      "decisions": {
+        "title": "Key Decisions",
+        "count": "decision",
+        "count_plural": "decisions",
+        "noDecisions": "No decisions recorded"
+      },
+      "actions": {
+        "title": "Action Items",
+        "assignedTo": "Assigned to",
+        "confidence": "Confidence",
+        "status": {
+          "open": "Open",
+          "in_progress": "In Progress",
+          "done": "Done"
+        },
+        "jira": {
+          "synced": "Synced to Jira",
+          "failed": "Jira sync failed",
+          "pending": "Sync pending"
+        },
+        "noActions": "No action items"
+      },
+      "transcript": {
+        "title": "Meeting Transcript",
+        "noTranscript": "Transcript not available"
+      },
+      "relatedProjects": {
+        "title": "Related Projects",
+        "noProjects": "No related projects"
+      }
+    }
+  }
+}

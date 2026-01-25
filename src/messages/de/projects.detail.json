@@ -1,0 +1,49 @@
+{
+  "projects": {
+    "detail": {
+      "backToList": "Zurück zu Projekten",
+      "tabs": {
+        "overview": "Übersicht",
+        "updates": "Updates",
+        "meetings": "Verbundene Besprechungen",
+        "actions": "Offene Aktionen"
+      },
+      "overview": {
+        "title": "Projektbeschreibung",
+        "aiSummary": "KI-Analyse",
+        "description": "Beschreibung",
+        "metadata": {
+          "owner": "Verantwortlich",
+          "status": "Status",
+          "startDate": "Startdatum",
+          "targetDate": "Zieldatum",
+          "progress": "Fortschritt",
+          "team": "Teammitglieder"
+        }
+      },
+      "updates": {
+        "title": "Aktuelle Updates",
+        "types": {
+          "progress": "Fortschrittsupdate",
+          "blocker": "Blocker",
+          "milestone": "Meilenstein"
+        },
+        "noUpdates": "Noch keine Updates"
+      },
+      "meetings": {
+        "title": "Verbundene Besprechungen",
+        "noMeetings": "Keine verbundenen Besprechungen"
+      },
+      "actions": {
+        "title": "Offene Aktionen",
+        "from": "von",
+        "noActions": "Keine offenen Aktionen"
+      },
+      "status": {
+        "active": "Aktiv",
+        "on_hold": "Pausiert",
+        "completed": "Abgeschlossen"
+      }
+    }
+  }
+}

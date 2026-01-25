@@ -1,0 +1,37 @@
+{
+  "schedule": {
+    "title": "Zeitplan",
+    "subtitle": "Ihre Zeitleiste und bevorstehende Ereignisse",
+    "filters": {
+      "all": "Alle Ereignisse",
+      "meetings": "Besprechungen",
+      "deadlines": "Fristen",
+      "milestones": "Meilensteine"
+    },
+    "types": {
+      "meeting": "Besprechung",
+      "deadline": "Frist",
+      "milestone": "Meilenstein"
+    },
+    "event": {
+      "organizer": "Organisator",
+      "attendees": "Teilnehmer",
+      "location": "Ort",
+      "relatedProject": "Verbundenes Projekt",
+      "agentSuggestion": "Agentenvorschlag"
+    },
+    "timeline": {
+      "today": "Heute",
+      "tomorrow": "Morgen",
+      "thisWeek": "Diese Woche",
+      "nextWeek": "Nächste Woche",
+      "later": "Später"
+    },
+    "empty": "Keine Ereignisse geplant",
+    "duration": {
+      "hours": "Stunde",
+      "hours_plural": "Stunden",
+      "minutes": "Min"
+    }
+  }
+}

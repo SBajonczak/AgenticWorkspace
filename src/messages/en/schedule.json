@@ -1,0 +1,37 @@
+{
+  "schedule": {
+    "title": "Schedule",
+    "subtitle": "Your timeline and upcoming events",
+    "filters": {
+      "all": "All Events",
+      "meetings": "Meetings",
+      "deadlines": "Deadlines",
+      "milestones": "Milestones"
+    },
+    "types": {
+      "meeting": "Meeting",
+      "deadline": "Deadline",
+      "milestone": "Milestone"
+    },
+    "event": {
+      "organizer": "Organizer",
+      "attendees": "Attendees",
+      "location": "Location",
+      "relatedProject": "Related Project",
+      "agentSuggestion": "Agent Suggestion"
+    },
+    "timeline": {
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "thisWeek": "This Week",
+      "nextWeek": "Next Week",
+      "later": "Later"
+    },
+    "empty": "No events scheduled",
+    "duration": {
+      "hours": "hour",
+      "hours_plural": "hours",
+      "minutes": "min"
+    }
+  }
+}

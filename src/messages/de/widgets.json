@@ -1,0 +1,38 @@
+{
+  "widgets": {
+    "recentIntelligence": {
+      "title": "Aktuelle Erkenntnisse",
+      "subtitle": "Zuletzt verarbeitete Besprechungen",
+      "viewAll": "Alle Besprechungen anzeigen",
+      "noMeetings": "Noch keine Besprechungen verarbeitet",
+      "actionCount": "Aktion",
+      "actionCount_plural": "Aktionen"
+    },
+    "upcomingMeetings": {
+      "title": "Bevorstehende Besprechungen",
+      "subtitle": "Ihr Zeitplan",
+      "viewSchedule": "Vollständigen Zeitplan anzeigen",
+      "noMeetings": "Keine bevorstehenden Besprechungen",
+      "today": "Heute",
+      "tomorrow": "Morgen",
+      "in": "in"
+    },
+    "activeProjects": {
+      "title": "Aktive Projekte",
+      "subtitle": "Laufende Initiativen",
+      "viewAll": "Alle Projekte anzeigen",
+      "noProjects": "Keine aktiven Projekte",
+      "openActions": "offene Aktion",
+      "openActions_plural": "offene Aktionen",
+      "progress": "Fortschritt"
+    },
+    "companyDirection": {
+      "title": "Unternehmensziele & Marktsignale",
+      "subtitle": "Strategischer Überblick",
+      "viewDetails": "Details anzeigen",
+      "goals": "Aktive Ziele",
+      "signals": "Marktsignale",
+      "highImpact": "Hohe Auswirkung"
+    }
+  }
+}

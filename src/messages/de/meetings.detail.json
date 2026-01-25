@@ -1,0 +1,52 @@
+{
+  "meetings": {
+    "detail": {
+      "backToList": "Zurück zu Besprechungen",
+      "tabs": {
+        "summary": "Zusammenfassung",
+        "decisions": "Entscheidungen",
+        "actions": "Aktionen",
+        "transcript": "Transkript"
+      },
+      "summary": {
+        "title": "Executive Summary",
+        "metadata": {
+          "organizer": "Organisator",
+          "date": "Datum",
+          "duration": "Dauer",
+          "status": "Status"
+        }
+      },
+      "decisions": {
+        "title": "Wichtige Entscheidungen",
+        "count": "Entscheidung",
+        "count_plural": "Entscheidungen",
+        "noDecisions": "Keine Entscheidungen erfasst"
+      },
+      "actions": {
+        "title": "Aktionspunkte",
+        "assignedTo": "Zugewiesen an",
+        "confidence": "Konfidenz",
+        "status": {
+          "open": "Offen",
+          "in_progress": "In Bearbeitung",
+          "done": "Erledigt"
+        },
+        "jira": {
+          "synced": "Mit Jira synchronisiert",
+          "failed": "Jira-Synchronisation fehlgeschlagen",
+          "pending": "Synchronisation ausstehend"
+        },
+        "noActions": "Keine Aktionspunkte"
+      },
+      "transcript": {
+        "title": "Besprechungstranskript",
+        "noTranscript": "Transkript nicht verfügbar"
+      },
+      "relatedProjects": {
+        "title": "Verbundene Projekte",
+        "noProjects": "Keine verbundenen Projekte"
+      }
+    }
+  }
+}

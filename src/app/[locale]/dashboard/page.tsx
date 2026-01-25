@@ -1,74 +1,33 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useTranslations } from 'next-intl'
 import { Link } from '@/i18n/routing'
-import MeetingSummaryCard from '@/components/cards/MeetingSummaryCard'
-import TodoList from '@/components/cards/TodoList'
 import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
-
-interface Meeting {
-  id: string
-  meetingId: string
-  title: string
-  organizer: string
-  startTime: string
-  endTime: string
-  summary: string
-  decisions: string
-  processedAt: string
-  todos: Todo[]
-}
-
-interface Todo {
-  id: string
-  title: string
-  description: string
-  assigneeHint: string | null
-  confidence: number
-  status: string
-  jiraSync: JiraSync | null
-}
-
-interface JiraSync {
-  id: string
-  jiraIssueKey: string | null
-  status: string
-  syncedAt: string | null
-}
+import {
+  RecentIntelligenceWidget,
+  UpcomingMeetingsWidget,
+  ActiveProjectsWidget,
+  CompanyDirectionWidget
+} from '@/components/widgets'
+import {
+  getRecentMeetings,
+  getUpcomingMeetings,
+  getActiveProjects,
+  mockGoals,
+  mockMarketSignals
+} from '@/mocks'
 
 export default function DashboardPage() {
   const tCommon = useTranslations('common')
   const tDashboard = useTranslations('dashboard')
-  const [meeting, setMeeting] = useState<Meeting | null>(null)
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetchLatestMeeting()
-  }, [])
-
-  const fetchLatestMeeting = async () => {
-    try {
-      const response = await fetch('/api/meetings/latest')
-      if (response.ok) {
-        const data = await response.json()
-        setMeeting(data)
-      }
-    } catch (error) {
-      console.error('Failed to fetch meeting:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center">
-        <div className="text-white text-2xl">{tCommon('labels.loading')}</div>
-      </div>
-    )
-  }
+  // Get data from mocks
+  const recentMeetings = getRecentMeetings(3)
+  const upcomingMeetings = getUpcomingMeetings(3)
+  const activeProjects = getActiveProjects(3)
+  const goals = mockGoals.slice(0, 5)
+  const signals = mockMarketSignals
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
@@ -94,65 +53,22 @@ export default function DashboardPage() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-12">
-        {!meeting ? (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center py-16"
-          >
-            <div className="text-6xl mb-4">🤖</div>
-            <h2 className="text-3xl font-bold text-white mb-4">{tDashboard('emptyState.title')}</h2>
-            <p className="text-gray-400 mb-8 max-w-md mx-auto">
-              {tDashboard('emptyState.description')}
-            </p>
-            <button
-              onClick={() => alert(tDashboard('emptyState.configMessage'))}
-              className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold transition-colors"
-            >
-              {tCommon('buttons.runAgent')}
-            </button>
-          </motion.div>
-        ) : (
-          <div className="space-y-8">
-            {/* Hero Stats */}
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="grid md:grid-cols-4 gap-4"
-            >
-              <div className="bg-gradient-to-br from-purple-600 to-purple-800 p-6 rounded-xl">
-                <div className="text-3xl font-bold text-white">
-                  {meeting.todos.length}
-                </div>
-                <div className="text-purple-200 text-sm">{tDashboard('stats.todosExtracted')}</div>
-              </div>
-              <div className="bg-gradient-to-br from-pink-600 to-pink-800 p-6 rounded-xl">
-                <div className="text-3xl font-bold text-white">
-                  {JSON.parse(meeting.decisions).length}
-                </div>
-                <div className="text-pink-200 text-sm">{tDashboard('stats.decisionsMade')}</div>
-              </div>
-              <div className="bg-gradient-to-br from-blue-600 to-blue-800 p-6 rounded-xl">
-                <div className="text-3xl font-bold text-white">
-                  {meeting.todos.filter(t => t.jiraSync?.status === 'synced').length}
-                </div>
-                <div className="text-blue-200 text-sm">{tDashboard('stats.syncedToJira')}</div>
-              </div>
-              <div className="bg-gradient-to-br from-green-600 to-green-800 p-6 rounded-xl">
-                <div className="text-3xl font-bold text-white">
-                  {(meeting.todos.reduce((sum, t) => sum + t.confidence, 0) / meeting.todos.length * 100).toFixed(0)}%
-                </div>
-                <div className="text-green-200 text-sm">{tDashboard('stats.avgConfidence')}</div>
-              </div>
-            </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <h1 className="text-4xl font-bold text-white mb-2">{tDashboard('title')}</h1>
+          <p className="text-gray-400">Your intelligent workspace overview</p>
+        </motion.div>
 
-            {/* Meeting Summary */}
-            <MeetingSummaryCard meeting={meeting} />
-
-            {/* TODO List */}
-            <TodoList todos={meeting.todos} />
-          </div>
-        )}
+        {/* Widget Grid */}
+        <div className="grid md:grid-cols-2 gap-6">
+          <RecentIntelligenceWidget meetings={recentMeetings} />
+          <UpcomingMeetingsWidget meetings={upcomingMeetings} />
+          <ActiveProjectsWidget projects={activeProjects} />
+          <CompanyDirectionWidget goals={goals} signals={signals} />
+        </div>
       </main>
     </div>
   )
