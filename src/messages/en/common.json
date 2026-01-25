@@ -26,6 +26,29 @@
     },
     "empty": {
       "noData": "No data available"
+    },
+    "home": {
+      "hero": {
+        "subtitle": "Your AI-powered workplace agent that transforms meetings into actionable outcomes",
+        "description": "Automatically process Microsoft Teams meetings, extract decisions and TODOs, and sync them to Jira—all while you focus on what matters."
+      },
+      "features": {
+        "autonomous": {
+          "title": "Autonomous Agent",
+          "description": "Works in the background, no manual intervention needed"
+        },
+        "extraction": {
+          "title": "Smart Extraction",
+          "description": "Identifies decisions and actionable tasks from conversations"
+        },
+        "sync": {
+          "title": "Auto-Sync",
+          "description": "Pushes TODOs directly to Jira with proper assignees"
+        }
+      },
+      "alerts": {
+        "configRequired": "Agent configuration required. See README.md for setup instructions."
+      }
     }
   }
 }

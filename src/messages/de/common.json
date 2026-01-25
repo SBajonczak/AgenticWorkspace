@@ -26,6 +26,29 @@
     },
     "empty": {
       "noData": "Keine Daten verfügbar"
+    },
+    "home": {
+      "hero": {
+        "subtitle": "Ihr KI-gestützter Arbeitsplatz-Agent, der Besprechungen in umsetzbare Ergebnisse verwandelt",
+        "description": "Verarbeiten Sie automatisch Microsoft Teams-Besprechungen, extrahieren Sie Entscheidungen und Aufgaben und synchronisieren Sie diese mit Jira – während Sie sich auf das Wesentliche konzentrieren."
+      },
+      "features": {
+        "autonomous": {
+          "title": "Autonomer Agent",
+          "description": "Arbeitet im Hintergrund, keine manuelle Intervention erforderlich"
+        },
+        "extraction": {
+          "title": "Intelligente Extraktion",
+          "description": "Identifiziert Entscheidungen und umsetzbare Aufgaben aus Gesprächen"
+        },
+        "sync": {
+          "title": "Automatische Synchronisierung",
+          "description": "Überträgt Aufgaben direkt an Jira mit korrekten Zuweisungen"
+        }
+      },
+      "alerts": {
+        "configRequired": "Agent-Konfiguration erforderlich. Siehe README.md für Einrichtungsanweisungen."
+      }
     }
   }
 }
