@@ -147,9 +147,9 @@ export default function ProjectsListPage() {
                       <span className="text-white">👤 {project.owner}</span>
                     </div>
                     <div className="flex items-center justify-between text-gray-400">
-                      <span>{tList('card.openActions')}</span>
+                      <span>{project.openActions === 1 ? tList('card.openActions') : tList('card.openActions_plural')}</span>
                       <span className="text-white font-semibold">
-                        {project.openActions} {project.openActions === 1 ? tList('card.openActions') : tList('card.openActions_plural')}
+                        {project.openActions}
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-gray-400">

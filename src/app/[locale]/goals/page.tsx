@@ -49,6 +49,21 @@ export default function GoalsPage() {
     }
   }
 
+  const getSignalTypeColor = (type: MarketSignal['type']) => {
+    switch (type) {
+      case 'competitor':
+        return 'bg-red-500/20 text-red-400'
+      case 'trend':
+        return 'bg-blue-500/20 text-blue-400'
+      case 'regulation':
+        return 'bg-yellow-500/20 text-yellow-400'
+      case 'technology':
+        return 'bg-purple-500/20 text-purple-400'
+      default:
+        return 'bg-gray-500/20 text-gray-400'
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
       {/* Header */}
@@ -198,7 +213,7 @@ export default function GoalsPage() {
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <span className="text-2xl">{getTypeIcon(signal.type)}</span>
-                    <span className={`text-xs font-semibold px-2 py-1 rounded ${getCategoryColor(signal.type)}`}>
+                    <span className={`text-xs font-semibold px-2 py-1 rounded ${getSignalTypeColor(signal.type)}`}>
                       {tGoals(`signals.types.${signal.type}`)}
                     </span>
                   </div>

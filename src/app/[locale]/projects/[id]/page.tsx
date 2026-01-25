@@ -30,7 +30,7 @@ export default function ProjectDetailPage() {
     )
   }
 
-  const relatedMeetings = project.relatedMeetingIds.map(id => getMeetingById(id)).filter(Boolean)
+  const relatedMeetings = project.relatedMeetingIds.map(id => getMeetingById(id)).filter((m): m is NonNullable<typeof m> => m !== undefined && m !== null)
   const getStatusColor = (status: typeof project.status) => {
     switch (status) {
       case 'active':
@@ -213,15 +213,15 @@ export default function ProjectDetailPage() {
                 <div className="space-y-3">
                   {relatedMeetings.map((meeting) => (
                     <Link
-                      key={meeting!.id}
-                      href={`/meetings/${meeting!.id}`}
+                      key={meeting.id}
+                      href={`/meetings/${meeting.id}`}
                       className="block bg-gray-900/50 rounded-lg p-4 hover:bg-gray-900/70 transition-colors"
                     >
-                      <h4 className="text-white font-semibold mb-1">{meeting!.title}</h4>
+                      <h4 className="text-white font-semibold mb-1">{meeting.title}</h4>
                       <div className="flex items-center gap-3 text-xs text-gray-400">
-                        <span>👤 {meeting!.organizer}</span>
+                        <span>👤 {meeting.organizer}</span>
                         <span>•</span>
-                        <span>📅 {new Date(meeting!.startTime).toLocaleDateString()}</span>
+                        <span>📅 {new Date(meeting.startTime).toLocaleDateString()}</span>
                       </div>
                     </Link>
                   ))}
