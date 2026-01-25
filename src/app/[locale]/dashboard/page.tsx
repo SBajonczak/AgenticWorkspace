@@ -4,6 +4,9 @@ import { motion } from 'framer-motion'
 import { useTranslations } from 'next-intl'
 import { Link } from '@/i18n/routing'
 import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
+import PersonalContextBar from '@/components/ui/PersonalContextBar'
+import WeatherIndicator from '@/components/ui/WeatherIndicator'
+import GreetingSummary from '@/components/ui/GreetingSummary'
 import {
   RecentIntelligenceWidget,
   UpcomingMeetingsWidget,
@@ -15,7 +18,10 @@ import {
   getUpcomingMeetings,
   getActiveProjects,
   mockGoals,
-  mockMarketSignals
+  mockMarketSignals,
+  mockUser,
+  mockWeather,
+  mockDailyStats
 } from '@/mocks'
 
 export default function DashboardPage() {
@@ -53,13 +59,21 @@ export default function DashboardPage() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-12">
+        {/* Personal Context Section */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
+          className="mb-8 space-y-6"
         >
-          <h1 className="text-4xl font-bold text-white mb-2">{tDashboard('title')}</h1>
-          <p className="text-gray-400">Your intelligent workspace overview</p>
+          {/* Greeting & Summary */}
+          <GreetingSummary user={mockUser} stats={mockDailyStats} />
+          
+          {/* Personal Context Bar */}
+          <div className="flex flex-wrap items-center gap-6 pt-4 border-t border-gray-700/50">
+            <PersonalContextBar user={mockUser} />
+            <div className="hidden sm:block h-6 w-px bg-gray-700/50" />
+            <WeatherIndicator weather={mockWeather} />
+          </div>
         </motion.div>
 
         {/* Widget Grid */}

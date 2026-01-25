@@ -27,6 +27,25 @@
     "empty": {
       "noData": "Keine Daten verfügbar"
     },
+    "greeting": {
+      "morning": "Guten Morgen",
+      "day": "Guten Tag",
+      "evening": "Guten Abend"
+    },
+    "weather": {
+      "conditions": {
+        "sunny": "Sonnig",
+        "cloudy": "Bewölkt",
+        "rainy": "Regnerisch",
+        "snowy": "Schneereich",
+        "clear": "Klar",
+        "partly_cloudy": "Teilweise bewölkt"
+      }
+    },
+    "agentSummary": {
+      "yesterday": "Gestern {meetingCount, plural, one {wurde # Besprechung} other {wurden # Besprechungen}} verarbeitet und {actionCount} {actionCount, plural, one {Aufgabe wurde} other {Aufgaben wurden}} identifiziert.",
+      "today": "Heute haben Sie {upcomingCount} {upcomingCount, plural, one {anstehende Besprechung} other {anstehende Besprechungen}}."
+    },
     "home": {
       "hero": {
         "subtitle": "Ihr KI-gestützter Arbeitsplatz-Agent, der Besprechungen in umsetzbare Ergebnisse verwandelt",
