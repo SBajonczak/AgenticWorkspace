@@ -1,39 +1,6 @@
+import { DeviceCodeCredential, DeviceCodePromptCallback } from '@azure/identity'
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
-
-// Note: @azure/identity needs to be installed separately for production use
-// For demo purposes, we'll create a mock implementation
-interface DeviceCodeInfo {
-  message: string
-  userCode: string
-  verificationUri: string
-}
-
-class DeviceCodeCredential {
-  private tenantId: string
-  private clientId: string
-  private userPromptCallback?: (info: DeviceCodeInfo) => void
-
-  constructor(config: {
-    tenantId: string
-    clientId: string
-    userPromptCallback?: (info: DeviceCodeInfo) => void
-  }) {
-    this.tenantId = config.tenantId
-    this.clientId = config.clientId
-    this.userPromptCallback = config.userPromptCallback
-  }
-
-  async getToken(scopes: string[]): Promise<{ token: string; expiresOnTimestamp: number } | null> {
-    // In production, this would use the actual @azure/identity package
-    // For demo, return mock token
-    console.warn('Using mock authentication. Install @azure/identity for production.')
-    return {
-      token: 'mock-token-' + Date.now(),
-      expiresOnTimestamp: Date.now() + 3600000, // 1 hour
-    }
-  }
-}
 
 export interface TokenCacheData {
   accessToken: string
@@ -94,45 +61,73 @@ export interface GraphAuthConfig {
 export class GraphAuth {
   private config: GraphAuthConfig
   private tokenCache: TokenCache
-  private credential?: DeviceCodeCredential
+  private credential: DeviceCodeCredential
 
   constructor(config: GraphAuthConfig, tokenCache?: TokenCache) {
     this.config = config
     this.tokenCache = tokenCache || new TokenCache()
+    
+    // Initialize DeviceCodeCredential with device code prompt callback
+    const promptCallback: DeviceCodePromptCallback = (info) => {
+      console.log('\n' + '='.repeat(70))
+      console.log('🔐 DEVICE CODE AUTHENTICATION REQUIRED')
+      console.log('='.repeat(70))
+      console.log(`\n${info.message}\n`)
+      console.log(`📱 User Code: ${info.userCode}`)
+      console.log(`🌐 Verification URI: ${info.verificationUri}`)
+      console.log('\n⏳ Waiting for authentication... (timeout: 5 minutes)')
+      console.log('='.repeat(70) + '\n')
+    }
+
+    this.credential = new DeviceCodeCredential({
+      tenantId: this.config.tenantId,
+      clientId: this.config.clientId,
+      userPromptCallback: promptCallback,
+    })
   }
 
   async getAccessToken(): Promise<string> {
     // Try to load from cache first
     const cached = this.tokenCache.load()
     if (cached && cached.expiresOn > Date.now()) {
+      console.log('Using cached token')
       return cached.accessToken
     }
 
-    // Initialize credential if not already done
-    if (!this.credential) {
-      this.credential = new DeviceCodeCredential({
-        tenantId: this.config.tenantId,
-        clientId: this.config.clientId,
-        userPromptCallback: (info) => {
-          console.log('\n' + '='.repeat(60))
-          console.log('DEVICE CODE AUTHENTICATION REQUIRED')
-          console.log('='.repeat(60))
-          console.log(`\n${info.message}\n`)
-          console.log('='.repeat(60) + '\n')
-        },
-      })
-    }
-
-    // Get new token
+    // Get new token from Azure with error handling and retries
     const scopes = this.config.scopes || [
       'https://graph.microsoft.com/.default',
       'offline_access',
     ]
+    
+    console.log('Requesting new token with scopes:', scopes)
+    console.log('\nDevice Code Flow initiated. Please complete the authentication in your browser.')
+    console.log('If no browser opened, visit the verification URI shown above and enter the user code.\n')
 
-    const tokenResponse = await this.credential.getToken(scopes)
+    let tokenResponse
+    let lastError: Error | null = null
+    const maxRetries = 3
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`Token acquisition attempt ${attempt}/${maxRetries}...`)
+        tokenResponse = await this.getTokenWithTimeout(scopes, 300000) // 5 minutes timeout
+        break
+      } catch (error) {
+        lastError = error as Error
+        console.error(`Attempt ${attempt} failed:`, lastError.message)
+        
+        if (attempt < maxRetries) {
+          console.log(`Retrying in 2 seconds...`)
+          await this.delay(2000)
+        }
+      }
+    }
     
     if (!tokenResponse) {
-      throw new Error('Failed to acquire token')
+      const errorMsg = `Failed to acquire token after ${maxRetries} attempts. ${lastError?.message || 'Device code authentication failed.'}`
+      console.error('\n' + errorMsg)
+      throw new Error(errorMsg)
     }
 
     // Cache the token
@@ -141,7 +136,27 @@ export class GraphAuth {
       expiresOn: tokenResponse.expiresOnTimestamp,
     })
 
+    console.log('✓ Token acquired and cached')
     return tokenResponse.token
+  }
+
+  private async getTokenWithTimeout(
+    scopes: string[],
+    timeoutMs: number
+  ): Promise<{ token: string; expiresOnTimestamp: number }> {
+    return Promise.race([
+      this.credential.getToken(scopes),
+      new Promise<{ token: string; expiresOnTimestamp: number }>((_, reject) =>
+        setTimeout(
+          () => reject(new Error(`Token acquisition timeout after ${timeoutMs / 1000}s. Please complete the device code authentication.`)),
+          timeoutMs
+        )
+      ),
+    ])
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms))
   }
 
   clearCache(): void {
@@ -156,6 +171,8 @@ export function createGraphAuth(): GraphAuth {
   if (!tenantId || !clientId) {
     throw new Error('Missing Azure configuration. Set AZURE_TENANT_ID and AZURE_CLIENT_ID.')
   }
+
+  console.log('Initializing GraphAuth with tenant and client ID')
 
   return new GraphAuth({
     tenantId,

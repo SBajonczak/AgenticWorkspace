@@ -40,7 +40,7 @@ export class TranscriptsClient {
       const contentResponse = await this.client
         .api(`/me/onlineMeetings/${meetingId}/transcripts/${transcriptId}/content`)
         .get()
-
+console.log("contentResponse:", contentResponse);
       return this.parseTranscriptContent(contentResponse)
     } catch (error) {
       console.error(`Failed to fetch transcript for meeting ${meetingId}:`, error)

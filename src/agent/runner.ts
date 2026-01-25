@@ -25,7 +25,7 @@ export class AgentRunner {
     this.dryRun = dryRun
   }
 
-  async run(): Promise<AgentRunResult> {
+  async run(): Promise<AgentRunResult | AgentRunResult[]> {
     try {
       console.log('\n' + '='.repeat(60))
       console.log('🤖 AGENTIC WORKSPACE - AGENT RUN')
@@ -42,9 +42,10 @@ export class AgentRunner {
       console.log('📞 Fetching latest meeting from Microsoft Graph...')
       const graphAuth = createGraphAuth()
       const accessToken = await graphAuth.getAccessToken()
-      
+
       const meetingsClient = new MeetingsClient(accessToken)
-      const latestMeeting = await meetingsClient.getLatestMeeting()
+      const latestMeetings = await meetingsClient.getLatestMeeting()
+      const latestMeeting = latestMeetings ? latestMeetings[0] : null;
 
       if (!latestMeeting) {
         return {
@@ -54,95 +55,125 @@ export class AgentRunner {
         }
       }
 
-      console.log(`Found meeting: ${latestMeeting.subject}`)
-
-      // Get transcript
-      console.log('📝 Fetching transcript...')
-      const transcriptsClient = new TranscriptsClient(accessToken)
-      const transcript = await transcriptsClient.getTranscript(latestMeeting.id)
-
-      if (!transcript) {
+      const results: AgentRunResult[] = []
+      if (latestMeetings == null) {
         return {
           success: false,
-          error: 'No transcript available for this meeting',
+          error: "No meetings found",
           dryRun: this.dryRun,
         }
       }
+      for (const meeting of latestMeetings) {
+        try {
+          console.log(`Found meeting: ${meeting.subject}`)
 
-      if (this.dryRun) {
-        console.log('\n✅ DRY RUN: Would process meeting with transcript')
-        console.log(`Meeting: ${latestMeeting.subject}`)
-        console.log(`Transcript length: ${transcript.length} characters`)
-        return {
-          success: true,
-          meetingTitle: latestMeeting.subject,
-          dryRun: true,
-        }
-      }
+          // Get transcript
+          console.log('📝 Fetching transcript...')
+          const transcriptsClient = new TranscriptsClient(accessToken)
+          const transcript = await transcriptsClient.getTranscript(meeting.id)
 
-      // Process meeting with LLM
-      console.log('🧠 Processing meeting with AI agent...')
-      const llmClient = createLLMClient()
-      const processor = new MeetingProcessor(llmClient, meetingRepo, todoRepo)
-
-      const result = await processor.processMeeting(
-        latestMeeting.id,
-        latestMeeting.subject,
-        latestMeeting.organizer.emailAddress.name,
-        latestMeeting.organizer.emailAddress.address,
-        new Date(latestMeeting.start.dateTime),
-        new Date(latestMeeting.end.dateTime),
-        transcript
-      )
-
-      console.log(`\n✅ Meeting processed successfully`)
-      console.log(`Summary: ${result.agentResponse.meetingSummary.summary.substring(0, 100)}...`)
-      console.log(`Decisions: ${result.agentResponse.meetingSummary.decisions.length}`)
-      console.log(`TODOs: ${result.todosCreated}`)
-
-      // Sync to Jira
-      let jiraSynced = 0
-      const jiraClient = createJiraClient()
-      
-      if (jiraClient) {
-        console.log('\n📋 Syncing TODOs to Jira...')
-        const todos = await todoRepo.findByMeetingId(result.meeting.id)
-        
-        for (const todo of todos) {
-          try {
-            const jiraIssue = await jiraClient.createTask({
-              summary: todo.title,
-              description: todo.description,
-              assignee: todo.assigneeHint || undefined,
+          if (!transcript) {
+            console.warn(`No transcript available for meeting: ${meeting.subject}`)
+            results.push({
+              success: false,
+              meetingId: meeting.id,
+              meetingTitle: meeting.subject,
+              error: 'No transcript available for this meeting',
+              dryRun: this.dryRun,
             })
-
-            await jiraSyncRepo.markSynced(todo.id, jiraIssue.key, jiraIssue.id)
-            console.log(`  ✓ Created: ${jiraIssue.key}`)
-            jiraSynced++
-          } catch (error) {
-            console.error(`  ✗ Failed to sync todo ${todo.id}:`, error)
-            await jiraSyncRepo.markFailed(
-              todo.id,
-              error instanceof Error ? error.message : 'Unknown error'
-            )
+            continue // Skip to the next meeting
           }
+          // The rest of the processing for a single meeting will be inside this loop.
+          // The final return statement of the method will need to be adjusted to return `results`.
+
+          if (this.dryRun) {
+            console.log('\n✅ DRY RUN: Would process meeting with transcript')
+            console.log(`Meeting: ${meeting.subject}`)
+            console.log(`Transcript length: ${transcript.length} characters`)
+            results.push({
+              success: true,
+              meetingTitle: meeting.subject,
+              dryRun: true,
+            })
+            continue
+          }
+
+          // Process meeting with LLM
+          console.log('🧠 Processing meeting with AI agent...')
+          const llmClient = createLLMClient()
+          const processor = new MeetingProcessor(llmClient, meetingRepo, todoRepo)
+
+          const result = await processor.processMeeting(
+            meeting.id,
+            meeting.subject,
+            meeting.organizer.emailAddress.name,
+            meeting.organizer.emailAddress.address,
+            new Date(meeting.start.dateTime),
+            new Date(meeting.end.dateTime),
+            transcript
+          )
+
+          console.log(`\n✅ Meeting processed successfully`)
+          console.log(`Summary: ${result.agentResponse.meetingSummary.summary.substring(0, 100)}...`)
+          console.log(`Decisions: ${result.agentResponse.meetingSummary.decisions.length}`)
+          console.log(`TODOs: ${result.todosCreated}`)
+
+          // Sync to Jira
+          let jiraSynced = 0
+          const jiraClient = createJiraClient()
+
+          if (jiraClient) {
+            console.log('\n📋 Syncing TODOs to Jira...')
+            const todos = await todoRepo.findByMeetingId(result.meeting.id)
+
+            for (const todo of todos) {
+              try {
+                const jiraIssue = await jiraClient.createTask({
+                  summary: todo.title,
+                  description: todo.description,
+                  assignee: todo.assigneeHint || undefined,
+                })
+
+                await jiraSyncRepo.markSynced(todo.id, jiraIssue.key, jiraIssue.id)
+                console.log(`  ✓ Created: ${jiraIssue.key}`)
+                jiraSynced++
+              } catch (error) {
+                console.error(`  ✗ Failed to sync todo ${todo.id}:`, error)
+                await jiraSyncRepo.markFailed(
+                  todo.id,
+                  error instanceof Error ? error.message : 'Unknown error'
+                )
+              }
+            }
+          } else {
+            console.log('\n⚠️  Jira client not configured. Skipping Jira sync.')
+          }
+
+          results.push({
+            success: true,
+            meetingId: result.meeting.id,
+            meetingTitle: result.meeting.title,
+            todosCreated: result.todosCreated,
+            jiraSynced,
+            dryRun: false,
+          })
+        } catch (error) {
+          console.error(`❌ Failed to process meeting ${meeting.id}:`, error)
+          results.push({
+            success: false,
+            meetingId: meeting.id,
+            meetingTitle: meeting.subject,
+            error: error instanceof Error ? error.message : 'Unknown error',
+            dryRun: this.dryRun,
+          })
         }
-      } else {
-        console.log('\n⚠️  Jira client not configured. Skipping Jira sync.')
       }
 
       console.log('\n' + '='.repeat(60))
       console.log('✨ AGENT RUN COMPLETE')
       console.log('='.repeat(60) + '\n')
 
-      return {
-        success: true,
-        meetingId: result.meeting.id,
-        meetingTitle: result.meeting.title,
-        todosCreated: result.todosCreated,
-        jiraSynced,
-        dryRun: false,
-      }
+      return results.length === 1 ? results[0] : results
     } catch (error) {
       console.error('❌ Agent run failed:', error)
       return {
