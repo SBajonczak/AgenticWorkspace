@@ -20,7 +20,8 @@ interface MeetingSummaryCardProps {
 }
 
 export default function MeetingSummaryCard({ meeting }: MeetingSummaryCardProps) {
-  const t = useTranslations('meetings')
+  const tMeetings = useTranslations('meetings')
+  const tCommon = useTranslations('common')
   const decisions = JSON.parse(meeting.decisions)
   const startTime = new Date(meeting.startTime)
   const endTime = new Date(meeting.endTime)
@@ -39,7 +40,7 @@ export default function MeetingSummaryCard({ meeting }: MeetingSummaryCardProps)
           <div className="flex items-center gap-4 text-gray-400">
             <span>👤 {meeting.organizer}</span>
             <span>•</span>
-            <span>⏱️ {duration} {t('common.labels.minutes', { ns: 'common' })}</span>
+            <span>⏱️ {duration} {tCommon('labels.minutes')}</span>
             <span>•</span>
             <span>{startTime.toLocaleDateString()}</span>
           </div>
@@ -48,20 +49,20 @@ export default function MeetingSummaryCard({ meeting }: MeetingSummaryCardProps)
           href={`/meetings/${meeting.id}`}
           className="text-purple-400 hover:text-purple-300 transition-colors"
         >
-          {t('common.buttons.viewDetails', { ns: 'common' })} →
+          {tCommon('buttons.viewDetails')} →
         </Link>
       </div>
 
       {/* Summary */}
       <div className="mb-6">
-        <h3 className="text-lg font-semibold text-white mb-3">{t('summary.title')}</h3>
+        <h3 className="text-lg font-semibold text-white mb-3">{tMeetings('summary.title')}</h3>
         <p className="text-gray-300 leading-relaxed">{meeting.summary}</p>
       </div>
 
       {/* Decisions */}
       {decisions.length > 0 && (
         <div>
-          <h3 className="text-lg font-semibold text-white mb-3">{t('summary.decisions')}</h3>
+          <h3 className="text-lg font-semibold text-white mb-3">{tMeetings('summary.decisions')}</h3>
           <ul className="space-y-2">
             {decisions.map((decision: string, index: number) => (
               <motion.li

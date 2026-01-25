@@ -1,23 +1,25 @@
 {
-  "summary": {
-    "title": "Executive Summary",
-    "decisions": "Key Decisions"
-  },
-  "tabs": {
-    "summary": "Summary",
-    "decisions": "Decisions",
-    "actions": "Actions",
-    "transcript": "Transcript"
-  },
-  "details": {
-    "organizer": "Organizer",
-    "duration": "Duration",
-    "date": "Date"
-  },
-  "actionItems": {
-    "title": "Action Items",
-    "noItems": "No action items found",
-    "assignedTo": "Assigned to",
-    "jiraSyncFailed": "Jira sync failed"
+  "meetings": {
+    "summary": {
+      "title": "Executive Summary",
+      "decisions": "Key Decisions"
+    },
+    "tabs": {
+      "summary": "Summary",
+      "decisions": "Decisions",
+      "actions": "Actions",
+      "transcript": "Transcript"
+    },
+    "details": {
+      "organizer": "Organizer",
+      "duration": "Duration",
+      "date": "Date"
+    },
+    "actionItems": {
+      "title": "Action Items",
+      "noItems": "No action items found",
+      "assignedTo": "Assigned to",
+      "jiraSyncFailed": "Jira sync failed"
+    }
   }
 }

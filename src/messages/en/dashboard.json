@@ -1,20 +1,22 @@
 {
-  "title": "Dashboard",
-  "stats": {
-    "todosExtracted": "TODOs Extracted",
-    "decisionsMade": "Decisions Made",
-    "syncedToJira": "Synced to Jira",
-    "avgConfidence": "Avg Confidence"
-  },
-  "emptyState": {
-    "title": "No meetings processed yet",
-    "description": "Run the agent to process your latest Microsoft Teams meeting and see results here.",
-    "configMessage": "Configure your environment and run: npm run agent"
-  },
-  "sections": {
-    "recentIntelligence": "Recent Intelligence",
-    "upcomingMeetings": "Upcoming Meetings",
-    "activeProjects": "Active Projects",
-    "companyGoals": "Company Goals & Market Signals"
+  "dashboard": {
+    "title": "Dashboard",
+    "stats": {
+      "todosExtracted": "TODOs Extracted",
+      "decisionsMade": "Decisions Made",
+      "syncedToJira": "Synced to Jira",
+      "avgConfidence": "Avg Confidence"
+    },
+    "emptyState": {
+      "title": "No meetings processed yet",
+      "description": "Run the agent to process your latest Microsoft Teams meeting and see results here.",
+      "configMessage": "Configure your environment and run: npm run agent"
+    },
+    "sections": {
+      "recentIntelligence": "Recent Intelligence",
+      "upcomingMeetings": "Upcoming Meetings",
+      "activeProjects": "Active Projects",
+      "companyGoals": "Company Goals & Market Signals"
+    }
   }
 }

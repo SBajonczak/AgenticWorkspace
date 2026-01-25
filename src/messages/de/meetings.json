@@ -1,23 +1,25 @@
 {
-  "summary": {
-    "title": "Zusammenfassung",
-    "decisions": "Wichtige Entscheidungen"
-  },
-  "tabs": {
-    "summary": "Zusammenfassung",
-    "decisions": "Entscheidungen",
-    "actions": "Aktionen",
-    "transcript": "Transkript"
-  },
-  "details": {
-    "organizer": "Organisator",
-    "duration": "Dauer",
-    "date": "Datum"
-  },
-  "actionItems": {
-    "title": "Aktionspunkte",
-    "noItems": "Keine Aktionspunkte gefunden",
-    "assignedTo": "Zugewiesen an",
-    "jiraSyncFailed": "Jira-Synchronisierung fehlgeschlagen"
+  "meetings": {
+    "summary": {
+      "title": "Zusammenfassung",
+      "decisions": "Wichtige Entscheidungen"
+    },
+    "tabs": {
+      "summary": "Zusammenfassung",
+      "decisions": "Entscheidungen",
+      "actions": "Aktionen",
+      "transcript": "Transkript"
+    },
+    "details": {
+      "organizer": "Organisator",
+      "duration": "Dauer",
+      "date": "Datum"
+    },
+    "actionItems": {
+      "title": "Aktionspunkte",
+      "noItems": "Keine Aktionspunkte gefunden",
+      "assignedTo": "Zugewiesen an",
+      "jiraSyncFailed": "Jira-Synchronisierung fehlgeschlagen"
+    }
   }
 }

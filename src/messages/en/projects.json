@@ -1,25 +1,27 @@
 {
-  "title": "Active Projects",
-  "labels": {
-    "openActions": "Open Actions",
-    "viewProjectBrief": "View Project Brief",
-    "status": "Status",
-    "priority": "Priority",
-    "team": "Team"
-  },
-  "status": {
-    "active": "Active",
-    "onHold": "On Hold",
-    "completed": "Completed",
-    "planning": "Planning"
-  },
-  "priority": {
-    "high": "High",
-    "medium": "Medium",
-    "low": "Low"
-  },
-  "emptyState": {
-    "title": "No active projects",
-    "description": "Start tracking projects by running the agent on your meetings."
+  "projects": {
+    "title": "Active Projects",
+    "labels": {
+      "openActions": "Open Actions",
+      "viewProjectBrief": "View Project Brief",
+      "status": "Status",
+      "priority": "Priority",
+      "team": "Team"
+    },
+    "status": {
+      "active": "Active",
+      "onHold": "On Hold",
+      "completed": "Completed",
+      "planning": "Planning"
+    },
+    "priority": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "emptyState": {
+      "title": "No active projects",
+      "description": "Start tracking projects by running the agent on your meetings."
+    }
   }
 }

@@ -1,20 +1,22 @@
 {
-  "title": "Dashboard",
-  "stats": {
-    "todosExtracted": "TODOs Erfasst",
-    "decisionsMade": "Entscheidungen Getroffen",
-    "syncedToJira": "Mit Jira Synchronisiert",
-    "avgConfidence": "Durchschn. Konfidenz"
-  },
-  "emptyState": {
-    "title": "Noch keine Besprechungen verarbeitet",
-    "description": "Führen Sie den Agent aus, um Ihre letzte Microsoft Teams-Besprechung zu verarbeiten und die Ergebnisse hier zu sehen.",
-    "configMessage": "Konfigurieren Sie Ihre Umgebung und führen Sie aus: npm run agent"
-  },
-  "sections": {
-    "recentIntelligence": "Aktuelle Erkenntnisse",
-    "upcomingMeetings": "Bevorstehende Besprechungen",
-    "activeProjects": "Aktive Projekte",
-    "companyGoals": "Unternehmensziele & Marktsignale"
+  "dashboard": {
+    "title": "Dashboard",
+    "stats": {
+      "todosExtracted": "TODOs Erfasst",
+      "decisionsMade": "Entscheidungen Getroffen",
+      "syncedToJira": "Mit Jira Synchronisiert",
+      "avgConfidence": "Durchschn. Konfidenz"
+    },
+    "emptyState": {
+      "title": "Noch keine Besprechungen verarbeitet",
+      "description": "Führen Sie den Agent aus, um Ihre letzte Microsoft Teams-Besprechung zu verarbeiten und die Ergebnisse hier zu sehen.",
+      "configMessage": "Konfigurieren Sie Ihre Umgebung und führen Sie aus: npm run agent"
+    },
+    "sections": {
+      "recentIntelligence": "Aktuelle Erkenntnisse",
+      "upcomingMeetings": "Bevorstehende Besprechungen",
+      "activeProjects": "Aktive Projekte",
+      "companyGoals": "Unternehmensziele & Marktsignale"
+    }
   }
 }

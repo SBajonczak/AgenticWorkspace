@@ -1,29 +1,31 @@
 {
-  "suggestions": {
-    "upcomingMeetings": {
-      "title": "Agent Suggestion",
-      "description": "I noticed you have a meeting scheduled for tomorrow that conflicts with another high-priority commitment. Would you like me to help reschedule?",
-      "explanation": "The agent monitors your calendar and proactively suggests scheduling optimizations based on meeting priorities, participant availability, and your typical working patterns."
+  "agent": {
+    "suggestions": {
+      "upcomingMeetings": {
+        "title": "Agent Suggestion",
+        "description": "I noticed you have a meeting scheduled for tomorrow that conflicts with another high-priority commitment. Would you like me to help reschedule?",
+        "explanation": "The agent monitors your calendar and proactively suggests scheduling optimizations based on meeting priorities, participant availability, and your typical working patterns."
+      },
+      "actionItems": {
+        "explanation": "Action items are automatically extracted from meeting transcripts using AI. The agent identifies concrete tasks with high confidence levels and can sync them to your project management tools."
+      },
+      "projectInsights": {
+        "explanation": "The agent tracks project mentions across meetings and correlates them with your task management system to provide real-time project health insights."
+      },
+      "goalAlignment": {
+        "explanation": "By analyzing company objectives and market signals, the agent helps ensure your daily work aligns with strategic priorities."
+      }
     },
-    "actionItems": {
-      "explanation": "Action items are automatically extracted from meeting transcripts using AI. The agent identifies concrete tasks with high confidence levels and can sync them to your project management tools."
+    "processing": {
+      "analyzing": "Analyzing meeting...",
+      "extracting": "Extracting action items...",
+      "syncing": "Syncing to Jira...",
+      "complete": "Processing complete"
     },
-    "projectInsights": {
-      "explanation": "The agent tracks project mentions across meetings and correlates them with your task management system to provide real-time project health insights."
-    },
-    "goalAlignment": {
-      "explanation": "By analyzing company objectives and market signals, the agent helps ensure your daily work aligns with strategic priorities."
+    "confidence": {
+      "high": "High confidence - explicitly mentioned in meeting",
+      "medium": "Medium confidence - inferred from discussion context",
+      "low": "Low confidence - possible action item, needs verification"
     }
-  },
-  "processing": {
-    "analyzing": "Analyzing meeting...",
-    "extracting": "Extracting action items...",
-    "syncing": "Syncing to Jira...",
-    "complete": "Processing complete"
-  },
-  "confidence": {
-    "high": "High confidence - explicitly mentioned in meeting",
-    "medium": "Medium confidence - inferred from discussion context",
-    "low": "Low confidence - possible action item, needs verification"
   }
 }

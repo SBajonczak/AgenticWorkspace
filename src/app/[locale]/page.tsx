@@ -5,7 +5,7 @@ import { Link } from '@/i18n/routing'
 import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
 
 export default function Home() {
-  const t = useTranslations()
+  const tCommon = useTranslations('common')
   
   return (
     <main className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
@@ -14,11 +14,11 @@ export default function Home() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 text-transparent bg-clip-text">
-              {t('common.brand.name')}
+              {tCommon('brand.name')}
             </Link>
             <nav className="flex gap-6 items-center">
               <Link href="/dashboard" className="text-gray-400 hover:text-white transition-colors">
-                {t('common.navigation.dashboard')}
+                {tCommon('navigation.dashboard')}
               </Link>
               <LanguageSwitcher />
             </nav>
@@ -31,7 +31,7 @@ export default function Home() {
           {/* Hero Section */}
           <div className="mb-12">
             <h1 className="text-6xl font-bold mb-6 bg-gradient-to-r from-purple-400 to-pink-400 text-transparent bg-clip-text">
-              {t('common.brand.name')}
+              {tCommon('brand.name')}
             </h1>
             <p className="text-2xl text-gray-300 mb-8">
               Your AI-powered workplace agent that transforms meetings into actionable outcomes
@@ -48,7 +48,7 @@ export default function Home() {
               href="/dashboard"
               className="px-8 py-4 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold text-lg transition-colors"
             >
-              {t('common.navigation.dashboard')}
+              {tCommon('navigation.dashboard')}
             </Link>
             <button
               onClick={() => {
@@ -56,7 +56,7 @@ export default function Home() {
               }}
               className="px-8 py-4 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-semibold text-lg transition-colors"
             >
-              {t('common.buttons.runAgent')}
+              {tCommon('buttons.runAgent')}
             </button>
           </div>
 

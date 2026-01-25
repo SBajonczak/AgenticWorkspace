@@ -1,29 +1,31 @@
 {
-  "navigation": {
-    "home": "Startseite",
-    "dashboard": "Dashboard",
-    "meetings": "Besprechungen"
-  },
-  "brand": {
-    "name": "Agentic Workplace"
-  },
-  "buttons": {
-    "viewDetails": "Details anzeigen",
-    "runAgent": "Agent ausführen",
-    "showOptions": "Optionen anzeigen",
-    "rescheduleAutomatically": "Automatisch verschieben"
-  },
-  "labels": {
-    "loading": "Lädt...",
-    "status": "Status",
-    "confidence": "Konfidenz",
-    "high": "Hoch",
-    "medium": "Mittel",
-    "low": "Niedrig",
-    "minutes": "Minuten",
-    "language": "Sprache"
-  },
-  "empty": {
-    "noData": "Keine Daten verfügbar"
+  "common": {
+    "navigation": {
+      "home": "Startseite",
+      "dashboard": "Dashboard",
+      "meetings": "Besprechungen"
+    },
+    "brand": {
+      "name": "Agentic Workplace"
+    },
+    "buttons": {
+      "viewDetails": "Details anzeigen",
+      "runAgent": "Agent ausführen",
+      "showOptions": "Optionen anzeigen",
+      "rescheduleAutomatically": "Automatisch verschieben"
+    },
+    "labels": {
+      "loading": "Lädt...",
+      "status": "Status",
+      "confidence": "Konfidenz",
+      "high": "Hoch",
+      "medium": "Mittel",
+      "low": "Niedrig",
+      "minutes": "Minuten",
+      "language": "Sprache"
+    },
+    "empty": {
+      "noData": "Keine Daten verfügbar"
+    }
   }
 }

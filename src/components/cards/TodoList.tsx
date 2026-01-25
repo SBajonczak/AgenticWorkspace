@@ -24,7 +24,8 @@ interface TodoListProps {
 }
 
 export default function TodoList({ todos }: TodoListProps) {
-  const t = useTranslations()
+  const tMeetings = useTranslations('meetings')
+  const tCommon = useTranslations('common')
   
   const getConfidenceColor = (confidence: number) => {
     if (confidence >= 0.85) return 'text-green-400'
@@ -33,9 +34,9 @@ export default function TodoList({ todos }: TodoListProps) {
   }
 
   const getConfidenceLabel = (confidence: number) => {
-    if (confidence >= 0.85) return t('common.labels.high')
-    if (confidence >= 0.7) return t('common.labels.medium')
-    return t('common.labels.low')
+    if (confidence >= 0.85) return tCommon('labels.high')
+    if (confidence >= 0.7) return tCommon('labels.medium')
+    return tCommon('labels.low')
   }
 
   return (
@@ -45,10 +46,10 @@ export default function TodoList({ todos }: TodoListProps) {
       transition={{ delay: 0.2 }}
       className="bg-gray-800/50 backdrop-blur rounded-2xl p-8 border border-gray-700"
     >
-      <h2 className="text-2xl font-bold text-white mb-6">{t('meetings.actionItems.title')}</h2>
+      <h2 className="text-2xl font-bold text-white mb-6">{tMeetings('actionItems.title')}</h2>
       
       {todos.length === 0 ? (
-        <p className="text-gray-400 text-center py-8">{t('meetings.actionItems.noItems')}</p>
+        <p className="text-gray-400 text-center py-8">{tMeetings('actionItems.noItems')}</p>
       ) : (
         <div className="space-y-4">
           {todos.map((todo, index) => (
@@ -92,12 +93,12 @@ export default function TodoList({ todos }: TodoListProps) {
                     </span>
                   )}
                   <span className="text-gray-500">
-                    {t('common.labels.status')}: <span className="text-gray-300 capitalize">{todo.status}</span>
+                    {tCommon('labels.status')}: <span className="text-gray-300 capitalize">{todo.status}</span>
                   </span>
                 </div>
 
                 {todo.jiraSync && todo.jiraSync.status === 'failed' && (
-                  <span className="text-red-400 text-xs">❌ {t('meetings.actionItems.jiraSyncFailed')}</span>
+                  <span className="text-red-400 text-xs">❌ {tMeetings('actionItems.jiraSyncFailed')}</span>
                 )}
               </div>
             </motion.div>

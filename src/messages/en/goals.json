@@ -1,18 +1,20 @@
 {
-  "title": "Company Goals & Market Signals",
-  "labels": {
-    "goal": "Goal",
-    "marketSignal": "Market Signal",
-    "agentInsight": "Agent Insight",
-    "progress": "Progress",
-    "deadline": "Deadline"
-  },
-  "insights": {
-    "analyzing": "Analyzing market trends and company objectives...",
-    "recommendation": "Recommendation"
-  },
-  "emptyState": {
-    "title": "No goals tracked yet",
-    "description": "The agent will identify strategic goals from executive meetings."
+  "goals": {
+    "title": "Company Goals & Market Signals",
+    "labels": {
+      "goal": "Goal",
+      "marketSignal": "Market Signal",
+      "agentInsight": "Agent Insight",
+      "progress": "Progress",
+      "deadline": "Deadline"
+    },
+    "insights": {
+      "analyzing": "Analyzing market trends and company objectives...",
+      "recommendation": "Recommendation"
+    },
+    "emptyState": {
+      "title": "No goals tracked yet",
+      "description": "The agent will identify strategic goals from executive meetings."
+    }
   }
 }

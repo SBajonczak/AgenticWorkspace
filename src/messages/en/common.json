@@ -1,29 +1,31 @@
 {
-  "navigation": {
-    "home": "Home",
-    "dashboard": "Dashboard",
-    "meetings": "Meetings"
-  },
-  "brand": {
-    "name": "Agentic Workplace"
-  },
-  "buttons": {
-    "viewDetails": "View Details",
-    "runAgent": "Run Agent",
-    "showOptions": "Show Options",
-    "rescheduleAutomatically": "Reschedule Automatically"
-  },
-  "labels": {
-    "loading": "Loading...",
-    "status": "Status",
-    "confidence": "Confidence",
-    "high": "High",
-    "medium": "Medium",
-    "low": "Low",
-    "minutes": "minutes",
-    "language": "Language"
-  },
-  "empty": {
-    "noData": "No data available"
+  "common": {
+    "navigation": {
+      "home": "Home",
+      "dashboard": "Dashboard",
+      "meetings": "Meetings"
+    },
+    "brand": {
+      "name": "Agentic Workplace"
+    },
+    "buttons": {
+      "viewDetails": "View Details",
+      "runAgent": "Run Agent",
+      "showOptions": "Show Options",
+      "rescheduleAutomatically": "Reschedule Automatically"
+    },
+    "labels": {
+      "loading": "Loading...",
+      "status": "Status",
+      "confidence": "Confidence",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low",
+      "minutes": "minutes",
+      "language": "Language"
+    },
+    "empty": {
+      "noData": "No data available"
+    }
   }
 }

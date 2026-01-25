@@ -1,25 +1,27 @@
 {
-  "title": "Aktive Projekte",
-  "labels": {
-    "openActions": "Offene Aktionen",
-    "viewProjectBrief": "Projektübersicht anzeigen",
-    "status": "Status",
-    "priority": "Priorität",
-    "team": "Team"
-  },
-  "status": {
-    "active": "Aktiv",
-    "onHold": "Pausiert",
-    "completed": "Abgeschlossen",
-    "planning": "Planung"
-  },
-  "priority": {
-    "high": "Hoch",
-    "medium": "Mittel",
-    "low": "Niedrig"
-  },
-  "emptyState": {
-    "title": "Keine aktiven Projekte",
-    "description": "Beginnen Sie mit der Projektverfolgung, indem Sie den Agent auf Ihre Besprechungen anwenden."
+  "projects": {
+    "title": "Aktive Projekte",
+    "labels": {
+      "openActions": "Offene Aktionen",
+      "viewProjectBrief": "Projektübersicht anzeigen",
+      "status": "Status",
+      "priority": "Priorität",
+      "team": "Team"
+    },
+    "status": {
+      "active": "Aktiv",
+      "onHold": "Pausiert",
+      "completed": "Abgeschlossen",
+      "planning": "Planung"
+    },
+    "priority": {
+      "high": "Hoch",
+      "medium": "Mittel",
+      "low": "Niedrig"
+    },
+    "emptyState": {
+      "title": "Keine aktiven Projekte",
+      "description": "Beginnen Sie mit der Projektverfolgung, indem Sie den Agent auf Ihre Besprechungen anwenden."
+    }
   }
 }

@@ -39,7 +39,8 @@ interface JiraSync {
 }
 
 export default function DashboardPage() {
-  const t = useTranslations()
+  const tCommon = useTranslations('common')
+  const tDashboard = useTranslations('dashboard')
   const [meeting, setMeeting] = useState<Meeting | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -64,7 +65,7 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center">
-        <div className="text-white text-2xl">{t('common.labels.loading')}</div>
+        <div className="text-white text-2xl">{tCommon('labels.loading')}</div>
       </div>
     )
   }
@@ -76,14 +77,14 @@ export default function DashboardPage() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 text-transparent bg-clip-text">
-              {t('common.brand.name')}
+              {tCommon('brand.name')}
             </Link>
             <nav className="flex gap-6 items-center">
               <Link href="/dashboard" className="text-purple-400 font-semibold">
-                {t('common.navigation.dashboard')}
+                {tCommon('navigation.dashboard')}
               </Link>
               <Link href="/" className="text-gray-400 hover:text-white transition-colors">
-                {t('common.navigation.home')}
+                {tCommon('navigation.home')}
               </Link>
               <LanguageSwitcher />
             </nav>
@@ -100,15 +101,15 @@ export default function DashboardPage() {
             className="text-center py-16"
           >
             <div className="text-6xl mb-4">🤖</div>
-            <h2 className="text-3xl font-bold text-white mb-4">{t('dashboard.emptyState.title')}</h2>
+            <h2 className="text-3xl font-bold text-white mb-4">{tDashboard('emptyState.title')}</h2>
             <p className="text-gray-400 mb-8 max-w-md mx-auto">
-              {t('dashboard.emptyState.description')}
+              {tDashboard('emptyState.description')}
             </p>
             <button
-              onClick={() => alert(t('dashboard.emptyState.configMessage'))}
+              onClick={() => alert(tDashboard('emptyState.configMessage'))}
               className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold transition-colors"
             >
-              {t('common.buttons.runAgent')}
+              {tCommon('buttons.runAgent')}
             </button>
           </motion.div>
         ) : (
@@ -123,25 +124,25 @@ export default function DashboardPage() {
                 <div className="text-3xl font-bold text-white">
                   {meeting.todos.length}
                 </div>
-                <div className="text-purple-200 text-sm">{t('dashboard.stats.todosExtracted')}</div>
+                <div className="text-purple-200 text-sm">{tDashboard('stats.todosExtracted')}</div>
               </div>
               <div className="bg-gradient-to-br from-pink-600 to-pink-800 p-6 rounded-xl">
                 <div className="text-3xl font-bold text-white">
                   {JSON.parse(meeting.decisions).length}
                 </div>
-                <div className="text-pink-200 text-sm">{t('dashboard.stats.decisionsMade')}</div>
+                <div className="text-pink-200 text-sm">{tDashboard('stats.decisionsMade')}</div>
               </div>
               <div className="bg-gradient-to-br from-blue-600 to-blue-800 p-6 rounded-xl">
                 <div className="text-3xl font-bold text-white">
                   {meeting.todos.filter(t => t.jiraSync?.status === 'synced').length}
                 </div>
-                <div className="text-blue-200 text-sm">{t('dashboard.stats.syncedToJira')}</div>
+                <div className="text-blue-200 text-sm">{tDashboard('stats.syncedToJira')}</div>
               </div>
               <div className="bg-gradient-to-br from-green-600 to-green-800 p-6 rounded-xl">
                 <div className="text-3xl font-bold text-white">
                   {(meeting.todos.reduce((sum, t) => sum + t.confidence, 0) / meeting.todos.length * 100).toFixed(0)}%
                 </div>
-                <div className="text-green-200 text-sm">{t('dashboard.stats.avgConfidence')}</div>
+                <div className="text-green-200 text-sm">{tDashboard('stats.avgConfidence')}</div>
               </div>
             </motion.div>
 
