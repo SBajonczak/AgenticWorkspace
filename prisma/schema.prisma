@@ -1,0 +1,62 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Meeting {
+  id            String    @id @default(uuid())
+  meetingId     String    @unique // Microsoft Teams meeting ID
+  title         String
+  organizer     String
+  organizerEmail String?
+  startTime     DateTime
+  endTime       DateTime
+  transcript    String?   // Full transcript
+  summary       String?   // AI-generated summary
+  decisions     String?   // JSON array of decisions
+  processedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  todos         Todo[]
+}
+
+model Todo {
+  id            String    @id @default(uuid())
+  meetingId     String
+  title         String
+  description   String
+  assigneeHint  String?
+  confidence    Float
+  status        String    @default("pending") // pending, in_progress, done
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  meeting       Meeting   @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  jiraSync      JiraSync?
+  
+  @@index([meetingId])
+}
+
+model JiraSync {
+  id            String    @id @default(uuid())
+  todoId        String    @unique
+  jiraIssueKey  String?   // e.g., "PROJ-123"
+  jiraIssueId   String?
+  status        String    @default("pending") // pending, synced, failed
+  error         String?
+  syncedAt      DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  todo          Todo      @relation(fields: [todoId], references: [id], onDelete: Cascade)
+  
+  @@index([todoId])
+}
