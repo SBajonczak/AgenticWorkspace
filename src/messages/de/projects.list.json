@@ -1,0 +1,30 @@
+{
+  "projects": {
+    "list": {
+      "title": "Aktive Projekte",
+      "subtitle": "Laufende Initiativen und Fortschritt",
+      "filters": {
+        "all": "Alle",
+        "active": "Aktiv",
+        "on_hold": "Pausiert",
+        "completed": "Abgeschlossen"
+      },
+      "card": {
+        "owner": "Verantwortlich",
+        "progress": "Fortschritt",
+        "openActions": "offene Aktion",
+        "openActions_plural": "offene Aktionen",
+        "targetDate": "Zieldatum",
+        "team": "Team",
+        "viewDetails": "Details anzeigen"
+      },
+      "status": {
+        "active": "Aktiv",
+        "on_hold": "Pausiert",
+        "completed": "Abgeschlossen"
+      },
+      "empty": "Keine Projekte gefunden",
+      "aiSummary": "KI-Zusammenfassung"
+    }
+  }
+}

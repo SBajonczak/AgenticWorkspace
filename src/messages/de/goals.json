@@ -1,20 +1,50 @@
 {
   "goals": {
     "title": "Unternehmensziele & Marktsignale",
+    "subtitle": "Strategische Ausrichtung und Marktintelligenz",
     "labels": {
       "goal": "Ziel",
       "marketSignal": "Marktsignal",
-      "agentInsight": "Agent-Erkenntnis",
+      "agentInsight": "Agenten-Einsicht",
       "progress": "Fortschritt",
-      "deadline": "Frist"
+      "deadline": "Frist",
+      "owner": "Verantwortlich",
+      "category": "Kategorie",
+      "relatedProjects": "Verbundene Projekte"
+    },
+    "categories": {
+      "revenue": "Umsatz",
+      "product": "Produkt",
+      "customer": "Kunde",
+      "operational": "Betrieblich"
+    },
+    "signals": {
+      "title": "Marktsignale",
+      "types": {
+        "competitor": "Wettbewerber",
+        "trend": "Markttrend",
+        "regulation": "Regulierung",
+        "technology": "Technologie"
+      },
+      "impact": {
+        "high": "Hohe Auswirkung",
+        "medium": "Mittlere Auswirkung",
+        "low": "Geringe Auswirkung"
+      },
+      "source": "Quelle"
+    },
+    "metrics": {
+      "current": "Aktuell",
+      "target": "Ziel"
     },
     "insights": {
       "analyzing": "Analysiere Markttrends und Unternehmensziele...",
-      "recommendation": "Empfehlung"
+      "recommendation": "Agentenempfehlung"
     },
     "emptyState": {
-      "title": "Noch keine Ziele erfasst",
-      "description": "Der Agent wird strategische Ziele aus Führungsbesprechungen identifizieren."
+      "title": "Noch keine Ziele verfolgt",
+      "description": "Der Agent wird strategische Ziele aus Executive-Besprechungen identifizieren.",
+      "noSignals": "Keine Marktsignale erkannt"
     }
   }
 }

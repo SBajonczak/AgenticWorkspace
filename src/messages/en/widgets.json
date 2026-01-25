@@ -1,0 +1,38 @@
+{
+  "widgets": {
+    "recentIntelligence": {
+      "title": "Recent Intelligence",
+      "subtitle": "Latest processed meetings",
+      "viewAll": "View all meetings",
+      "noMeetings": "No meetings processed yet",
+      "actionCount": "action",
+      "actionCount_plural": "actions"
+    },
+    "upcomingMeetings": {
+      "title": "Upcoming Meetings",
+      "subtitle": "Your schedule",
+      "viewSchedule": "View full schedule",
+      "noMeetings": "No upcoming meetings",
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "in": "in"
+    },
+    "activeProjects": {
+      "title": "Active Projects",
+      "subtitle": "Current initiatives",
+      "viewAll": "View all projects",
+      "noProjects": "No active projects",
+      "openActions": "open action",
+      "openActions_plural": "open actions",
+      "progress": "progress"
+    },
+    "companyDirection": {
+      "title": "Company Goals & Market Signals",
+      "subtitle": "Strategic overview",
+      "viewDetails": "View details",
+      "goals": "Active Goals",
+      "signals": "Market Signals",
+      "highImpact": "High Impact"
+    }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "meetings": {
+    "list": {
+      "title": "Alle Besprechungen",
+      "subtitle": "Vollständige Besprechungshistorie",
+      "filters": {
+        "all": "Alle",
+        "completed": "Abgeschlossen",
+        "upcoming": "Bevorstehend"
+      },
+      "table": {
+        "meeting": "Besprechung",
+        "date": "Datum",
+        "organizer": "Organisator",
+        "status": "Status",
+        "actions": "Aktionen"
+      },
+      "status": {
+        "completed": "Abgeschlossen",
+        "upcoming": "Bevorstehend",
+        "cancelled": "Abgesagt"
+      },
+      "empty": "Keine Besprechungen gefunden",
+      "actionCount": "Aktion",
+      "actionCount_plural": "Aktionen"
+    }
+  }
+}

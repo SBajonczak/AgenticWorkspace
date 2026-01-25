@@ -1,0 +1,49 @@
+{
+  "projects": {
+    "detail": {
+      "backToList": "Back to projects",
+      "tabs": {
+        "overview": "Overview",
+        "updates": "Updates",
+        "meetings": "Related Meetings",
+        "actions": "Open Actions"
+      },
+      "overview": {
+        "title": "Project Briefing",
+        "aiSummary": "AI Analysis",
+        "description": "Description",
+        "metadata": {
+          "owner": "Owner",
+          "status": "Status",
+          "startDate": "Start Date",
+          "targetDate": "Target Date",
+          "progress": "Progress",
+          "team": "Team Members"
+        }
+      },
+      "updates": {
+        "title": "Recent Updates",
+        "types": {
+          "progress": "Progress Update",
+          "blocker": "Blocker",
+          "milestone": "Milestone"
+        },
+        "noUpdates": "No updates yet"
+      },
+      "meetings": {
+        "title": "Related Meetings",
+        "noMeetings": "No related meetings"
+      },
+      "actions": {
+        "title": "Open Actions",
+        "from": "from",
+        "noActions": "No open actions"
+      },
+      "status": {
+        "active": "Active",
+        "on_hold": "On Hold",
+        "completed": "Completed"
+      }
+    }
+  }
+}

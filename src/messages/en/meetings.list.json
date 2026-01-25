@@ -1,0 +1,28 @@
+{
+  "meetings": {
+    "list": {
+      "title": "All Meetings",
+      "subtitle": "Complete meeting history",
+      "filters": {
+        "all": "All",
+        "completed": "Completed",
+        "upcoming": "Upcoming"
+      },
+      "table": {
+        "meeting": "Meeting",
+        "date": "Date",
+        "organizer": "Organizer",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "status": {
+        "completed": "Completed",
+        "upcoming": "Upcoming",
+        "cancelled": "Cancelled"
+      },
+      "empty": "No meetings found",
+      "actionCount": "action",
+      "actionCount_plural": "actions"
+    }
+  }
+}
