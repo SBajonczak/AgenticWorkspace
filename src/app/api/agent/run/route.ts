@@ -9,8 +9,13 @@ export async function POST(request: Request) {
     const runner = new AgentRunner(dryRun)
     const result = await runner.run()
 
+    // Handle both single result and array of results
+    const success = Array.isArray(result) 
+      ? result.every(r => r.success)
+      : result.success
+
     return NextResponse.json(result, {
-      status: result.success ? 200 : 500,
+      status: success ? 200 : 500,
     })
   } catch (error) {
     console.error('API error:', error)
