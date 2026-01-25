@@ -1,7 +1,8 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import Link from 'next/link'
+import { useTranslations } from 'next-intl'
+import { Link } from '@/i18n/routing'
 
 interface Meeting {
   id: string
@@ -19,6 +20,7 @@ interface MeetingSummaryCardProps {
 }
 
 export default function MeetingSummaryCard({ meeting }: MeetingSummaryCardProps) {
+  const t = useTranslations('meetings')
   const decisions = JSON.parse(meeting.decisions)
   const startTime = new Date(meeting.startTime)
   const endTime = new Date(meeting.endTime)
@@ -37,7 +39,7 @@ export default function MeetingSummaryCard({ meeting }: MeetingSummaryCardProps)
           <div className="flex items-center gap-4 text-gray-400">
             <span>👤 {meeting.organizer}</span>
             <span>•</span>
-            <span>⏱️ {duration} minutes</span>
+            <span>⏱️ {duration} {t('common.labels.minutes', { ns: 'common' })}</span>
             <span>•</span>
             <span>{startTime.toLocaleDateString()}</span>
           </div>
@@ -46,20 +48,20 @@ export default function MeetingSummaryCard({ meeting }: MeetingSummaryCardProps)
           href={`/meetings/${meeting.id}`}
           className="text-purple-400 hover:text-purple-300 transition-colors"
         >
-          View Details →
+          {t('common.buttons.viewDetails', { ns: 'common' })} →
         </Link>
       </div>
 
       {/* Summary */}
       <div className="mb-6">
-        <h3 className="text-lg font-semibold text-white mb-3">Executive Summary</h3>
+        <h3 className="text-lg font-semibold text-white mb-3">{t('summary.title')}</h3>
         <p className="text-gray-300 leading-relaxed">{meeting.summary}</p>
       </div>
 
       {/* Decisions */}
       {decisions.length > 0 && (
         <div>
-          <h3 className="text-lg font-semibold text-white mb-3">Key Decisions</h3>
+          <h3 className="text-lg font-semibold text-white mb-3">{t('summary.decisions')}</h3>
           <ul className="space-y-2">
             {decisions.map((decision: string, index: number) => (
               <motion.li
