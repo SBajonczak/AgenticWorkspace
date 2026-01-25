@@ -14,9 +14,15 @@ export default getRequestConfig(async ({ requestLocale }) => {
     ...(await import(`@/messages/${locale}/common.json`)).default,
     ...(await import(`@/messages/${locale}/dashboard.json`)).default,
     ...(await import(`@/messages/${locale}/meetings.json`)).default,
+    ...(await import(`@/messages/${locale}/meetings.list.json`)).default,
+    ...(await import(`@/messages/${locale}/meetings.detail.json`)).default,
     ...(await import(`@/messages/${locale}/projects.json`)).default,
+    ...(await import(`@/messages/${locale}/projects.list.json`)).default,
+    ...(await import(`@/messages/${locale}/projects.detail.json`)).default,
     ...(await import(`@/messages/${locale}/goals.json`)).default,
     ...(await import(`@/messages/${locale}/agent.json`)).default,
+    ...(await import(`@/messages/${locale}/widgets.json`)).default,
+    ...(await import(`@/messages/${locale}/schedule.json`)).default,
   };
 
   return {
