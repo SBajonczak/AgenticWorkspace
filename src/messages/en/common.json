@@ -27,6 +27,25 @@
     "empty": {
       "noData": "No data available"
     },
+    "greeting": {
+      "morning": "Good morning",
+      "day": "Good day",
+      "evening": "Good evening"
+    },
+    "weather": {
+      "conditions": {
+        "sunny": "Sunny",
+        "cloudy": "Cloudy",
+        "rainy": "Rainy",
+        "snowy": "Snowy",
+        "clear": "Clear",
+        "partly_cloudy": "Partly Cloudy"
+      }
+    },
+    "agentSummary": {
+      "yesterday": "Yesterday, {meetingCount} {meetingCount, plural, one {meeting was} other {meetings were}} processed and {actionCount} {actionCount, plural, one {action item was} other {action items were}} identified.",
+      "today": "Today, you have {upcomingCount} {upcomingCount, plural, one {upcoming meeting} other {upcoming meetings}}."
+    },
     "home": {
       "hero": {
         "subtitle": "Your AI-powered workplace agent that transforms meetings into actionable outcomes",
