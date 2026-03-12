@@ -21,11 +21,14 @@ model Meeting {
   transcript    String?   // Full transcript
   summary       String?   // AI-generated summary
   decisions     String?   // JSON array of decisions
+  participants  String?   // JSON array of attendee emails
   processedAt   DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  
-  todos         Todo[]
+
+  todos           Todo[]
+  minutes         MeetingMinutes[]
+  projectStatuses ProjectStatus[]
 }
 
 model Todo {
@@ -35,13 +38,15 @@ model Todo {
   description   String
   assigneeHint  String?
   confidence    Float
+  priority      String    @default("medium") // high, medium, low
+  dueDate       DateTime?
   status        String    @default("pending") // pending, in_progress, done
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  
+
   meeting       Meeting   @relation(fields: [meetingId], references: [id], onDelete: Cascade)
   jiraSync      JiraSync?
-  
+
   @@index([meetingId])
 }
 
@@ -55,8 +60,87 @@ model JiraSync {
   syncedAt      DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  
+
   todo          Todo      @relation(fields: [todoId], references: [id], onDelete: Cascade)
-  
+
   @@index([todoId])
+}
+
+model MeetingMinutes {
+  id        String   @id @default(uuid())
+  meetingId String
+  language  String   // 'de', 'en', etc.
+  content   String   // Markdown formatted minutes
+  createdAt DateTime @default(now())
+
+  meeting   Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  @@unique([meetingId, language])
+  @@index([meetingId])
+}
+
+model ProjectStatus {
+  id          String   @id @default(uuid())
+  meetingId   String
+  projectName String
+  status      String   // 'on_track' | 'at_risk' | 'blocked' | 'completed' | 'in_progress'
+  summary     String
+  createdAt   DateTime @default(now())
+
+  meeting     Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  @@index([meetingId])
+}
+
+// NextAuth.js models
+model User {
+  id            String    @id @default(uuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+}
+
+model Account {
+  id                 String  @id @default(uuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?
+  access_token       String?
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user         User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
 }

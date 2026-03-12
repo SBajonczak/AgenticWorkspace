@@ -1,0 +1,12 @@
+# Copy this file to terraform.tfvars and fill in your values
+# NEVER commit terraform.tfvars to git (it's in .gitignore)
+
+azure_subscription_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+azure_tenant_id       = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+# Optional overrides (defaults are usually fine):
+# resource_group_name    = "rg-agentic-workspace"
+# location               = "westeurope"
+# openai_account_name    = "oai-agentic-workspace"
+# openai_deployment_name = "gpt-4o-mini"
+# openai_capacity        = 30

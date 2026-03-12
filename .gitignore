@@ -42,3 +42,10 @@ prisma/migrations
 
 # Token cache
 .token-cache
+
+# Terraform – sensitive state and var files
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.backup
+terraform/.terraform.lock.hcl
+terraform/terraform.tfvars

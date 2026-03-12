@@ -1,6 +1,5 @@
 import { Client } from '@microsoft/microsoft-graph-client'
 import 'isomorphic-fetch'
-import { id } from 'zod/v4/locales'
 
 export interface Meeting {
   id: string
@@ -23,6 +22,7 @@ export interface Meeting {
   isOnlineMeeting?: boolean
   onlineMeetingUrl?: string
   onlineMeeting?: OnlineMeeting
+  participants?: string[]  // Array of attendee emails (including organizer)
 }
 
 export class OnlineMeeting {
@@ -57,7 +57,7 @@ export class MeetingsClient {
           startDateTime: startDateTime,
           endDateTime: endDateTime,
         })
-        .select('subject,id,organizer,start,end,isOnlineMeeting,onlineMeetingUrl')
+        .select('subject,id,organizer,start,end,isOnlineMeeting,onlineMeetingUrl,attendees')
         .top(limit)
         .orderby('start/dateTime DESC')
         .get()
@@ -103,11 +103,26 @@ export class MeetingsClient {
           } catch (error) {
             console.error(`Error fetching online meeting by JoinWebUrl for "${meeting.subject}":`, error)
           }
+          // Collect participant emails from attendees + organizer
+          const attendeeEmails: string[] = []
+          if (meeting.organizer?.emailAddress?.address) {
+            attendeeEmails.push(meeting.organizer.emailAddress.address.toLowerCase())
+          }
+          if (Array.isArray((meeting as any).attendees)) {
+            for (const attendee of (meeting as any).attendees) {
+              const email = attendee?.emailAddress?.address
+              if (email && !attendeeEmails.includes(email.toLowerCase())) {
+                attendeeEmails.push(email.toLowerCase())
+              }
+            }
+          }
+
           return {
             ...meeting,
-            id:onlineMeetingId,
+            id: onlineMeetingId,
             joinWebUrl: meeting.onlineMeetingUrl || undefined,
-            onlineMeetingId:onlineMeetingId, // Neue Property für Transcript-Abruf
+            onlineMeetingId: onlineMeetingId,
+            participants: attendeeEmails,
           }
         })
       )

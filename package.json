@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    
     "dev": "next dev",
     "build": "prisma generate && next build",
     "start": "next start",
@@ -14,16 +13,23 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "tsx prisma/seed.ts",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "prisma studio",
+    "worker": "tsx src/worker/index.ts",
+    "worker:dev": "tsx watch src/worker/index.ts"
   },
   "dependencies": {
+    "@auth/prisma-adapter": "^2.11.1",
     "@azure/identity": "^4.13.0",
     "@microsoft/microsoft-graph-client": "^3.0.7",
     "@prisma/client": "^5.8.0",
+    "@types/node-cron": "^3.0.11",
+    "dotenv": "^17.3.1",
     "framer-motion": "^10.18.0",
     "isomorphic-fetch": "^3.0.0",
     "next": "^14.2.35",
+    "next-auth": "^5.0.0-beta.30",
     "next-intl": "^4.7.0",
+    "node-cron": "^4.2.1",
     "openai": "^4.26.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
