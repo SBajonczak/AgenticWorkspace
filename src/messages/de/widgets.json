@@ -3,6 +3,8 @@
     "recentIntelligence": {
       "title": "Aktuelle Erkenntnisse",
       "subtitle": "Zuletzt verarbeitete Besprechungen",
+      "live": "Live",
+      "updatedAt": "Aktualisiert {time}",
       "viewAll": "Alle Besprechungen anzeigen",
       "noMeetings": "Noch keine Besprechungen verarbeitet",
       "actionCount": "Aktion",
@@ -11,6 +13,7 @@
     "upcomingMeetings": {
       "title": "Bevorstehende Besprechungen",
       "subtitle": "Ihr Zeitplan",
+      "updatedAt": "Aktualisiert {time}",
       "viewSchedule": "Vollständigen Zeitplan anzeigen",
       "noMeetings": "Keine bevorstehenden Besprechungen",
       "today": "Heute",

@@ -17,6 +17,29 @@
       "upcomingMeetings": "Upcoming Meetings",
       "activeProjects": "Active Projects",
       "companyGoals": "Company Goals & Market Signals"
+    },
+    "settingsPage": {
+      "title": "Agent Status & Logs",
+      "subtitle": "Detailed status for meeting processing",
+      "backToDashboard": "← Back to Dashboard",
+      "loadError": "Failed to load agent status.",
+      "status": {
+        "running": "Processing in progress",
+        "idle": "No active processing job",
+        "nextRun": "Next run",
+        "lastRun": "Last run",
+        "lastSuccess": "Last successful run",
+        "consent": "Microsoft consent required",
+        "refreshToken": "Refresh token available",
+        "unknown": "Unknown",
+        "yes": "Yes",
+        "no": "No"
+      },
+      "logs": {
+        "title": "Latest error",
+        "empty": "No error stored"
+      },
+      "updatedAt": "Updated: {time}"
     }
   }
 }

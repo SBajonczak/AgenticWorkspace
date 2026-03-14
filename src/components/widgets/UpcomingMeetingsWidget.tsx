@@ -7,10 +7,19 @@ import { MeetingListItem } from '@/types/meetings'
 
 interface UpcomingMeetingsWidgetProps {
   meetings: MeetingListItem[]
+  lastUpdatedAt: string | null
 }
 
-export default function UpcomingMeetingsWidget({ meetings }: UpcomingMeetingsWidgetProps) {
+export default function UpcomingMeetingsWidget({ meetings, lastUpdatedAt }: UpcomingMeetingsWidgetProps) {
   const t = useTranslations('widgets.upcomingMeetings')
+  const lastUpdatedLabel = lastUpdatedAt
+    ? t('updatedAt', {
+        time: new Date(lastUpdatedAt).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+      })
+    : null
 
   const getTimeUntil = (startTime: string): string => {
     const start = new Date(startTime)
@@ -35,6 +44,7 @@ export default function UpcomingMeetingsWidget({ meetings }: UpcomingMeetingsWid
         <div>
           <h3 className="text-xl font-bold text-white mb-1">{t('title')}</h3>
           <p className="text-sm text-gray-400">{t('subtitle')}</p>
+          {lastUpdatedLabel && <p className="text-[11px] text-gray-500 mt-1">{lastUpdatedLabel}</p>}
         </div>
         <span className="text-3xl">📅</span>
       </div>

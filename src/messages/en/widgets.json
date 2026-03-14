@@ -3,6 +3,8 @@
     "recentIntelligence": {
       "title": "Recent Intelligence",
       "subtitle": "Latest processed meetings",
+      "live": "Live",
+      "updatedAt": "Updated {time}",
       "viewAll": "View all meetings",
       "noMeetings": "No meetings processed yet",
       "actionCount": "action",
@@ -11,6 +13,7 @@
     "upcomingMeetings": {
       "title": "Upcoming Meetings",
       "subtitle": "Your schedule",
+      "updatedAt": "Updated {time}",
       "viewSchedule": "View full schedule",
       "noMeetings": "No upcoming meetings",
       "today": "Today",

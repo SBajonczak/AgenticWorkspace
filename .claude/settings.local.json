@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls /d/sourcen/AgenticWorkspace/src/app/[locale]/)",
+      "Bash(ls /d/sourcen/AgenticWorkspace/src/app/[locale]/meetings/)",
+      "Bash(ls /d/sourcen/AgenticWorkspace/src/app/[locale]/projects/)",
+      "Bash(ls /d/sourcen/AgenticWorkspace/src/app/[locale]/schedule/)",
+      "Bash(ls /d/sourcen/AgenticWorkspace/src/app/[locale]/goals/)"
+    ]
+  }
+}

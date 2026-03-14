@@ -3,7 +3,8 @@
     "navigation": {
       "home": "Home",
       "dashboard": "Dashboard",
-      "meetings": "Meetings"
+      "meetings": "Meetings",
+      "settings": "Settings"
     },
     "brand": {
       "name": "Agentic Workplace"

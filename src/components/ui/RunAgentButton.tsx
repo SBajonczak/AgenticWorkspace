@@ -24,6 +24,10 @@ export default function RunAgentButton() {
     lastError: string | null
   } | null>(null)
 
+  const lastUpdatedLabel = status?.lastRunAt
+    ? `Zuletzt aktualisiert: ${new Date(status.lastRunAt).toLocaleString()}`
+    : null
+
   async function loadStatus() {
     try {
       const res = await fetch('/api/agent/status', {
@@ -121,33 +125,7 @@ export default function RunAgentButton() {
         </div>
       )}
 
-      {status && (
-        <div className="rounded-lg bg-slate-900/40 border border-slate-700/50 px-4 py-3 text-sm text-slate-200 space-y-1">
-          <p>
-            <span className="font-semibold">Status:</span>{' '}
-            {status.isProcessing ? 'Meetings werden gerade verarbeitet' : 'Kein laufender Verarbeitungsjob'}
-          </p>
-          <p>
-            <span className="font-semibold">Nächster Lauf:</span>{' '}
-            {status.nextRunAt ? new Date(status.nextRunAt).toLocaleString() : 'Noch nicht geplant'}
-          </p>
-          {status.lastRunAt && (
-            <p>
-              <span className="font-semibold">Letzter Lauf:</span> {new Date(status.lastRunAt).toLocaleString()}
-            </p>
-          )}
-          {status.consentRequired && (
-            <p className="text-amber-300">
-              Microsoft-Consent fehlt. Bitte neu anmelden und Zugriff bestätigen.
-            </p>
-          )}
-          {status.lastError && !status.isProcessing && (
-            <p className="text-amber-300">
-              Letzter Fehler: {status.lastError}
-            </p>
-          )}
-        </div>
-      )}
+      {lastUpdatedLabel && <p className="text-[11px] text-gray-500">{lastUpdatedLabel}</p>}
 
       {results && (
         <div className="space-y-2">

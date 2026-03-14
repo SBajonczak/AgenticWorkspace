@@ -1,10 +1,11 @@
 'use client'
 
 import { useTranslations } from 'next-intl'
-import { User, DailyAgentStats } from '@/mocks'
+import { DailyAgentStats } from '@/mocks'
+import { DashboardUserProfile } from '@/types/user'
 
 interface GreetingSummaryProps {
-  user: User
+  user: DashboardUserProfile
   stats: DailyAgentStats
 }
 
@@ -24,13 +25,13 @@ export default function GreetingSummary({ user, stats }: GreetingSummaryProps) {
   }
 
   const greeting = getTimeBasedGreeting()
-  const firstName = user.name.split(' ')[0]
+  const displayName = user.name?.trim()
 
   return (
     <div className="space-y-3">
       {/* Greeting */}
       <h2 className="text-3xl font-bold text-white">
-        {greeting}, {firstName}
+        {displayName ? `${greeting}, ${displayName}` : greeting}
       </h2>
       
       {/* Agent Summary */}

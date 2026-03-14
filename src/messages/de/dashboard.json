@@ -17,6 +17,29 @@
       "upcomingMeetings": "Bevorstehende Besprechungen",
       "activeProjects": "Aktive Projekte",
       "companyGoals": "Unternehmensziele & Marktsignale"
+    },
+    "settingsPage": {
+      "title": "Agent-Status & Logs",
+      "subtitle": "Detaillierter Status der Meeting-Verarbeitung",
+      "backToDashboard": "← Zurück zum Dashboard",
+      "loadError": "Agent-Status konnte nicht geladen werden.",
+      "status": {
+        "running": "Verarbeitung läuft",
+        "idle": "Kein laufender Verarbeitungsjob",
+        "nextRun": "Nächster Lauf",
+        "lastRun": "Letzter Lauf",
+        "lastSuccess": "Letzter erfolgreicher Lauf",
+        "consent": "Microsoft-Consent erforderlich",
+        "refreshToken": "Refresh Token verfügbar",
+        "unknown": "Unbekannt",
+        "yes": "Ja",
+        "no": "Nein"
+      },
+      "logs": {
+        "title": "Letzte Fehlermeldung",
+        "empty": "Keine Fehlermeldung gespeichert"
+      },
+      "updatedAt": "Aktualisiert: {time}"
     }
   }
 }

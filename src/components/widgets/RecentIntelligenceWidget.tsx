@@ -7,11 +7,19 @@ import { MeetingListItem } from '@/types/meetings'
 
 interface RecentIntelligenceWidgetProps {
   meetings: MeetingListItem[]
+  lastUpdatedAt: string | null
 }
 
-export default function RecentIntelligenceWidget({ meetings }: RecentIntelligenceWidgetProps) {
+export default function RecentIntelligenceWidget({ meetings, lastUpdatedAt }: RecentIntelligenceWidgetProps) {
   const t = useTranslations('widgets.recentIntelligence')
-  const tCommon = useTranslations('common')
+  const lastUpdatedLabel = lastUpdatedAt
+    ? t('updatedAt', {
+        time: new Date(lastUpdatedAt).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+      })
+    : null
 
   return (
     <motion.div
@@ -24,7 +32,14 @@ export default function RecentIntelligenceWidget({ meetings }: RecentIntelligenc
           <h3 className="text-xl font-bold text-white mb-1">{t('title')}</h3>
           <p className="text-sm text-gray-400">{t('subtitle')}</p>
         </div>
-        <span className="text-3xl">🧠</span>
+        <div className="flex flex-col items-end gap-1">
+          <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/40 bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-emerald-300">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-300" />
+            {t('live')}
+          </span>
+          {lastUpdatedLabel && <span className="text-[11px] text-gray-500">{lastUpdatedLabel}</span>}
+          <span className="text-3xl">🧠</span>
+        </div>
       </div>
 
       {meetings.length === 0 ? (

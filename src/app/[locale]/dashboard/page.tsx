@@ -19,17 +19,30 @@ import {
   getActiveProjects,
   mockGoals,
   mockMarketSignals,
-  mockUser,
   mockWeather,
   mockDailyStats
 } from '@/mocks'
-import { MeetingListItem, MeetingsListResponse } from '@/types/meetings'
+import { MeetingListItem, MeetingsApiResponse } from '@/types/meetings'
+import { DashboardUserProfile } from '@/types/user'
+
+const DASHBOARD_MEETINGS_REFRESH_MS = 15000
+
+const DEFAULT_USER_PROFILE: DashboardUserProfile = {
+  id: '',
+  name: '',
+  email: null,
+  role: null,
+  location: null,
+  initials: '??',
+  avatarUrl: null,
+}
 
 export default function DashboardPage() {
   const tCommon = useTranslations('common')
-  const tDashboard = useTranslations('dashboard')
   const [recentMeetings, setRecentMeetings] = useState<MeetingListItem[]>([])
   const [upcomingMeetings, setUpcomingMeetings] = useState<MeetingListItem[]>([])
+  const [recentMeetingsUpdatedAt, setRecentMeetingsUpdatedAt] = useState<string | null>(null)
+  const [currentUser, setCurrentUser] = useState<DashboardUserProfile>(DEFAULT_USER_PROFILE)
 
   useEffect(() => {
     let active = true
@@ -37,8 +50,8 @@ export default function DashboardPage() {
     const loadMeetingWidgets = async () => {
       try {
         const [recentResponse, upcomingResponse] = await Promise.all([
-          fetch('/api/meetings?kind=completed&limit=3'),
-          fetch('/api/meetings?kind=upcoming&limit=3'),
+          fetch('/api/meetings?kind=all&limit=3', { cache: 'no-store' }),
+          fetch('/api/meetings?kind=upcoming&limit=3', { cache: 'no-store' }),
         ])
 
         if (!recentResponse.ok || !upcomingResponse.ok) {
@@ -48,11 +61,15 @@ export default function DashboardPage() {
         const [recentData, upcomingData] = (await Promise.all([
           recentResponse.json(),
           upcomingResponse.json(),
-        ])) as [MeetingsListResponse, MeetingsListResponse]
+        ])) as [MeetingsApiResponse, MeetingsApiResponse]
+
+        const normalizedRecentMeetings = Array.isArray(recentData) ? recentData : recentData.meetings
+        const normalizedUpcomingMeetings = Array.isArray(upcomingData) ? upcomingData : upcomingData.meetings
 
         if (active) {
-          setRecentMeetings(recentData.meetings || [])
-          setUpcomingMeetings(upcomingData.meetings || [])
+          setRecentMeetings(normalizedRecentMeetings || [])
+          setUpcomingMeetings(normalizedUpcomingMeetings || [])
+          setRecentMeetingsUpdatedAt(new Date().toISOString())
         }
       } catch {
         if (active) {
@@ -62,10 +79,55 @@ export default function DashboardPage() {
       }
     }
 
+    const loadCurrentUser = async () => {
+      try {
+        const response = await fetch('/api/user/me', { cache: 'no-store' })
+        if (!response.ok) {
+          throw new Error('Failed to load current user profile')
+        }
+
+        const data = (await response.json()) as DashboardUserProfile
+
+        if (active) {
+          setCurrentUser({
+            ...DEFAULT_USER_PROFILE,
+            ...data,
+            name: data.name?.trim() || DEFAULT_USER_PROFILE.name,
+            initials: data.initials?.trim() || DEFAULT_USER_PROFILE.initials,
+          })
+        }
+      } catch {
+        if (active) {
+          setCurrentUser(DEFAULT_USER_PROFILE)
+        }
+      }
+    }
+
     loadMeetingWidgets()
+    loadCurrentUser()
+
+    const intervalId = setInterval(loadMeetingWidgets, DASHBOARD_MEETINGS_REFRESH_MS)
+
+    const handleWindowFocus = () => {
+      void loadMeetingWidgets()
+      void loadCurrentUser()
+    }
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        void loadMeetingWidgets()
+        void loadCurrentUser()
+      }
+    }
+
+    window.addEventListener('focus', handleWindowFocus)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
 
     return () => {
       active = false
+      clearInterval(intervalId)
+      window.removeEventListener('focus', handleWindowFocus)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [])
 
@@ -73,6 +135,10 @@ export default function DashboardPage() {
   const activeProjects = getActiveProjects(3)
   const goals = mockGoals.slice(0, 5)
   const signals = mockMarketSignals
+  const weatherForDisplay = {
+    ...mockWeather,
+    city: currentUser.location || mockWeather.city,
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
@@ -86,6 +152,9 @@ export default function DashboardPage() {
             <nav className="flex gap-6 items-center">
               <Link href="/dashboard" className="text-purple-400 font-semibold">
                 {tCommon('navigation.dashboard')}
+              </Link>
+              <Link href="/settings" className="text-gray-400 hover:text-white transition-colors">
+                {tCommon('navigation.settings')}
               </Link>
               <Link href="/" className="text-gray-400 hover:text-white transition-colors">
                 {tCommon('navigation.home')}
@@ -105,13 +174,13 @@ export default function DashboardPage() {
           className="mb-8 space-y-6"
         >
           {/* Greeting & Summary */}
-          <GreetingSummary user={mockUser} stats={mockDailyStats} />
+          <GreetingSummary user={currentUser} stats={mockDailyStats} />
           
           {/* Personal Context Bar */}
           <div className="flex flex-wrap items-center gap-6 pt-4 border-t border-gray-700/50">
-            <PersonalContextBar user={mockUser} />
+            <PersonalContextBar user={currentUser} />
             <div className="hidden sm:block h-6 w-px bg-gray-700/50" />
-            <WeatherIndicator weather={mockWeather} />
+            <WeatherIndicator weather={weatherForDisplay} />
           </div>
         </motion.div>
 
@@ -122,16 +191,21 @@ export default function DashboardPage() {
           transition={{ delay: 0.1 }}
           className="mb-8 p-5 rounded-xl border border-gray-700/50 bg-gray-800/40 backdrop-blur"
         >
-          <h2 className="text-sm font-semibold text-gray-300 mb-3">
-            Meeting-Transkripte verarbeiten
-          </h2>
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold text-gray-300">
+              Meeting-Transkripte verarbeiten
+            </h2>
+            <Link href="/settings" className="text-xs text-gray-500 hover:text-gray-300 transition-colors">
+              Status & Logs
+            </Link>
+          </div>
           <RunAgentButton />
         </motion.div>
 
         {/* Widget Grid */}
         <div className="grid md:grid-cols-2 gap-6">
-          <RecentIntelligenceWidget meetings={recentMeetings} />
-          <UpcomingMeetingsWidget meetings={upcomingMeetings} />
+          <RecentIntelligenceWidget meetings={recentMeetings} lastUpdatedAt={recentMeetingsUpdatedAt} />
+          <UpcomingMeetingsWidget meetings={upcomingMeetings} lastUpdatedAt={recentMeetingsUpdatedAt} />
           <ActiveProjectsWidget projects={activeProjects} />
           <CompanyDirectionWidget goals={goals} signals={signals} />
         </div>
