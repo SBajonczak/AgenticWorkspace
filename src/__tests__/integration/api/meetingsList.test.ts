@@ -78,12 +78,12 @@ describe('GET /api/meetings', () => {
 
   it('passes tenantId to repository for scoping', async () => {
     await GET()
-    expect(mockFindLatest).toHaveBeenCalledWith(50, 'tenant-1')
+    expect(mockFindLatest).toHaveBeenCalledWith(50, 'tenant-1', 'alice@example.com')
   })
 
   it('passes undefined tenantId when user has no tenant', async () => {
     ;(mockAuth as any).mockResolvedValue({ user: { id: 'u2', email: 'x@x.com' } })
     await GET()
-    expect(mockFindLatest).toHaveBeenCalledWith(50, undefined)
+    expect(mockFindLatest).toHaveBeenCalledWith(50, undefined, 'x@x.com')
   })
 })

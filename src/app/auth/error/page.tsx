@@ -4,9 +4,16 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
 const errorMessages: Record<string, string> = {
-  Configuration: 'Server configuration error. Please contact your administrator.',
+  Configuration: 'Configuration error during authentication. Ask an administrator to check server logs for NextAuth/Azure details.',
   AccessDenied: 'Access denied. Your account is not authorized to use this application.',
   Verification: 'The verification link is no longer valid. Please request a new one.',
+  OAuthSignin: 'Failed to start the OAuth sign-in flow. Please try again.',
+  OAuthCallback: 'OAuth callback failed. This often indicates consent, tenant, or redirect URI issues.',
+  OAuthCreateAccount: 'Could not create or link your account after OAuth sign-in.',
+  OAuthAccountNotLinked: 'This email is already linked to another sign-in method.',
+  Callback: 'Authentication callback failed unexpectedly.',
+  SessionRequired: 'You must sign in to continue.',
+  Signin: 'Sign-in failed unexpectedly. Please try again.',
   Default: 'An unexpected error occurred during sign in.',
 }
 
@@ -14,6 +21,9 @@ export default function AuthErrorPage() {
   const searchParams = useSearchParams()
   const error = searchParams.get('error') || 'Default'
   const message = errorMessages[error] || errorMessages.Default
+  const correlationId = searchParams.get('correlation_id') || searchParams.get('correlationId')
+  const traceId = searchParams.get('trace_id') || searchParams.get('traceId')
+  const tenant = searchParams.get('tenant')
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
@@ -26,6 +36,31 @@ export default function AuthErrorPage() {
           </div>
           <h1 className="text-2xl font-bold text-white mb-2">Authentication Error</h1>
           <p className="text-slate-400 text-sm">{message}</p>
+        </div>
+
+        <div className="mb-6 rounded-lg border border-slate-700/60 bg-slate-900/40 p-3 text-left text-xs text-slate-300">
+          <p className="mb-1">
+            <span className="text-slate-400">Error code:</span> <span className="font-mono text-slate-100">{error}</span>
+          </p>
+          {correlationId && (
+            <p className="mb-1 break-all">
+              <span className="text-slate-400">Correlation ID:</span>{' '}
+              <span className="font-mono text-slate-100">{correlationId}</span>
+            </p>
+          )}
+          {traceId && (
+            <p className="mb-1 break-all">
+              <span className="text-slate-400">Trace ID:</span> <span className="font-mono text-slate-100">{traceId}</span>
+            </p>
+          )}
+          {tenant && (
+            <p className="break-all">
+              <span className="text-slate-400">Tenant hint:</span> <span className="font-mono text-slate-100">{tenant}</span>
+            </p>
+          )}
+          <p className="mt-2 text-slate-400">
+            Share these values with an admin so the exact Microsoft Entra sign-in failure can be found in server logs.
+          </p>
         </div>
 
         <Link

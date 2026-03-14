@@ -12,6 +12,7 @@
  *   DATABASE_URL             – Prisma database connection
  *   AZURE_TENANT_ID          – Microsoft Entra ID tenant
  *   AZURE_CLIENT_ID          – App registration client ID
+ *   AZURE_CLIENT_SECRET      – App registration client secret (refresh token exchange)
  *   OPENAI_API_KEY or AZURE_OPENAI_* – LLM credentials
  *   JIRA_*                   – Jira integration (optional)
  */

@@ -1,5 +1,5 @@
 import cron from 'node-cron'
-import { createAppGraphAuth } from '../graph/appAuth'
+import { prisma } from '../db/prisma'
 import { MeetingsClient } from '../graph/meetings'
 import { TranscriptsClient } from '../graph/transcripts'
 import { MeetingProcessor } from '../agent/meetingProcessor'
@@ -10,54 +10,65 @@ import { MeetingMinutesRepository } from '../db/repositories/meetingMinutesRepos
 import { ProjectStatusRepository } from '../db/repositories/projectStatusRepository'
 import { TicketSyncRepository } from '../db/repositories/ticketSyncRepository'
 import { TenantRepository } from '../db/repositories/tenantRepository'
+import { UserSyncStateRepository } from '../db/repositories/userSyncStateRepository'
 import { createTicketProvider, createTicketProviderFromEnv } from '../tickets/factory'
+import { ReauthRequiredError, UserTokenService } from '../graph/userTokenService'
 
 let isRunning = false
+let configuredIntervalMinutes = 30
 
-async function runAgentCycle(): Promise<void> {
-  if (isRunning) {
-    console.log('[Worker] Previous run still in progress, skipping.')
-    return
+function normalizeParticipantEmails(userEmail: string | null | undefined, organizerEmail: string, participants?: string[]): string[] {
+  const allParticipants = [
+    ...(participants ?? []),
+    organizerEmail,
+    userEmail ?? '',
+  ]
+
+  return [...new Set(allParticipants.map((entry) => entry?.trim().toLowerCase()).filter(Boolean))]
+}
+
+function mergeParticipantLists(current?: string | null, incoming?: string[]): string[] {
+  let currentParticipants: string[] = []
+  if (current) {
+    try {
+      currentParticipants = (JSON.parse(current) as string[]).map((email) => email.toLowerCase())
+    } catch {
+      currentParticipants = []
+    }
   }
 
-  isRunning = true
+  const nextParticipants = incoming?.map((email) => email.toLowerCase()) ?? []
+  return [...new Set([...currentParticipants, ...nextParticipants])]
+}
+
+function getNextRunAt(intervalMinutes: number): Date {
+  return new Date(Date.now() + intervalMinutes * 60 * 1000)
+}
+
+async function runForUser(user: { id: string; email: string | null; tenantId: string | null }, intervalMinutes: number): Promise<void> {
+  const syncRepo = new UserSyncStateRepository()
+  const tokenService = new UserTokenService(syncRepo)
+  const nextRunAt = getNextRunAt(intervalMinutes)
+  await syncRepo.markProcessing(user.id, true, nextRunAt)
+
   try {
-    console.log(`[Worker] Starting agent cycle at ${new Date().toISOString()}`)
-
-    // IMPORTANT: Uses ClientSecretCredential (app permissions) – no interactive login.
-    // GRAPH_TARGET_USER_ID must be the UPN or Azure AD object ID of the target user.
-    const targetUserId = process.env.GRAPH_TARGET_USER_ID
-    if (!targetUserId) {
-      throw new Error(
-        'GRAPH_TARGET_USER_ID is required. Set it to the UPN or Azure AD object ID of the target M365 user.'
-      )
-    }
-
-    const appAuth = createAppGraphAuth()
-    const accessToken = await appAuth.getAccessToken()
-
-    const meetingsClient = new MeetingsClient(accessToken, targetUserId)
-    const transcriptsClient = new TranscriptsClient(accessToken, targetUserId)
+    const accessToken = await tokenService.getValidAccessTokenForUser(user.id)
+    const meetingsClient = new MeetingsClient(accessToken)
+    const transcriptsClient = new TranscriptsClient(accessToken)
 
     const meetings = await meetingsClient.getLatestMeeting()
     if (!meetings || meetings.length === 0) {
-      console.log('[Worker] No meetings found.')
+      await syncRepo.markRunSuccess(user.id, nextRunAt)
       return
     }
 
-    // Resolve tenant for ticket provider (per-tenant config wins over env fallback)
-    const azureTenantId = process.env.AZURE_TENANT_ID
     const tenantRepo = new TenantRepository()
     let ticketProvider = createTicketProviderFromEnv()
-    let tenantId: string | undefined
 
-    if (azureTenantId) {
-      const tenant = await tenantRepo.findOrCreate(azureTenantId)
-      tenantId = tenant.id
-      const tenantConfig = await tenantRepo.getTicketConfig(tenant.id)
+    if (user.tenantId) {
+      const tenantConfig = await tenantRepo.getTicketConfig(user.tenantId)
       if (tenantConfig) {
         ticketProvider = createTicketProvider(tenantConfig)
-        console.log(`[Worker] Using tenant ticket provider: ${ticketProvider.type}`)
       }
     }
 
@@ -78,51 +89,103 @@ async function runAgentCycle(): Promise<void> {
       ticketProvider
     )
 
-    let processed = 0
-    let skipped = 0
-    let failed = 0
-
     for (const meeting of meetings) {
-      if (!meeting.id) { skipped++; continue }
+      if (!meeting.id) continue
 
-      try {
-        const existing = await meetingRepo.findByMeetingId(meeting.id)
-        if (existing?.processedAt) { skipped++; continue }
+      const organizerEmail = meeting.organizer.emailAddress.address.toLowerCase()
+      const participants = normalizeParticipantEmails(user.email, organizerEmail, meeting.participants)
 
-        const transcript = await transcriptsClient.getTranscript(meeting.id)
-        if (!transcript) {
-          console.warn(`[Worker] No transcript for "${meeting.subject}" -- skipping`)
-          skipped++
-          continue
+      const existing = await meetingRepo.findByMeetingId(meeting.id)
+      if (existing?.processedAt) {
+        const merged = mergeParticipantLists(existing.participants, participants)
+        if (merged.length > 0) {
+          await meetingRepo.update(existing.id, {
+            participants: JSON.stringify(merged),
+          })
         }
-
-        const result = await processor.processMeeting(
-          meeting.id,
-          meeting.subject,
-          meeting.organizer.emailAddress.name,
-          meeting.organizer.emailAddress.address,
-          new Date(meeting.start.dateTime),
-          new Date(meeting.end.dateTime),
-          transcript,
-          meeting.participants || [],
-          tenantId
-        )
-
-        processed++
-        console.log(
-          `[Worker] Processed: "${meeting.subject}" | ` +
-          `Todos: ${result.todosCreated} | ` +
-          `Tickets: ${result.ticketsSynced}/${result.todosCreated} synced`
-        )
-      } catch (err) {
-        failed++
-        console.error(`[Worker] Failed to process "${meeting.subject}":`, err)
+        continue
       }
+
+      const transcript = await transcriptsClient.getTranscript(meeting.id)
+      if (!transcript) {
+        continue
+      }
+
+      await processor.processMeeting(
+        meeting.id,
+        meeting.subject,
+        meeting.organizer.emailAddress.name,
+        organizerEmail,
+        new Date(meeting.start.dateTime),
+        new Date(meeting.end.dateTime),
+        transcript,
+        participants,
+        user.tenantId ?? undefined
+      )
     }
 
-    console.log(
-      `[Worker] Cycle complete -- processed: ${processed}, skipped: ${skipped}, failed: ${failed}`
+    await syncRepo.markRunSuccess(user.id, nextRunAt)
+  } catch (error) {
+    if (error instanceof ReauthRequiredError) {
+      await syncRepo.markRunError(user.id, error.message, { consentRequired: true, nextRunAt })
+      return
+    }
+
+    await syncRepo.markRunError(
+      user.id,
+      error instanceof Error ? error.message : 'Unknown worker error',
+      { nextRunAt }
     )
+  }
+}
+
+export async function runAgentCycleForUser(userId: string): Promise<void> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      email: true,
+      tenantId: true,
+    },
+  })
+
+  if (!user) {
+    throw new Error('User not found')
+  }
+
+  await runForUser(user, configuredIntervalMinutes)
+}
+
+export async function runAgentCycle(): Promise<void> {
+  if (isRunning) {
+    console.log('[Worker] Previous run still in progress, skipping.')
+    return
+  }
+
+  isRunning = true
+  try {
+    console.log(`[Worker] Starting agent cycle at ${new Date().toISOString()}`)
+
+    const users = await prisma.user.findMany({
+      where: {
+        accounts: {
+          some: {
+            provider: 'microsoft-entra-id',
+          },
+        },
+      },
+      select: {
+        id: true,
+        email: true,
+        tenantId: true,
+      },
+    })
+
+    for (const user of users) {
+      await runForUser(user, configuredIntervalMinutes)
+    }
+
+    console.log(`[Worker] Cycle complete for ${users.length} user(s).`)
   } catch (error) {
     console.error('[Worker] Unhandled error during agent cycle:', error)
   } finally {
@@ -131,6 +194,7 @@ async function runAgentCycle(): Promise<void> {
 }
 
 export function startWorker(intervalMinutes: number = 30): void {
+  configuredIntervalMinutes = intervalMinutes
   const cronExpression = `*/${intervalMinutes} * * * *`
   console.log(`[Worker] Scheduling agent every ${intervalMinutes} minutes`)
 

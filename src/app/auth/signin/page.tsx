@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation'
 export default function SignInPage() {
   const searchParams = useSearchParams()
   const callbackUrl = searchParams.get('callbackUrl') || '/dashboard'
+  const forceConsent = searchParams.get('consent') === 'required'
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
@@ -23,7 +24,12 @@ export default function SignInPage() {
         </div>
 
         <button
-          onClick={() => signIn('microsoft-entra-id', { callbackUrl })}
+          onClick={() =>
+            signIn('microsoft-entra-id', {
+              callbackUrl,
+              ...(forceConsent ? { prompt: 'consent' } : {}),
+            })
+          }
           className="w-full flex items-center justify-center gap-3 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-xl transition-colors duration-200"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
@@ -35,6 +41,11 @@ export default function SignInPage() {
         <p className="mt-6 text-xs text-slate-500">
           Access is restricted to meeting participants. Only attendees of a meeting can view its data.
         </p>
+        {forceConsent && (
+          <p className="mt-2 text-xs text-amber-300">
+            Additional Microsoft consent is required. Please grant the requested permissions.
+          </p>
+        )}
       </div>
     </div>
   )

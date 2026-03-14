@@ -22,6 +22,21 @@ type MeetingWithTodosAndJira = Prisma.MeetingGetPayload<{
 }>
 
 export class MeetingRepository {
+  private buildUserScope(userEmail?: string, tenantId?: string): Prisma.MeetingWhereInput {
+    if (!userEmail) {
+      return tenantId ? { tenantId } : {}
+    }
+
+    const normalizedEmail = userEmail.toLowerCase()
+    return {
+      ...(tenantId ? { tenantId } : {}),
+      OR: [
+        { organizerEmail: normalizedEmail },
+        { participants: { contains: `"${normalizedEmail}"` } },
+      ],
+    }
+  }
+
   async create(data: Prisma.MeetingCreateInput): Promise<Meeting> {
     return prisma.meeting.create({ data })
   }
@@ -45,9 +60,9 @@ export class MeetingRepository {
   }
 
   /** List meetings, optionally scoped to a tenant. */
-  async findLatest(limit: number = 10, tenantId?: string): Promise<MeetingWithTodos[]> {
+  async findLatest(limit: number = 10, tenantId?: string, userEmail?: string): Promise<MeetingWithTodos[]> {
     return prisma.meeting.findMany({
-      where: tenantId ? { tenantId } : {},
+      where: this.buildUserScope(userEmail, tenantId),
       orderBy: { startTime: 'desc' },
       take: limit,
       include: {
@@ -56,10 +71,10 @@ export class MeetingRepository {
     })
   }
 
-  async findLatestProcessed(limit: number = 10, tenantId?: string): Promise<MeetingWithTodos[]> {
+  async findLatestProcessed(limit: number = 10, tenantId?: string, userEmail?: string): Promise<MeetingWithTodos[]> {
     return prisma.meeting.findMany({
       where: {
-        ...(tenantId ? { tenantId } : {}),
+        ...this.buildUserScope(userEmail, tenantId),
         processedAt: {
           not: null,
         },
@@ -72,10 +87,10 @@ export class MeetingRepository {
     })
   }
 
-  async findUpcoming(limit: number = 10, fromDate: Date = new Date(), tenantId?: string): Promise<MeetingWithTodos[]> {
+  async findUpcoming(limit: number = 10, fromDate: Date = new Date(), tenantId?: string, userEmail?: string): Promise<MeetingWithTodos[]> {
     return prisma.meeting.findMany({
       where: {
-        ...(tenantId ? { tenantId } : {}),
+        ...this.buildUserScope(userEmail, tenantId),
         startTime: {
           gte: fromDate,
         },

@@ -45,6 +45,7 @@ export async function GET(request?: NextRequest) {
   }
 
   const tenantId = (session.user as any).tenantId as string | undefined
+  const userEmail = session.user.email?.toLowerCase()
 
   try {
     const { searchParams } = request?.url
@@ -58,10 +59,10 @@ export async function GET(request?: NextRequest) {
 
     const meetings =
       kind === 'completed'
-        ? await meetingRepo.findLatestProcessed(limit, tenantId)
+        ? await meetingRepo.findLatestProcessed(limit, tenantId, userEmail)
         : kind === 'upcoming'
-          ? await meetingRepo.findUpcoming(limit, new Date(), tenantId)
-          : await meetingRepo.findLatest(limit, tenantId)
+          ? await meetingRepo.findUpcoming(limit, new Date(), tenantId, userEmail)
+          : await meetingRepo.findLatest(limit, tenantId, userEmail)
 
     const result = meetings.map((meeting) => ({
       id: meeting.id,
