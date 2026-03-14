@@ -1,23 +1,182 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { useTranslations } from 'next-intl'
 import { Link } from '@/i18n/routing'
 import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
-import { getMeetingById, getProjectsByMeetingId } from '@/mocks'
+
+type UiTodoStatus = 'open' | 'in_progress' | 'done'
+
+interface MeetingDetailTodo {
+  id: string
+  title: string
+  description: string
+  assigneeHint: string | null
+  confidence: number
+  status: UiTodoStatus
+  jiraSync: {
+    id: string
+    jiraIssueKey: string | null
+    status: 'synced' | 'pending' | 'failed'
+    syncedAt: string | null
+  } | null
+}
+
+interface MeetingDetailModel {
+  id: string
+  title: string
+  organizer: string
+  startTime: string
+  endTime: string
+  transcript: string | null
+  summary: string | null
+  decisions: string | null
+  todos: MeetingDetailTodo[]
+}
+
+interface MeetingApiTodo {
+  id: string
+  title: string
+  description: string
+  assigneeHint: string | null
+  confidence: number
+  status: string
+  jiraSync: {
+    id: string
+    jiraIssueKey: string | null
+    status: 'synced' | 'pending' | 'failed'
+    syncedAt: string | null
+  } | null
+}
+
+interface MeetingApiResponse {
+  id: string
+  title: string
+  organizer: string
+  startTime: string
+  endTime: string
+  transcript: string | null
+  summary: string | null
+  decisions: string | null
+  todos: MeetingApiTodo[]
+}
+
+function mapTodoStatus(status: string): UiTodoStatus {
+  if (status === 'in_progress' || status === 'done') {
+    return status
+  }
+
+  return 'open'
+}
+
+function mapMeetingFromApi(payload: MeetingApiResponse): MeetingDetailModel {
+  return {
+    id: payload.id,
+    title: payload.title,
+    organizer: payload.organizer,
+    startTime: payload.startTime,
+    endTime: payload.endTime,
+    transcript: payload.transcript,
+    summary: payload.summary,
+    decisions: payload.decisions,
+    todos: (payload.todos || []).map((todo) => ({
+      id: todo.id,
+      title: todo.title,
+      description: todo.description,
+      assigneeHint: todo.assigneeHint,
+      confidence: todo.confidence,
+      status: mapTodoStatus(todo.status),
+      jiraSync: todo.jiraSync,
+    })),
+  }
+}
 
 export default function MeetingDetailPage() {
   const params = useParams()
   const tCommon = useTranslations('common')
   const tDetail = useTranslations('meetings.detail')
   const [activeTab, setActiveTab] = useState<'summary' | 'decisions' | 'actions' | 'transcript'>('summary')
+  const [meeting, setMeeting] = useState<MeetingDetailModel | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [notFound, setNotFound] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const meeting = getMeetingById(params.id as string)
-  const relatedProjects = meeting ? getProjectsByMeetingId(meeting.id) : []
+  const meetingId = params.id as string
 
-  if (!meeting) {
+  useEffect(() => {
+    let active = true
+
+    const loadMeeting = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        setNotFound(false)
+
+        const response = await fetch(`/api/meetings/${meetingId}`)
+
+        if (response.status === 404) {
+          if (active) {
+            setMeeting(null)
+            setNotFound(true)
+          }
+          return
+        }
+
+        if (!response.ok) {
+          throw new Error(`Failed with status ${response.status}`)
+        }
+
+        const data = (await response.json()) as MeetingApiResponse
+        if (active) {
+          setMeeting(mapMeetingFromApi(data))
+        }
+      } catch {
+        if (active) {
+          setMeeting(null)
+          setError('Meeting konnte nicht geladen werden.')
+        }
+      } finally {
+        if (active) {
+          setLoading(false)
+        }
+      }
+    }
+
+    if (meetingId) {
+      loadMeeting()
+    }
+
+    return () => {
+      active = false
+    }
+  }, [meetingId])
+
+  const decisions = useMemo<string[]>(() => {
+    if (!meeting?.decisions) {
+      return []
+    }
+
+    try {
+      const parsed = JSON.parse(meeting.decisions)
+      return Array.isArray(parsed) ? parsed : []
+    } catch {
+      return []
+    }
+  }, [meeting?.decisions])
+
+  const relatedProjects: Array<{ id: string; name: string; aiSummary: string }> = []
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center">
+        <div className="text-gray-300 text-xl">Loading...</div>
+      </div>
+    )
+  }
+
+  if (notFound) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center">
         <div className="text-center">
@@ -31,7 +190,20 @@ export default function MeetingDetailPage() {
     )
   }
 
-  const decisions = JSON.parse(meeting.decisions)
+  if (!meeting || error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-6xl mb-4">⚠️</div>
+          <div className="text-white text-2xl mb-4">{error || 'Meeting not available'}</div>
+          <Link href="/meetings" className="text-purple-400 hover:text-purple-300">
+            ← {tDetail('backToList')}
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   const startTime = new Date(meeting.startTime)
   const endTime = new Date(meeting.endTime)
   const duration = Math.round((endTime.getTime() - startTime.getTime()) / 1000 / 60)

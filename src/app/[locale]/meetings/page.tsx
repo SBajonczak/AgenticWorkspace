@@ -163,6 +163,7 @@ export default function MeetingsListPage() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.1 * index }}
               >
+
                 <Link
                   href={`/meetings/${meeting.id}`}
                   className="block bg-gray-800/50 backdrop-blur rounded-xl p-6 border border-gray-700 hover:border-purple-500 transition-all"
