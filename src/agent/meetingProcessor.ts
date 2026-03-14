@@ -107,7 +107,21 @@ export class MeetingProcessor {
     if (agentResponse.projectStatuses.length > 0) {
       const statusData = await Promise.all(
         agentResponse.projectStatuses.map(async (ps) => {
-          const matched = await this.projectRepo.findByNameOrAlias(ps.projectName, tenantId)
+          let matched = await this.projectRepo.findByNameOrAlias(ps.projectName, tenantId)
+          if (!matched && tenantId) {
+            try {
+              matched = await this.projectRepo.create({
+                tenantId,
+                name: ps.projectName,
+                status: 'active',
+                confirmed: false,
+                description: `Auto-created from meeting transcript on ${new Date().toLocaleDateString()}`,
+              })
+              console.log(`[Processor] Auto-created unconfirmed project: "${ps.projectName}"`)
+            } catch (err) {
+              console.warn(`[Processor] Could not auto-create project "${ps.projectName}":`, err)
+            }
+          }
           return {
             meetingId: meeting.id,
             projectId: matched?.id ?? null,

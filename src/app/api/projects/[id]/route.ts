@@ -39,6 +39,7 @@ const UpdateProjectSchema = z.object({
   status: z.enum(['active', 'on_hold', 'completed', 'archived']).optional(),
   owner: z.string().max(200).optional().nullable(),
   archived: z.boolean().optional(),
+  confirmed: z.boolean().optional(),
   aliases: z.array(z.string().min(1).max(200)).optional(),
 })
 

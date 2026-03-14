@@ -22,7 +22,8 @@
         "active": "Aktiv",
         "on_hold": "Pausiert",
         "completed": "Abgeschlossen",
-        "archived": "Archiviert"
+        "archived": "Archiviert",
+        "unconfirmed": "Nicht bestätigt"
       },
       "empty": "Keine Projekte gefunden",
       "newProject": "Neues Projekt",

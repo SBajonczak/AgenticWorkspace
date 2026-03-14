@@ -22,7 +22,8 @@
         "active": "Active",
         "on_hold": "On Hold",
         "completed": "Completed",
-        "archived": "Archived"
+        "archived": "Archived",
+        "unconfirmed": "Unconfirmed"
       },
       "empty": "No projects found",
       "newProject": "New Project",

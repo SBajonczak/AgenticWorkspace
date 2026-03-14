@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
 import { MeetingRepository } from '@/db/repositories/meetingRepository'
+import { ProjectRepository } from '@/db/repositories/projectRepository'
 import { requireMeetingParticipant } from '@/lib/authz'
 import { createLLMClient } from '@/ai/llmClient'
+import { prisma } from '@/db/prisma'
 import {
   MeetingPreparationAgendaItem,
   MeetingPreparationResponse,
@@ -160,6 +162,54 @@ export async function GET(
       })
     }
 
+    // Build knowledgeBase items from projects mentioned in related meetings
+    const projectRepo = new ProjectRepository()
+    const projectNames = [
+      ...new Set(relatedPayload.flatMap((m) => m.projectStatuses.map((ps) => ps.projectName))),
+    ]
+    const knowledgeBaseItems: MeetingPreparationResponse['knowledgeBaseItems'] = []
+
+    for (const projectName of projectNames.slice(0, 5)) {
+      try {
+        const proj = await projectRepo.findByNameOrAlias(projectName, tenantId)
+        if (!proj) continue
+
+        const recentStatuses = await prisma.projectStatus.findMany({
+          where: { projectId: proj.id },
+          include: { meeting: { include: { todos: true } } },
+          orderBy: { createdAt: 'desc' },
+          take: 5,
+        })
+
+        const decisions = recentStatuses.flatMap((s) => {
+          try {
+            const d = JSON.parse(s.meeting.decisions ?? '[]')
+            return Array.isArray(d) ? d.filter((x): x is string => typeof x === 'string') : []
+          } catch {
+            return []
+          }
+        })
+
+        const openTodos = recentStatuses
+          .flatMap((s) => s.meeting.todos.filter((t) => t.status !== 'done'))
+          .map((t) => ({
+            id: t.id,
+            title: t.title,
+            assigneeHint: t.assigneeHint,
+            priority: t.priority,
+          }))
+
+        knowledgeBaseItems.push({
+          title: proj.name,
+          excerpt: `${openTodos.length} open item${openTodos.length !== 1 ? 's' : ''}, ${decisions.length} recent decision${decisions.length !== 1 ? 's' : ''}`,
+          decisions: decisions.slice(0, 5),
+          openTodos: openTodos.slice(0, 5),
+        })
+      } catch (err) {
+        console.warn('[preparation] Could not load KB for project', projectName, err)
+      }
+    }
+
     const response: MeetingPreparationResponse = {
       upcomingMeeting: {
         id: meeting.id,
@@ -170,7 +220,7 @@ export async function GET(
       },
       relatedMeetings: relatedPayload,
       preparedAgenda,
-      knowledgeBaseItems: [],
+      knowledgeBaseItems,
       conflicts,
     }
 

@@ -76,6 +76,13 @@ export interface MeetingPreparationResponse {
     title: string
     excerpt: string
     url?: string
+    decisions?: string[]
+    openTodos?: {
+      id: string
+      title: string
+      assigneeHint: string | null
+      priority: string | null
+    }[]
   }[]
   conflicts: MeetingPreparationConflict[]
 }

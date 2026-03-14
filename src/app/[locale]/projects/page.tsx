@@ -37,6 +37,7 @@ interface Project {
   status: string
   owner: string | null
   archived: boolean
+  confirmed: boolean
   aliases: ProjectAlias[]
   sourceLinks: ProjectSourceLink[]
 }
@@ -457,9 +458,16 @@ export default function ProjectsListPage() {
                   <CardContent className="p-6 h-full flex flex-col">
                     <div className="flex items-start justify-between mb-3">
                       <h3 className="text-xl font-bold text-foreground flex-1">{project.name}</h3>
-                      <Badge variant="outline" className={cn('ml-2 shrink-0 text-xs', statusBadgeClass(project.status))}>
-                        {tList(`status.${project.status}` as Parameters<typeof tList>[0])}
-                      </Badge>
+                      <div className="flex items-center gap-1.5 ml-2 shrink-0">
+                        {!project.confirmed && (
+                          <Badge variant="outline" className="text-xs border-amber-500/40 bg-amber-500/15 text-amber-400">
+                            {tList('status.unconfirmed' as Parameters<typeof tList>[0])}
+                          </Badge>
+                        )}
+                        <Badge variant="outline" className={cn('text-xs', statusBadgeClass(project.status))}>
+                          {tList(`status.${project.status}` as Parameters<typeof tList>[0])}
+                        </Badge>
+                      </div>
                     </div>
 
                     {project.description && (

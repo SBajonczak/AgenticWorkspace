@@ -142,6 +142,7 @@ model Project {
   status      String   @default("active")  // active | on_hold | completed | archived
   owner       String?
   archived    Boolean  @default(false)
+  confirmed   Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

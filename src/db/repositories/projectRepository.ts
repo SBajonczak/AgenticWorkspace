@@ -11,6 +11,7 @@ export interface ProjectCreateData {
   description?: string | null
   status?: string
   owner?: string | null
+  confirmed?: boolean
 }
 
 export interface ProjectUpdateData {
@@ -19,6 +20,7 @@ export interface ProjectUpdateData {
   status?: string
   owner?: string | null
   archived?: boolean
+  confirmed?: boolean
 }
 
 export class ProjectRepository {
@@ -30,6 +32,7 @@ export class ProjectRepository {
         description: data.description ?? null,
         status: data.status ?? 'active',
         owner: data.owner ?? null,
+        confirmed: data.confirmed ?? true,
       },
       include: { aliases: true, sourceLinks: true },
     })
