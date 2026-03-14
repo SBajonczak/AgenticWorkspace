@@ -1,9 +1,10 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import { Geist } from "next/font/google";
+import { Inter } from "next/font/google";
 import { cn } from "@/lib/utils";
+import { ThemeProvider } from 'next-themes';
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
   title: 'Agentic Workplace',
@@ -16,8 +17,12 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={cn("dark", "font-sans", geist.variable)}>
-      <body className="font-sans antialiased">{children}</body>
+    <html lang="en" className={cn("font-sans", inter.variable)} suppressHydrationWarning>
+      <body className="font-sans antialiased">
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+          {children}
+        </ThemeProvider>
+      </body>
     </html>
   )
 }

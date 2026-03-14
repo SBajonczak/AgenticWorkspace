@@ -29,13 +29,10 @@ export default function GreetingSummary({ user, stats }: GreetingSummaryProps) {
 
   return (
     <div className="space-y-3">
-      {/* Greeting */}
-      <h2 className="text-3xl font-bold text-white">
+      <h2 className="text-3xl font-bold text-foreground">
         {displayName ? `${greeting}, ${displayName}` : greeting}
       </h2>
-      
-      {/* Agent Summary */}
-      <p className="text-gray-400 text-base leading-relaxed max-w-2xl">
+      <p className="text-muted-foreground text-base leading-relaxed max-w-2xl">
         {t('agentSummary.yesterday', {
           meetingCount: stats.meetingsProcessedYesterday,
           actionCount: stats.actionItemsIdentifiedYesterday

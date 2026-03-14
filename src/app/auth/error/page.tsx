@@ -2,6 +2,9 @@
 
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { buttonVariants } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 const errorMessages: Record<string, string> = {
   Configuration: 'Configuration error during authentication. Ask an administrator to check server logs for NextAuth/Azure details.',
@@ -27,49 +30,56 @@ export default function AuthErrorPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      <div className="bg-white/10 backdrop-blur-md border border-red-400/30 rounded-2xl p-10 max-w-md w-full text-center shadow-2xl">
-        <div className="mb-6">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-500/20 border border-red-400/30 mb-4">
-            <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
+      <Card className="max-w-md w-full text-center shadow-2xl border-destructive/30">
+        <CardHeader className="pb-2">
+          <div className="flex justify-center mb-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-destructive/20 border border-destructive/30">
+              <svg className="w-8 h-8 text-destructive" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
           </div>
-          <h1 className="text-2xl font-bold text-white mb-2">Authentication Error</h1>
-          <p className="text-slate-400 text-sm">{message}</p>
-        </div>
+          <h1 className="text-2xl font-bold text-foreground">Authentication Error</h1>
+          <p className="text-muted-foreground text-sm mt-1">{message}</p>
+        </CardHeader>
 
-        <div className="mb-6 rounded-lg border border-slate-700/60 bg-slate-900/40 p-3 text-left text-xs text-slate-300">
-          <p className="mb-1">
-            <span className="text-slate-400">Error code:</span> <span className="font-mono text-slate-100">{error}</span>
-          </p>
-          {correlationId && (
-            <p className="mb-1 break-all">
-              <span className="text-slate-400">Correlation ID:</span>{' '}
-              <span className="font-mono text-slate-100">{correlationId}</span>
+        <CardContent className="space-y-4">
+          <div className="rounded-lg border border-border bg-muted/20 p-3 text-left text-xs text-muted-foreground">
+            <p className="mb-1">
+              <span className="text-muted-foreground/70">Error code:</span>{' '}
+              <span className="font-mono text-foreground">{error}</span>
             </p>
-          )}
-          {traceId && (
-            <p className="mb-1 break-all">
-              <span className="text-slate-400">Trace ID:</span> <span className="font-mono text-slate-100">{traceId}</span>
+            {correlationId && (
+              <p className="mb-1 break-all">
+                <span className="text-muted-foreground/70">Correlation ID:</span>{' '}
+                <span className="font-mono text-foreground">{correlationId}</span>
+              </p>
+            )}
+            {traceId && (
+              <p className="mb-1 break-all">
+                <span className="text-muted-foreground/70">Trace ID:</span>{' '}
+                <span className="font-mono text-foreground">{traceId}</span>
+              </p>
+            )}
+            {tenant && (
+              <p className="break-all">
+                <span className="text-muted-foreground/70">Tenant hint:</span>{' '}
+                <span className="font-mono text-foreground">{tenant}</span>
+              </p>
+            )}
+            <p className="mt-2 text-muted-foreground/60">
+              Share these values with an admin so the exact Microsoft Entra sign-in failure can be found in server logs.
             </p>
-          )}
-          {tenant && (
-            <p className="break-all">
-              <span className="text-slate-400">Tenant hint:</span> <span className="font-mono text-slate-100">{tenant}</span>
-            </p>
-          )}
-          <p className="mt-2 text-slate-400">
-            Share these values with an admin so the exact Microsoft Entra sign-in failure can be found in server logs.
-          </p>
-        </div>
+          </div>
 
-        <Link
-          href="/auth/signin"
-          className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-xl transition-colors duration-200"
-        >
-          Back to Sign In
-        </Link>
-      </div>
+          <Link
+            href="/auth/signin"
+            className={cn(buttonVariants(), 'w-full bg-blue-600 hover:bg-blue-700 text-white')}
+          >
+            Back to Sign In
+          </Link>
+        </CardContent>
+      </Card>
     </div>
   )
 }

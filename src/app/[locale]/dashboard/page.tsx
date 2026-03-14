@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { useTranslations } from 'next-intl'
 import { Link } from '@/i18n/routing'
-import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
+import AppHeader from '@/components/layout/AppHeader'
 import PersonalContextBar from '@/components/ui/PersonalContextBar'
 import WeatherIndicator from '@/components/ui/WeatherIndicator'
 import GreetingSummary from '@/components/ui/GreetingSummary'
@@ -24,6 +23,8 @@ import {
 } from '@/mocks'
 import { MeetingListItem, MeetingsApiResponse } from '@/types/meetings'
 import { DashboardUserProfile } from '@/types/user'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
 
 const DASHBOARD_MEETINGS_REFRESH_MS = 15000
 
@@ -38,7 +39,6 @@ const DEFAULT_USER_PROFILE: DashboardUserProfile = {
 }
 
 export default function DashboardPage() {
-  const tCommon = useTranslations('common')
   const [recentMeetings, setRecentMeetings] = useState<MeetingListItem[]>([])
   const [upcomingMeetings, setUpcomingMeetings] = useState<MeetingListItem[]>([])
   const [recentMeetingsUpdatedAt, setRecentMeetingsUpdatedAt] = useState<string | null>(null)
@@ -82,12 +82,8 @@ export default function DashboardPage() {
     const loadCurrentUser = async () => {
       try {
         const response = await fetch('/api/user/me', { cache: 'no-store' })
-        if (!response.ok) {
-          throw new Error('Failed to load current user profile')
-        }
-
+        if (!response.ok) throw new Error('Failed to load current user profile')
         const data = (await response.json()) as DashboardUserProfile
-
         if (active) {
           setCurrentUser({
             ...DEFAULT_USER_PROFILE,
@@ -97,9 +93,7 @@ export default function DashboardPage() {
           })
         }
       } catch {
-        if (active) {
-          setCurrentUser(DEFAULT_USER_PROFILE)
-        }
+        if (active) setCurrentUser(DEFAULT_USER_PROFILE)
       }
     }
 
@@ -112,7 +106,6 @@ export default function DashboardPage() {
       void loadMeetingWidgets()
       void loadCurrentUser()
     }
-
     const handleVisibilityChange = () => {
       if (!document.hidden) {
         void loadMeetingWidgets()
@@ -131,7 +124,6 @@ export default function DashboardPage() {
     }
   }, [])
 
-  // Keep non-meeting dashboard cards on mock data for now.
   const activeProjects = getActiveProjects(3)
   const goals = mockGoals.slice(0, 5)
   const signals = mockMarketSignals
@@ -141,31 +133,9 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
-      {/* Header */}
-      <header className="border-b border-gray-800 bg-gray-900/50 backdrop-blur">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 text-transparent bg-clip-text">
-              {tCommon('brand.name')}
-            </Link>
-            <nav className="flex gap-6 items-center">
-              <Link href="/dashboard" className="text-purple-400 font-semibold">
-                {tCommon('navigation.dashboard')}
-              </Link>
-              <Link href="/settings" className="text-gray-400 hover:text-white transition-colors">
-                {tCommon('navigation.settings')}
-              </Link>
-              <Link href="/" className="text-gray-400 hover:text-white transition-colors">
-                {tCommon('navigation.home')}
-              </Link>
-              <LanguageSwitcher />
-            </nav>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-background">
+      <AppHeader activeLink="dashboard" />
 
-      {/* Main Content */}
       <main className="container mx-auto px-4 py-12">
         {/* Personal Context Section */}
         <motion.div
@@ -173,13 +143,10 @@ export default function DashboardPage() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8 space-y-6"
         >
-          {/* Greeting & Summary */}
           <GreetingSummary user={currentUser} stats={mockDailyStats} />
-          
-          {/* Personal Context Bar */}
-          <div className="flex flex-wrap items-center gap-6 pt-4 border-t border-gray-700/50">
+          <div className="flex flex-wrap items-center gap-6 pt-4 border-t border-border/50">
             <PersonalContextBar user={currentUser} />
-            <div className="hidden sm:block h-6 w-px bg-gray-700/50" />
+            <Separator orientation="vertical" className="hidden sm:block h-6" />
             <WeatherIndicator weather={weatherForDisplay} />
           </div>
         </motion.div>
@@ -189,17 +156,23 @@ export default function DashboardPage() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="mb-8 p-5 rounded-xl border border-gray-700/50 bg-gray-800/40 backdrop-blur"
+          className="mb-8"
         >
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold text-gray-300">
-              Meeting-Transkripte verarbeiten
-            </h2>
-            <Link href="/settings" className="text-xs text-gray-500 hover:text-gray-300 transition-colors">
-              Status & Logs
-            </Link>
-          </div>
-          <RunAgentButton />
+          <Card className="bg-card/60 backdrop-blur border-border/50">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-sm font-semibold text-muted-foreground">
+                  Meeting-Transkripte verarbeiten
+                </h2>
+                <Link href="/settings" className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors">
+                  Status & Logs
+                </Link>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <RunAgentButton />
+            </CardContent>
+          </Card>
         </motion.div>
 
         {/* Widget Grid */}

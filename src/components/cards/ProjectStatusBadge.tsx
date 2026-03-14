@@ -1,58 +1,50 @@
+import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
+
 interface ProjectStatusBadgeProps {
   status: string
   showLabel?: boolean
 }
 
-const statusConfig: Record<
-  string,
-  { label: string; color: string; bgColor: string; dotColor: string }
-> = {
+const statusConfig: Record<string, { label: string; className: string; dotClass: string }> = {
   on_track: {
     label: 'On Track',
-    color: 'text-emerald-400',
-    bgColor: 'bg-emerald-500/15 border-emerald-500/30',
-    dotColor: 'bg-emerald-400',
+    className: 'border-emerald-500/30 bg-emerald-500/15 text-emerald-400',
+    dotClass: 'bg-emerald-400',
   },
   in_progress: {
     label: 'In Progress',
-    color: 'text-blue-400',
-    bgColor: 'bg-blue-500/15 border-blue-500/30',
-    dotColor: 'bg-blue-400',
+    className: 'border-blue-500/30 bg-blue-500/15 text-blue-400',
+    dotClass: 'bg-blue-400',
   },
   at_risk: {
     label: 'At Risk',
-    color: 'text-amber-400',
-    bgColor: 'bg-amber-500/15 border-amber-500/30',
-    dotColor: 'bg-amber-400',
+    className: 'border-amber-500/30 bg-amber-500/15 text-amber-400',
+    dotClass: 'bg-amber-400',
   },
   blocked: {
     label: 'Blocked',
-    color: 'text-red-400',
-    bgColor: 'bg-red-500/15 border-red-500/30',
-    dotColor: 'bg-red-400',
+    className: 'border-red-500/30 bg-red-500/15 text-red-400',
+    dotClass: 'bg-red-400',
   },
   completed: {
     label: 'Completed',
-    color: 'text-slate-400',
-    bgColor: 'bg-slate-500/15 border-slate-500/30',
-    dotColor: 'bg-slate-400',
+    className: 'border-slate-500/30 bg-slate-500/15 text-slate-400',
+    dotClass: 'bg-slate-400',
   },
 }
 
 export function ProjectStatusBadge({ status, showLabel = true }: ProjectStatusBadgeProps) {
   const config = statusConfig[status] || {
     label: status,
-    color: 'text-slate-400',
-    bgColor: 'bg-slate-500/15 border-slate-500/30',
-    dotColor: 'bg-slate-400',
+    className: 'border-slate-500/30 bg-slate-500/15 text-slate-400',
+    dotClass: 'bg-slate-400',
   }
 
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${config.bgColor} ${config.color}`}
-    >
-      <span className={`w-1.5 h-1.5 rounded-full ${config.dotColor}`} />
+    <Badge variant="outline" className={cn('gap-1.5', config.className)}>
+      <span className={cn('w-1.5 h-1.5 rounded-full', config.dotClass)} />
       {showLabel && config.label}
-    </span>
+    </Badge>
   )
 }

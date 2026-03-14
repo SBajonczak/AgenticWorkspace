@@ -4,6 +4,9 @@
       "home": "Home",
       "dashboard": "Dashboard",
       "meetings": "Meetings",
+      "projects": "Projects",
+      "schedule": "Schedule",
+      "goals": "Goals",
       "settings": "Settings"
     },
     "brand": {
