@@ -91,6 +91,9 @@ Visit `http://localhost:3000` to see the dashboard with demo data.
 
 The application uses SQLite for the MVP. The database is automatically created on first run.
 
+For future migration paths, set `DATABASE_PROVIDER` to `turso` or `mssql` and switch Prisma datasource/provider accordingly.
+Current runtime focus remains SQLite (`DATABASE_PROVIDER=sqlite`).
+
 ```bash
 # Generate Prisma client
 npx prisma generate

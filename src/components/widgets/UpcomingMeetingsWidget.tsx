@@ -3,10 +3,10 @@
 import { motion } from 'framer-motion'
 import { useTranslations } from 'next-intl'
 import { Link } from '@/i18n/routing'
-import { Meeting } from '@/mocks'
+import { MeetingListItem } from '@/types/meetings'
 
 interface UpcomingMeetingsWidgetProps {
-  meetings: Meeting[]
+  meetings: MeetingListItem[]
 }
 
 export default function UpcomingMeetingsWidget({ meetings }: UpcomingMeetingsWidgetProps) {

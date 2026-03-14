@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useTranslations } from 'next-intl'
 import { Link } from '@/i18n/routing'
@@ -15,8 +16,6 @@ import {
   CompanyDirectionWidget
 } from '@/components/widgets'
 import {
-  getRecentMeetings,
-  getUpcomingMeetings,
   getActiveProjects,
   mockGoals,
   mockMarketSignals,
@@ -24,14 +23,53 @@ import {
   mockWeather,
   mockDailyStats
 } from '@/mocks'
+import { MeetingListItem, MeetingsListResponse } from '@/types/meetings'
 
 export default function DashboardPage() {
   const tCommon = useTranslations('common')
   const tDashboard = useTranslations('dashboard')
+  const [recentMeetings, setRecentMeetings] = useState<MeetingListItem[]>([])
+  const [upcomingMeetings, setUpcomingMeetings] = useState<MeetingListItem[]>([])
 
-  // Get data from mocks
-  const recentMeetings = getRecentMeetings(3)
-  const upcomingMeetings = getUpcomingMeetings(3)
+  useEffect(() => {
+    let active = true
+
+    const loadMeetingWidgets = async () => {
+      try {
+        const [recentResponse, upcomingResponse] = await Promise.all([
+          fetch('/api/meetings?kind=completed&limit=3'),
+          fetch('/api/meetings?kind=upcoming&limit=3'),
+        ])
+
+        if (!recentResponse.ok || !upcomingResponse.ok) {
+          throw new Error('Failed to load meeting widgets')
+        }
+
+        const [recentData, upcomingData] = (await Promise.all([
+          recentResponse.json(),
+          upcomingResponse.json(),
+        ])) as [MeetingsListResponse, MeetingsListResponse]
+
+        if (active) {
+          setRecentMeetings(recentData.meetings || [])
+          setUpcomingMeetings(upcomingData.meetings || [])
+        }
+      } catch {
+        if (active) {
+          setRecentMeetings([])
+          setUpcomingMeetings([])
+        }
+      }
+    }
+
+    loadMeetingWidgets()
+
+    return () => {
+      active = false
+    }
+  }, [])
+
+  // Keep non-meeting dashboard cards on mock data for now.
   const activeProjects = getActiveProjects(3)
   const goals = mockGoals.slice(0, 5)
   const signals = mockMarketSignals

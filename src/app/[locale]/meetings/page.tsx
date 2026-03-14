@@ -1,23 +1,60 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useTranslations } from 'next-intl'
 import { Link } from '@/i18n/routing'
 import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
-import { mockMeetings, Meeting } from '@/mocks'
+import { MeetingListItem, MeetingsListResponse } from '@/types/meetings'
 
 export default function MeetingsListPage() {
   const tCommon = useTranslations('common')
   const tList = useTranslations('meetings.list')
   const [filter, setFilter] = useState<'all' | 'completed' | 'upcoming'>('all')
+  const [meetings, setMeetings] = useState<MeetingListItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const filteredMeetings = mockMeetings.filter(m => {
+  useEffect(() => {
+    let active = true
+
+    const loadMeetings = async () => {
+      try {
+        const response = await fetch('/api/meetings?kind=all&limit=100')
+        if (!response.ok) {
+          throw new Error(`Failed with status ${response.status}`)
+        }
+
+        const data = (await response.json()) as MeetingsListResponse
+        if (active) {
+          setMeetings(data.meetings || [])
+          setError(null)
+        }
+      } catch (err) {
+        if (active) {
+          setError('Meetings konnten nicht geladen werden.')
+          setMeetings([])
+        }
+      } finally {
+        if (active) {
+          setLoading(false)
+        }
+      }
+    }
+
+    loadMeetings()
+
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const filteredMeetings = meetings.filter((m) => {
     if (filter === 'all') return true
     return m.status === filter
   })
 
-  const getStatusColor = (status: Meeting['status']) => {
+  const getStatusColor = (status: MeetingListItem['status']) => {
     switch (status) {
       case 'completed':
         return 'bg-green-500/20 text-green-400'
@@ -90,7 +127,21 @@ export default function MeetingsListPage() {
         </motion.div>
 
         {/* Meetings List */}
-        {filteredMeetings.length === 0 ? (
+        {loading ? (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+            {[1, 2, 3].map((item) => (
+              <div key={item} className="h-28 rounded-xl border border-gray-700 bg-gray-800/40 animate-pulse" />
+            ))}
+          </motion.div>
+        ) : error ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center py-16"
+          >
+            <p className="text-red-400 text-xl">{error}</p>
+          </motion.div>
+        ) : filteredMeetings.length === 0 ? (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
