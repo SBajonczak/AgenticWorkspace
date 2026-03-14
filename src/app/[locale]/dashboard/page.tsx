@@ -7,6 +7,7 @@ import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
 import PersonalContextBar from '@/components/ui/PersonalContextBar'
 import WeatherIndicator from '@/components/ui/WeatherIndicator'
 import GreetingSummary from '@/components/ui/GreetingSummary'
+import RunAgentButton from '@/components/ui/RunAgentButton'
 import {
   RecentIntelligenceWidget,
   UpcomingMeetingsWidget,
@@ -74,6 +75,19 @@ export default function DashboardPage() {
             <div className="hidden sm:block h-6 w-px bg-gray-700/50" />
             <WeatherIndicator weather={mockWeather} />
           </div>
+        </motion.div>
+
+        {/* Agent Trigger */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="mb-8 p-5 rounded-xl border border-gray-700/50 bg-gray-800/40 backdrop-blur"
+        >
+          <h2 className="text-sm font-semibold text-gray-300 mb-3">
+            Meeting-Transkripte verarbeiten
+          </h2>
+          <RunAgentButton />
         </motion.div>
 
         {/* Widget Grid */}

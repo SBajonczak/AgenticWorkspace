@@ -57,7 +57,7 @@ export async function requireAuth(): Promise<
   }
 
   return {
-    session: session as { user: { id: string; email: string; name?: string | null } },
+    session: session as { user: { id: string; email: string; name?: string | null }; msGraphAccessToken?: string },
     error: null,
   }
 }

@@ -1,8 +1,12 @@
 'use client'
 
 import { signIn } from 'next-auth/react'
+import { useSearchParams } from 'next/navigation'
 
 export default function SignInPage() {
+  const searchParams = useSearchParams()
+  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard'
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
       <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-10 max-w-md w-full text-center shadow-2xl">
@@ -19,7 +23,7 @@ export default function SignInPage() {
         </div>
 
         <button
-          onClick={() => signIn('microsoft-entra-id', { callbackUrl: '/dashboard' })}
+          onClick={() => signIn('microsoft-entra-id', { callbackUrl })}
           className="w-full flex items-center justify-center gap-3 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-xl transition-colors duration-200"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">

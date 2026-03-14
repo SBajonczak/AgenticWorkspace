@@ -22,7 +22,20 @@ export interface Meeting {
   isOnlineMeeting?: boolean
   onlineMeetingUrl?: string
   onlineMeeting?: OnlineMeeting
+  onlineMeetingId?: string
   participants?: string[]  // Array of attendee emails (including organizer)
+  metadata?: {
+    organizerUpn?: string
+    attendeeUpns: string[]
+    responseStatus?: string
+    meetingCode?: string | null
+    meetingType?: string | null
+    iCalUId?: string | null
+    startDateTime?: string
+    endDateTime?: string
+    allowTranscription?: boolean
+    meetingOptionsWebUrl?: string | null
+  }
 }
 
 export class OnlineMeeting {
@@ -50,10 +63,12 @@ export class MeetingsClient {
     try {
       const now = new Date()
       const startDate = new Date()
-      startDate.setDate(now.getDate() - 14)
+      startDate.setDate(now.getDate() - 30)
+      const endDate = new Date()
+      endDate.setDate(now.getDate() + 14)
 
       const startDateTime = startDate.toISOString()
-      const endDateTime = now.toISOString()
+      const endDateTime = endDate.toISOString()
 
       const response = await this.client
         .api(`${this.userPath}/calendarView`)
@@ -61,8 +76,8 @@ export class MeetingsClient {
           startDateTime: startDateTime,
           endDateTime: endDateTime,
         })
-        .select('subject,id,organizer,start,end,isOnlineMeeting,onlineMeetingUrl,attendees')
-        .top(limit)
+        .select('subject,id,organizer,start,end,isOnlineMeeting,onlineMeetingUrl,attendees,responseStatus')
+        .top(100)
         .orderby('start/dateTime DESC')
         .get()
 
@@ -70,7 +85,7 @@ export class MeetingsClient {
 
       const enrichedMeetings = await Promise.all(
         meetings.map(async (meeting: Meeting) => {
-          let joinUrl = null
+          let joinUrl: string | null = null
 
           if (meeting.isOnlineMeeting) {
             try {
@@ -78,16 +93,18 @@ export class MeetingsClient {
                 .api(`${this.userPath}/events/${meeting.id}`)
                 .select('onlineMeeting')
                 .get()
-              joinUrl = eventDetails.onlineMeeting?.joinUrl
+              joinUrl = eventDetails.onlineMeeting?.joinUrl || meeting.onlineMeetingUrl || null
             } catch (error) {
               console.warn(`Could not get online meeting ID for "${meeting.subject}"`)
+              joinUrl = meeting.onlineMeetingUrl || null
             }
           }
 
           let onlineMeetingId = null
           if (joinUrl) {
             try {
-              const filter = `JoinWebUrl eq '${joinUrl}'`
+              const escapedJoinUrl = joinUrl.replace(/'/g, "''")
+              const filter = `JoinWebUrl eq '${escapedJoinUrl}'`
               const onlineMeetingResponse = await this.client
                 .api(`${this.userPath}/onlineMeetings`)
                 .filter(filter)
@@ -97,6 +114,20 @@ export class MeetingsClient {
               }
             } catch (error) {
               console.error(`Error fetching online meeting for "${meeting.subject}":`, error)
+            }
+          }
+
+          let onlineMeetingDetails: any = null
+          if (onlineMeetingId) {
+            try {
+              onlineMeetingDetails = await this.client
+                .api(`${this.userPath}/onlineMeetings/${onlineMeetingId}`)
+                .select(
+                  'id,subject,joinWebUrl,participants,startDateTime,endDateTime,allowTranscription,meetingCode,meetingType,meetingOptionsWebUrl,iCalUId'
+                )
+                .get()
+            } catch (error) {
+              console.warn(`Could not load online meeting details for "${meeting.subject}" (${onlineMeetingId})`)
             }
           }
 
@@ -114,17 +145,68 @@ export class MeetingsClient {
             }
           }
 
+          const organizerUpn = onlineMeetingDetails?.participants?.organizer?.upn?.toLowerCase()
+          if (organizerUpn && !attendeeEmails.includes(organizerUpn)) {
+            attendeeEmails.push(organizerUpn)
+          }
+
+          const onlineAttendeeUpns: string[] =
+            Array.isArray(onlineMeetingDetails?.participants?.attendees)
+              ? onlineMeetingDetails.participants.attendees
+                  .map((attendee: any) => attendee?.upn?.toLowerCase())
+                  .filter((upn: string | undefined): upn is string => Boolean(upn))
+              : []
+
+          for (const upn of onlineAttendeeUpns) {
+            if (!attendeeEmails.includes(upn)) {
+              attendeeEmails.push(upn)
+            }
+          }
+
+          if (!onlineMeetingId) {
+            console.warn(`Skipping "${meeting.subject}" – could not resolve online meeting ID (no transcript available)`)
+            return null
+          }
+
+          const responseStatus = (meeting as any)?.responseStatus?.response
+
           return {
             ...meeting,
             id: onlineMeetingId,
-            joinWebUrl: meeting.onlineMeetingUrl || undefined,
+            joinWebUrl:
+              onlineMeetingDetails?.joinWebUrl ||
+              meeting.onlineMeetingUrl ||
+              joinUrl ||
+              undefined,
             onlineMeetingId: onlineMeetingId,
+            organizer:
+              organizerUpn && meeting.organizer?.emailAddress
+                ? {
+                    emailAddress: {
+                      name: meeting.organizer.emailAddress.name,
+                      address: organizerUpn,
+                    },
+                  }
+                : meeting.organizer,
             participants: attendeeEmails,
+            metadata: {
+              organizerUpn,
+              attendeeUpns: onlineAttendeeUpns,
+              responseStatus,
+              meetingCode: onlineMeetingDetails?.meetingCode ?? null,
+              meetingType: onlineMeetingDetails?.meetingType ?? null,
+              iCalUId: onlineMeetingDetails?.iCalUId ?? null,
+              startDateTime: onlineMeetingDetails?.startDateTime,
+              endDateTime: onlineMeetingDetails?.endDateTime,
+              allowTranscription: onlineMeetingDetails?.allowTranscription,
+              meetingOptionsWebUrl: onlineMeetingDetails?.meetingOptionsWebUrl ?? null,
+            },
           }
         })
       )
 
-      return enrichedMeetings as any[]
+      const resolvedMeetings = enrichedMeetings.filter((m): m is NonNullable<typeof m> => m !== null)
+      return resolvedMeetings as any[]
     } catch (error) {
       console.error('Failed to fetch meetings:', error)
       throw error
@@ -145,7 +227,7 @@ export class MeetingsClient {
   }
 
   async getLatestMeeting(): Promise<Meeting[] | null> {
-    const meetings = await this.getRecentMeetings(10)
+    const meetings = await this.getRecentMeetings(20)
     return meetings.length > 0 ? meetings : null
   }
 }

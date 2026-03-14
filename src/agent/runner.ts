@@ -20,11 +20,20 @@ export interface AgentRunResult {
   dryRun: boolean
 }
 
+export interface AgentRunOptions {
+  /** Pre-acquired Microsoft Graph access token. Skips device-code flow when provided. */
+  accessToken?: string
+  /** Target user UPN / object ID for /users/{id}/ Graph paths (required with app permissions). */
+  targetUserId?: string
+}
+
 export class AgentRunner {
   private dryRun: boolean
+  private options: AgentRunOptions
 
-  constructor(dryRun: boolean = false) {
+  constructor(dryRun: boolean = false, options: AgentRunOptions = {}) {
     this.dryRun = dryRun
+    this.options = options
   }
 
   async run(): Promise<AgentRunResult | AgentRunResult[]> {
@@ -44,10 +53,16 @@ export class AgentRunner {
 
       // Get latest meeting from Graph API
       console.log('📞 Fetching latest meeting from Microsoft Graph...')
-      const graphAuth = createGraphAuth()
-      const accessToken = await graphAuth.getAccessToken()
+      let accessToken: string
+      if (this.options.accessToken) {
+        accessToken = this.options.accessToken
+        console.log('Using provided access token')
+      } else {
+        const graphAuth = createGraphAuth()
+        accessToken = await graphAuth.getAccessToken()
+      }
 
-      const meetingsClient = new MeetingsClient(accessToken)
+      const meetingsClient = new MeetingsClient(accessToken, this.options.targetUserId)
       const latestMeetings = await meetingsClient.getLatestMeeting()
       const latestMeeting = latestMeetings ? latestMeetings[0] : null;
 
@@ -69,11 +84,15 @@ export class AgentRunner {
       }
       for (const meeting of latestMeetings) {
         try {
+          if (!meeting.id) {
+            console.warn(`Skipping "${meeting.subject}" – missing online meeting ID`)
+            continue
+          }
           console.log(`Found meeting: ${meeting.subject}`)
 
           // Get transcript
           console.log('📝 Fetching transcript...')
-          const transcriptsClient = new TranscriptsClient(accessToken)
+          const transcriptsClient = new TranscriptsClient(accessToken, this.options.targetUserId)
           const transcript = await transcriptsClient.getTranscript(meeting.id)
 
           if (!transcript) {

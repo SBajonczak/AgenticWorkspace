@@ -9,10 +9,12 @@ export interface TranscriptContent {
 
 export class TranscriptsClient {
   private client: Client
+  private accessToken: string
   // When set, use /users/{userId}/ instead of /me/ (required for app permissions)
   private userPath: string
 
   constructor(accessToken: string, userId?: string) {
+    this.accessToken = accessToken
     this.client = Client.init({
       authProvider: (done) => {
         done(null, accessToken)
@@ -35,15 +37,48 @@ export class TranscriptsClient {
       }
 
       const latestTranscript = transcripts[0]
+      const transcriptContentUrl = latestTranscript.transcriptContentUrl
       const transcriptId = latestTranscript.id
+
+      if (transcriptContentUrl) {
+        try {
+          const vttResponse = await fetch(transcriptContentUrl, {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${this.accessToken}`,
+              Accept: 'text/vtt',
+            },
+          })
+
+          if (vttResponse.ok) {
+            return await vttResponse.text()
+          }
+
+          console.warn(
+            `Fetching transcriptContentUrl failed (${vttResponse.status}) for meeting ${meetingId}. Falling back to /content endpoint.`
+          )
+        } catch (error) {
+          console.warn(`Fetching transcriptContentUrl failed for meeting ${meetingId}. Falling back to /content endpoint.`, error)
+        }
+      }
 
       const contentResponse = await this.client
         .api(`${this.userPath}/onlineMeetings/${meetingId}/transcripts/${transcriptId}/content`)
+        .header('Accept', 'text/vtt')
         .get()
 
       return this.parseTranscriptContent(contentResponse)
     } catch (error) {
-      console.error(`Failed to fetch transcript for meeting ${meetingId}:`, error)
+      const err = error as { statusCode?: number; code?: string; message?: string }
+      if (err?.statusCode === 403) {
+        console.warn(
+          `Transcript access denied for meeting ${meetingId}. ` +
+            `Check delegated Graph scopes (OnlineMeetingTranscript.Read.All, OnlineMeetings.Read, Calendars.Read), ` +
+            `admin consent, and whether the signed-in user has access to this meeting.`
+        )
+      } else {
+        console.error(`Failed to fetch transcript for meeting ${meetingId}:`, error)
+      }
       return null
     }
   }
