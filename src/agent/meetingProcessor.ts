@@ -3,6 +3,7 @@ import { MeetingRepository } from '../db/repositories/meetingRepository'
 import { TodoRepository } from '../db/repositories/todoRepository'
 import { MeetingMinutesRepository } from '../db/repositories/meetingMinutesRepository'
 import { ProjectStatusRepository } from '../db/repositories/projectStatusRepository'
+import { ProjectRepository } from '../db/repositories/projectRepository'
 import { TicketSyncRepository } from '../db/repositories/ticketSyncRepository'
 import { ITicketProvider } from '../tickets/types'
 import { NoneTicketProvider } from '../tickets/providers/none'
@@ -19,6 +20,8 @@ export interface ProcessingResult {
 }
 
 export class MeetingProcessor {
+  private projectRepo: ProjectRepository
+
   constructor(
     private llmClient: LLMClient,
     private meetingRepo: MeetingRepository,
@@ -27,7 +30,9 @@ export class MeetingProcessor {
     private projectStatusRepo: ProjectStatusRepository,
     private ticketSyncRepo: TicketSyncRepository = new TicketSyncRepository(),
     private ticketProvider: ITicketProvider = new NoneTicketProvider()
-  ) {}
+  ) {
+    this.projectRepo = new ProjectRepository()
+  }
 
   async processMeeting(
     meetingId: string,
@@ -41,9 +46,10 @@ export class MeetingProcessor {
     tenantId?: string
   ): Promise<ProcessingResult> {
     // Upsert meeting record
-    let meeting = await this.meetingRepo.findByMeetingId(meetingId)
+    const existingMeeting = await this.meetingRepo.findByMeetingId(meetingId)
+    let meeting: Meeting
 
-    if (!meeting) {
+    if (!existingMeeting) {
       meeting = await this.meetingRepo.create({
         meetingId,
         title,
@@ -56,7 +62,7 @@ export class MeetingProcessor {
         ...(tenantId ? { tenant: { connect: { id: tenantId } } } : {}),
       })
     } else {
-      meeting = await this.meetingRepo.update(meeting.id, {
+      meeting = await this.meetingRepo.update(existingMeeting.id, {
         participants: JSON.stringify(participants),
       })
     }
@@ -77,7 +83,7 @@ export class MeetingProcessor {
 
     // Persist todos
     const todosData = agentResponse.todos.map((todo) => ({
-      meetingId: meeting!.id,
+      meetingId: meeting.id,
       title: todo.title,
       description: todo.description,
       assigneeHint: todo.assigneeHint,
@@ -95,18 +101,23 @@ export class MeetingProcessor {
       minutesCreated++
     }
 
-    // Persist project statuses
+    // Persist project statuses – match against managed projects by name/alias
     await this.projectStatusRepo.deleteByMeetingId(meeting.id)
     let projectStatusesCreated = 0
     if (agentResponse.projectStatuses.length > 0) {
-      projectStatusesCreated = await this.projectStatusRepo.createMany(
-        agentResponse.projectStatuses.map((ps) => ({
-          meetingId: meeting!.id,
-          projectName: ps.projectName,
-          status: ps.status,
-          summary: ps.summary,
-        }))
+      const statusData = await Promise.all(
+        agentResponse.projectStatuses.map(async (ps) => {
+          const matched = await this.projectRepo.findByNameOrAlias(ps.projectName, tenantId)
+          return {
+            meetingId: meeting.id,
+            projectId: matched?.id ?? null,
+            projectName: ps.projectName,
+            status: ps.status,
+            summary: ps.summary,
+          }
+        })
       )
+      projectStatusesCreated = await this.projectStatusRepo.createMany(statusData)
     }
 
     // Sync todos to the configured ticket provider (skip NoneTicketProvider)

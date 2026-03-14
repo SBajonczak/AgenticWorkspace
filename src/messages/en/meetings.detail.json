@@ -1,5 +1,20 @@
 {
   "meetings": {
+    "preparation": {
+      "title": "Meeting Preparation",
+      "backToMeeting": "Back to meeting",
+      "loadError": "Failed to load preparation.",
+      "agendaTitle": "Prepared agenda items",
+      "noAgenda": "No agenda items available",
+      "conflictsTitle": "Conflicts with other meetings",
+      "noConflicts": "No conflicts detected",
+      "kbTitle": "Knowledge base insights",
+      "noKnowledgeBase": "No knowledge-base integration configured",
+      "historyTitle": "Relevant previous meetings",
+      "noHistory": "No related previous meetings found",
+      "decisionsLabel": "Key decisions",
+      "openTodosLabel": "Open action items"
+    },
     "detail": {
       "backToList": "Back to meetings",
       "tabs": {

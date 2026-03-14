@@ -23,6 +23,8 @@ export interface Meeting {
   onlineMeetingUrl?: string
   onlineMeeting?: OnlineMeeting
   onlineMeetingId?: string
+  /** ISO string from Graph API lastModifiedDateTime for this calendar event */
+  lastModifiedDateTime?: string
   participants?: string[]  // Array of attendee emails (including organizer)
   metadata?: {
     organizerUpn?: string
@@ -59,13 +61,19 @@ export class MeetingsClient {
     this.userPath = userId ? `/users/${userId}` : '/me'
   }
 
-  async getRecentMeetings(limit: number = 10): Promise<Meeting[]> {
+  async getRecentMeetings(limit: number = 10, options?: {
+    /** Only return calendar events whose start is >= this date (delta-sync checkpoint). */
+    startAfter?: Date
+    /** How many days back to look when no startAfter checkpoint is available (default: 30). */
+    daysBack?: number
+  }): Promise<Meeting[]> {
     try {
       const now = new Date()
-      const startDate = new Date()
-      startDate.setDate(now.getDate() - 30)
-      const endDate = new Date()
-      endDate.setDate(now.getDate() + 14)
+      const daysBack = options?.daysBack ?? 30
+      const startDate = options?.startAfter
+        ? new Date(options.startAfter.getTime() - 60 * 60 * 1000) // 1h buffer for overlap
+        : new Date(now.getTime() - daysBack * 24 * 60 * 60 * 1000)
+      const endDate = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000)
 
       const startDateTime = startDate.toISOString()
       const endDateTime = endDate.toISOString()
@@ -76,7 +84,7 @@ export class MeetingsClient {
           startDateTime: startDateTime,
           endDateTime: endDateTime,
         })
-        .select('subject,id,organizer,start,end,isOnlineMeeting,onlineMeetingUrl,attendees,responseStatus')
+        .select('subject,id,organizer,start,end,isOnlineMeeting,onlineMeetingUrl,attendees,responseStatus,lastModifiedDateTime')
         .top(100)
         .orderby('start/dateTime DESC')
         .get()
@@ -179,6 +187,7 @@ export class MeetingsClient {
               joinUrl ||
               undefined,
             onlineMeetingId: onlineMeetingId,
+            lastModifiedDateTime: (meeting as any).lastModifiedDateTime,
             organizer:
               organizerUpn && meeting.organizer?.emailAddress
                 ? {
@@ -226,8 +235,8 @@ export class MeetingsClient {
     }
   }
 
-  async getLatestMeeting(): Promise<Meeting[] | null> {
-    const meetings = await this.getRecentMeetings(20)
+  async getLatestMeeting(options?: Parameters<MeetingsClient['getRecentMeetings']>[1]): Promise<Meeting[] | null> {
+    const meetings = await this.getRecentMeetings(20, options)
     return meetings.length > 0 ? meetings : null
   }
 }

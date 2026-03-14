@@ -11,13 +11,27 @@ type MeetingWithTodos = Prisma.MeetingGetPayload<{
   }
 }>
 
-type MeetingWithTodosAndJira = Prisma.MeetingGetPayload<{
+type MeetingWithDetails = Prisma.MeetingGetPayload<{
   include: {
     todos: {
       include: {
-        jiraSync: true
+        ticketSync: true
       }
     }
+    projectStatuses: true
+    minutes: true
+  }
+}>
+
+type MeetingWithPreparationData = Prisma.MeetingGetPayload<{
+  include: {
+    todos: {
+      include: {
+        ticketSync: true
+      }
+    }
+    projectStatuses: true
+    minutes: true
   }
 }>
 
@@ -41,7 +55,7 @@ export class MeetingRepository {
     return prisma.meeting.create({ data })
   }
 
-  async findById(id: string): Promise<MeetingWithTodosAndJira | null> {
+  async findById(id: string): Promise<MeetingWithDetails | null> {
     return prisma.meeting.findUnique({
       where: { id },
       include: {
@@ -103,11 +117,71 @@ export class MeetingRepository {
     })
   }
 
+  async findRelatedPastMeetings(
+    options: {
+      title: string
+      organizerEmail?: string | null
+      before: Date
+      excludeInternalMeetingId: string
+      limit?: number
+      tenantId?: string
+      userEmail?: string
+    }
+  ): Promise<MeetingWithPreparationData[]> {
+    const searchTerms = options.title
+      .split(/\s+/)
+      .map((term) => term.trim())
+      .filter((term) => term.length >= 4)
+      .slice(0, 3)
+
+    const titleFilters: Prisma.MeetingWhereInput[] = searchTerms.map((term) => ({
+      title: {
+        contains: term,
+      },
+    }))
+
+    const relationSignals: Prisma.MeetingWhereInput[] = []
+    if (titleFilters.length > 0) {
+      relationSignals.push(...titleFilters)
+    }
+    if (options.organizerEmail) {
+      relationSignals.push({ organizerEmail: options.organizerEmail.toLowerCase() })
+    }
+
+    return prisma.meeting.findMany({
+      where: {
+        ...this.buildUserScope(options.userEmail, options.tenantId),
+        id: { not: options.excludeInternalMeetingId },
+        processedAt: { not: null },
+        startTime: { lt: options.before },
+        ...(relationSignals.length > 0 ? { OR: relationSignals } : {}),
+      },
+      orderBy: { startTime: 'desc' },
+      take: options.limit ?? 5,
+      include: {
+        todos: { include: { ticketSync: true } },
+        projectStatuses: true,
+        minutes: true,
+      },
+    })
+  }
+
   async update(id: string, data: Prisma.MeetingUpdateInput): Promise<Meeting> {
     return prisma.meeting.update({ where: { id }, data })
   }
 
-  async getLatestProcessed(tenantId?: string): Promise<MeetingWithTodosAndJira | null> {
+  /** Update only the delta-sync tracking fields without touching processing state. */
+  async updateSyncMeta(id: string, graphLastModifiedAt: Date | null, lastSyncedAt: Date): Promise<Meeting> {
+    return prisma.meeting.update({
+      where: { id },
+      data: {
+        lastSyncedAt,
+        ...(graphLastModifiedAt !== null ? { graphLastModifiedAt } : {}),
+      },
+    })
+  }
+
+  async getLatestProcessed(tenantId?: string): Promise<MeetingWithDetails | null> {
     return prisma.meeting.findFirst({
       where: {
         processedAt: { not: null },

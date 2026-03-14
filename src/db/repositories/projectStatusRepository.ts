@@ -3,6 +3,7 @@ import { ProjectStatus } from '@prisma/client'
 
 export interface ProjectStatusCreateData {
   meetingId: string
+  projectId?: string | null
   projectName: string
   status: string
   summary: string

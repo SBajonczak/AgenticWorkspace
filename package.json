@@ -13,6 +13,7 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "tsx prisma/seed.ts",
+    "projects:backfill": "tsx scripts/backfill-projects.ts",
     "prisma:studio": "prisma studio",
     "worker": "tsx src/worker/index.ts",
     "worker:dev": "tsx watch src/worker/index.ts"

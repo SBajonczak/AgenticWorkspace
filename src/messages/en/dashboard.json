@@ -39,6 +39,11 @@
         "title": "Latest error",
         "empty": "No error stored"
       },
+      "projects": {
+        "title": "Projects & Knowledge Sources",
+        "description": "Manage your projects, assign aliases used in meeting transcripts, and link external knowledge sources (Confluence, Jira, GitHub, SharePoint) to each project.",
+        "manageButton": "Manage Projects"
+      },
       "updatedAt": "Updated: {time}"
     }
   }

@@ -51,14 +51,25 @@ async function runForUser(user: { id: string; email: string | null; tenantId: st
   const nextRunAt = getNextRunAt(intervalMinutes)
   await syncRepo.markProcessing(user.id, true, nextRunAt)
 
+  // Record the cycle start-time BEFORE the Graph call so we can use it as the
+  // next checkpoint. Any meeting whose lastModifiedDateTime falls within this
+  // window will then be picked up on the next run.
+  const cycleStartedAt = new Date()
+
   try {
     const accessToken = await tokenService.getValidAccessTokenForUser(user.id)
     const meetingsClient = new MeetingsClient(accessToken)
     const transcriptsClient = new TranscriptsClient(accessToken)
 
-    const meetings = await meetingsClient.getLatestMeeting()
+    // Load the previous sync checkpoint so we can do a delta (incremental) query.
+    const syncState = await syncRepo.getByUserId(user.id)
+    const lastMeetingSyncAt: Date | null = (syncState as any)?.lastMeetingSyncAt ?? null
+
+    const meetings = await meetingsClient.getLatestMeeting(
+      lastMeetingSyncAt ? { startAfter: lastMeetingSyncAt } : undefined
+    )
     if (!meetings || meetings.length === 0) {
-      await syncRepo.markRunSuccess(user.id, nextRunAt)
+      await syncRepo.markRunSuccess(user.id, nextRunAt, cycleStartedAt)
       return
     }
 
@@ -96,16 +107,47 @@ async function runForUser(user: { id: string; email: string | null; tenantId: st
       const participants = normalizeParticipantEmails(user.email, organizerEmail, meeting.participants)
 
       const existing = await meetingRepo.findByMeetingId(meeting.id)
+      const graphModifiedAt = meeting.lastModifiedDateTime ? new Date(meeting.lastModifiedDateTime) : null
+
       if (existing?.processedAt) {
-        const merged = mergeParticipantLists(existing.participants, participants)
-        if (merged.length > 0) {
-          await meetingRepo.update(existing.id, {
-            participants: JSON.stringify(merged),
-          })
+        // Determine whether this meeting has been modified in Graph since we last synced it.
+        const hasChangedInGraph =
+          graphModifiedAt !== null &&
+          (existing.lastSyncedAt === null || graphModifiedAt > existing.lastSyncedAt)
+
+        if (hasChangedInGraph) {
+          // Re-process: transcript may have been updated (e.g. corrections added).
+          console.log(`[Worker] Re-processing changed meeting: "${meeting.subject}"`)
+          const transcript = await transcriptsClient.getTranscript(meeting.id)
+          if (transcript) {
+            await processor.processMeeting(
+              meeting.id,
+              meeting.subject,
+              meeting.organizer.emailAddress.name,
+              organizerEmail,
+              new Date(meeting.start.dateTime),
+              new Date(meeting.end.dateTime),
+              transcript,
+              participants,
+              user.tenantId ?? undefined
+            )
+          }
+          // Update sync metadata regardless of transcript availability.
+          await meetingRepo.updateSyncMeta(existing.id, graphModifiedAt, new Date())
+        } else {
+          // Nothing changed – only merge participants to keep the list up to date.
+          const merged = mergeParticipantLists(existing.participants, participants)
+          if (merged.length > 0) {
+            await meetingRepo.update(existing.id, {
+              participants: JSON.stringify(merged),
+            })
+          }
+          await meetingRepo.updateSyncMeta(existing.id, graphModifiedAt, new Date())
         }
         continue
       }
 
+      // Brand-new meeting (not yet in DB).
       const transcript = await transcriptsClient.getTranscript(meeting.id)
       if (!transcript) {
         continue
@@ -122,9 +164,16 @@ async function runForUser(user: { id: string; email: string | null; tenantId: st
         participants,
         user.tenantId ?? undefined
       )
+
+      // Persist sync metadata for the newly created meeting row.
+      const created = await meetingRepo.findByMeetingId(meeting.id)
+      if (created) {
+        await meetingRepo.updateSyncMeta(created.id, graphModifiedAt, new Date())
+      }
     }
 
-    await syncRepo.markRunSuccess(user.id, nextRunAt)
+    // Advance the delta-sync checkpoint to the start of this cycle.
+    await syncRepo.markRunSuccess(user.id, nextRunAt, cycleStartedAt)
   } catch (error) {
     if (error instanceof ReauthRequiredError) {
       await syncRepo.markRunError(user.id, error.message, { consentRequired: true, nextRunAt })

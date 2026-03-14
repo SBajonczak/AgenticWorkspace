@@ -21,10 +21,55 @@
       "status": {
         "active": "Aktiv",
         "on_hold": "Pausiert",
-        "completed": "Abgeschlossen"
+        "completed": "Abgeschlossen",
+        "archived": "Archiviert"
       },
       "empty": "Keine Projekte gefunden",
-      "aiSummary": "KI-Zusammenfassung"
+      "newProject": "Neues Projekt",
+      "aiSummary": "KI-Zusammenfassung",
+      "manage": {
+        "createTitle": "Projekt erstellen",
+        "editTitle": "Projekt bearbeiten",
+        "name": "Name",
+        "namePlaceholder": "z. B. Mobile App Relaunch",
+        "description": "Beschreibung",
+        "descriptionPlaceholder": "Kurze Projektbeschreibung",
+        "owner": "Verantwortlich",
+        "ownerPlaceholder": "z. B. anna@firma.de",
+        "status": "Status",
+        "aliases": "Aliasnamen (einer pro Zeile)",
+        "aliasesHint": "Alternative Namen, die in Meeting-Transkripten für dieses Projekt verwendet werden",
+        "save": "Speichern",
+        "cancel": "Abbrechen",
+        "delete": "Löschen",
+        "deleteConfirm": "Dieses Projekt wirklich löschen?",
+        "sources": "Wissensquellen",
+        "addSource": "Quelle hinzufügen",
+        "sourceType": "Typ",
+        "sourceLabel": "Bezeichnung",
+        "sourceLabelPlaceholder": "z. B. Team-Wiki",
+        "sourceIdentifier": "Bezeichner",
+        "sourceIdentifierHint": {
+          "confluence": "Confluence Space Key (z. B. TEAM)",
+          "jira": "Jira Project Key (z. B. PROJ)",
+          "github": "GitHub Repo (z. B. owner/repo)",
+          "sharepoint": "SharePoint-Site-URL"
+        },
+        "sourceConfig": "Konfiguration (optionales JSON)",
+        "testConnection": "Verbindung testen",
+        "testOk": "Verbindung erfolgreich",
+        "testFail": "Verbindung fehlgeschlagen",
+        "sourceTypes": {
+          "confluence": "Confluence",
+          "jira": "Jira",
+          "github": "GitHub",
+          "sharepoint": "SharePoint"
+        },
+        "removeSource": "Entfernen",
+        "saveError": "Speichern fehlgeschlagen. Bitte überprüfe die Eingaben.",
+        "loadError": "Projekte konnten nicht geladen werden."
+      }
     }
   }
 }
+

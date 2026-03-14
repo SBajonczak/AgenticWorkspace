@@ -28,3 +28,54 @@ export interface MeetingsListResponse {
 }
 
 export type MeetingsApiResponse = MeetingListItem[] | MeetingsListResponse
+
+export interface MeetingPreparationAgendaItem {
+  title: string
+  rationale: string
+  priority: 'high' | 'medium' | 'low'
+  source: 'history' | 'knowledge_base' | 'conflict'
+}
+
+export interface MeetingPreparationConflict {
+  id: string
+  title: string
+  startTime: string
+  endTime: string
+}
+
+export interface MeetingPreparationRelatedMeeting {
+  id: string
+  title: string
+  startTime: string
+  summary: string | null
+  decisions: string[]
+  openTodos: {
+    id: string
+    title: string
+    assigneeHint: string | null
+    status: string
+  }[]
+  projectStatuses: {
+    projectName: string
+    status: string
+    summary: string
+  }[]
+}
+
+export interface MeetingPreparationResponse {
+  upcomingMeeting: {
+    id: string
+    title: string
+    organizer: string
+    startTime: string
+    endTime: string
+  }
+  relatedMeetings: MeetingPreparationRelatedMeeting[]
+  preparedAgenda: MeetingPreparationAgendaItem[]
+  knowledgeBaseItems: {
+    title: string
+    excerpt: string
+    url?: string
+  }[]
+  conflicts: MeetingPreparationConflict[]
+}

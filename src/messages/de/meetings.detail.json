@@ -1,5 +1,20 @@
 {
   "meetings": {
+    "preparation": {
+      "title": "Besprechungsvorbereitung",
+      "backToMeeting": "Zurück zur Besprechung",
+      "loadError": "Vorbereitung konnte nicht geladen werden.",
+      "agendaTitle": "Vorbereitete Agendapunkte",
+      "noAgenda": "Keine Agendapunkte verfügbar",
+      "conflictsTitle": "Konflikte mit anderen Terminen",
+      "noConflicts": "Keine Konflikte erkannt",
+      "kbTitle": "Knowledge Base Hinweise",
+      "noKnowledgeBase": "Keine Knowledge-Base-Integration konfiguriert",
+      "historyTitle": "Relevante Vortermine",
+      "noHistory": "Keine relevanten Vortermine gefunden",
+      "decisionsLabel": "Wichtige Entscheidungen",
+      "openTodosLabel": "Offene Aufgaben"
+    },
     "detail": {
       "backToList": "Zurück zu Besprechungen",
       "tabs": {

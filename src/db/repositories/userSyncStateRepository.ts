@@ -35,7 +35,7 @@ export class UserSyncStateRepository {
     })
   }
 
-  async markRunSuccess(userId: string, nextRunAt?: Date): Promise<any> {
+  async markRunSuccess(userId: string, nextRunAt?: Date, lastMeetingSyncAt?: Date): Promise<any> {
     const now = new Date()
     return this.client.userSyncState.upsert({
       where: { userId },
@@ -46,6 +46,7 @@ export class UserSyncStateRepository {
         lastSuccessAt: now,
         nextRunAt,
         lastError: null,
+        ...(lastMeetingSyncAt ? { lastMeetingSyncAt } : {}),
       },
       update: {
         isProcessing: false,
@@ -53,6 +54,7 @@ export class UserSyncStateRepository {
         lastSuccessAt: now,
         nextRunAt,
         lastError: null,
+        ...(lastMeetingSyncAt ? { lastMeetingSyncAt } : {}),
       },
     })
   }

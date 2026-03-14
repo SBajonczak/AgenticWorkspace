@@ -27,33 +27,38 @@ model Tenant {
 
   meetings      Meeting[]
   users         User[]
+  projects      Project[]
 }
 
 model Meeting {
-  id             String    @id @default(uuid())
-  meetingId      String    @unique // Microsoft Teams meeting ID
-  title          String
-  organizer      String
-  organizerEmail String?
-  startTime      DateTime
-  endTime        DateTime
-  transcript     String?   // Full transcript
-  summary        String?   // AI-generated summary
-  decisions      String?   // JSON array of decisions
-  participants   String?   // JSON array of attendee emails
-  processedAt    DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id                  String    @id @default(uuid())
+  meetingId           String    @unique // Microsoft Teams meeting ID
+  title               String
+  organizer           String
+  organizerEmail      String?
+  startTime           DateTime
+  endTime             DateTime
+  transcript          String?   // Full transcript
+  summary             String?   // AI-generated summary
+  decisions           String?   // JSON array of decisions
+  participants        String?   // JSON array of attendee emails
+  processedAt         DateTime?
+  // Delta-sync tracking: avoid re-fetching / re-processing unchanged meetings
+  graphLastModifiedAt DateTime? // Microsoft Graph lastModifiedDateTime for this event
+  lastSyncedAt        DateTime? // When this meeting was last fetched from Graph
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   // Optional tenant association (null = single-tenant / legacy data)
-  tenantId       String?
-  tenant         Tenant?   @relation(fields: [tenantId], references: [id])
+  tenantId            String?
+  tenant              Tenant?   @relation(fields: [tenantId], references: [id])
 
-  todos           Todo[]
-  minutes         MeetingMinutes[]
-  projectStatuses ProjectStatus[]
+  todos               Todo[]
+  minutes             MeetingMinutes[]
+  projectStatuses     ProjectStatus[]
 
   @@index([tenantId])
+  @@index([graphLastModifiedAt])
 }
 
 model Todo {
@@ -111,14 +116,72 @@ model MeetingMinutes {
 model ProjectStatus {
   id          String   @id @default(uuid())
   meetingId   String
+  projectId   String?  // Link to managed Project (null = unmapped / auto-discovered)
   projectName String
   status      String   // 'on_track' | 'at_risk' | 'blocked' | 'completed' | 'in_progress'
   summary     String
   createdAt   DateTime @default(now())
 
   meeting     Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  project     Project? @relation(fields: [projectId], references: [id])
 
   @@index([meetingId])
+  @@index([projectId])
+}
+
+// ---------------------------------------------------------------------------
+// Managed Projects: tenant-scoped, user-editable project entities.
+// ProjectStatus rows from meeting processing are matched against these by
+// name/alias and linked via projectId (or remain unmapped when no match).
+// ---------------------------------------------------------------------------
+model Project {
+  id          String   @id @default(uuid())
+  tenantId    String?
+  name        String
+  description String?
+  status      String   @default("active")  // active | on_hold | completed | archived
+  owner       String?
+  archived    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant      Tenant?            @relation(fields: [tenantId], references: [id])
+  aliases     ProjectAlias[]
+  sourceLinks ProjectSourceLink[]
+  statuses    ProjectStatus[]
+
+  @@index([tenantId])
+  @@index([name])
+}
+
+// Alternate names / abbreviations used in meeting transcripts to match this project.
+model ProjectAlias {
+  id        String  @id @default(uuid())
+  projectId String
+  alias     String
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, alias])
+  @@index([projectId])
+  @@index([alias])
+}
+
+// External knowledge-source links associated with a project.
+// type: 'confluence' | 'jira' | 'github' | 'sharepoint'
+model ProjectSourceLink {
+  id         String   @id @default(uuid())
+  projectId  String
+  type       String   // confluence | jira | github | sharepoint
+  label      String?  // human-readable label, e.g. "Team Wiki"
+  identifier String   // space key, project key, repo "owner/repo", SharePoint site URL
+  config     String?  // JSON: extra provider-specific config (e.g., baseUrl for Confluence)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
 }
 
 // ---------------------------------------------------------------------------
@@ -148,12 +211,14 @@ model UserSyncState {
   isProcessing    Boolean  @default(false)
   hasRefreshToken Boolean  @default(false)
   consentRequired Boolean  @default(false)
-  lastRunAt       DateTime?
-  lastSuccessAt   DateTime?
-  nextRunAt       DateTime?
-  lastError       String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  lastRunAt         DateTime?
+  lastSuccessAt     DateTime?
+  nextRunAt         DateTime?
+  lastError         String?
+  // Delta-sync checkpoint: start-date for the next incremental Graph calendar query
+  lastMeetingSyncAt DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 

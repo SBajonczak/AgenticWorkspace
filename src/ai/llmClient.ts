@@ -31,6 +31,22 @@ export const AgentResponseSchema = z.object({
 
 export type AgentResponse = z.infer<typeof AgentResponseSchema>
 
+const MeetingPreparationSchema = z.object({
+  agenda: z
+    .array(
+      z.object({
+        title: z.string(),
+        rationale: z.string(),
+        priority: z.enum(['high', 'medium', 'low']).default('medium'),
+        source: z.enum(['history', 'knowledge_base', 'conflict']).default('history'),
+      })
+    )
+    .max(10)
+    .default([]),
+})
+
+export type MeetingPreparationItem = z.infer<typeof MeetingPreparationSchema>['agenda'][number]
+
 export interface LLMConfig {
   apiKey: string
   model?: string
@@ -45,6 +61,7 @@ export class LLMClient {
   private client: OpenAI
   private model: string
   private systemPrompt: string
+  private meetingPreparationPrompt: string
   private outputLanguages: string[]
 
   constructor(config: LLMConfig) {
@@ -70,6 +87,9 @@ export class LLMClient {
     // Load enhanced system prompt from file
     const promptPath = join(process.cwd(), 'src/ai/prompts/enhanced-meeting-analysis.md')
     this.systemPrompt = readFileSync(promptPath, 'utf-8')
+
+    const preparationPromptPath = join(process.cwd(), 'src/ai/prompts/meeting-preparation.md')
+    this.meetingPreparationPrompt = readFileSync(preparationPromptPath, 'utf-8')
   }
 
   async processTranscript(
@@ -109,6 +129,76 @@ export class LLMClient {
     const validatedResponse = AgentResponseSchema.parse(jsonResponse)
 
     return validatedResponse
+  }
+
+  async prepareMeetingAgenda(
+    upcomingMeeting: {
+      title: string
+      organizer: string
+      startTime: Date
+      endTime: Date
+    },
+    context: {
+      relatedMeetings: {
+        id: string
+        title: string
+        startTime: string
+        summary: string | null
+        decisions: string[]
+        openTodos: {
+          id: string
+          title: string
+          assigneeHint: string | null
+          status: string
+        }[]
+        projectStatuses: {
+          projectName: string
+          status: string
+          summary: string
+        }[]
+      }[]
+      conflicts: {
+        id: string
+        title: string
+        startTime: string
+        endTime: string
+      }[]
+    }
+  ): Promise<MeetingPreparationItem[]> {
+    const completion = await this.client.chat.completions.create({
+      model: this.model,
+      messages: [
+        {
+          role: 'system',
+          content: this.meetingPreparationPrompt,
+        },
+        {
+          role: 'user',
+          content: JSON.stringify(
+            {
+              upcomingMeeting: {
+                ...upcomingMeeting,
+                startTime: upcomingMeeting.startTime.toISOString(),
+                endTime: upcomingMeeting.endTime.toISOString(),
+              },
+              context,
+            },
+            null,
+            2
+          ),
+        },
+      ],
+      response_format: { type: 'json_object' },
+      temperature: 0.2,
+    })
+
+    const responseText = completion.choices[0]?.message?.content
+    if (!responseText) {
+      throw new Error('No response from LLM while preparing agenda')
+    }
+
+    const validated = MeetingPreparationSchema.parse(JSON.parse(responseText))
+    return validated.agenda
   }
 
   private buildUserPrompt(

@@ -39,6 +39,11 @@
         "title": "Letzte Fehlermeldung",
         "empty": "Keine Fehlermeldung gespeichert"
       },
+      "projects": {
+        "title": "Projekte & Wissensquellen",
+        "description": "Verwalten Sie Ihre Projekte, vergeben Sie Aliase aus Meeting-Transkripten und verknüpfen Sie externe Wissensquellen (Confluence, Jira, GitHub, SharePoint) mit jedem Projekt.",
+        "manageButton": "Projekte verwalten"
+      },
       "updatedAt": "Aktualisiert: {time}"
     }
   }

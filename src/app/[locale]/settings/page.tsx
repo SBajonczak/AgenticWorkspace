@@ -5,6 +5,8 @@ import { motion } from 'framer-motion'
 import { useTranslations } from 'next-intl'
 import { Link } from '@/i18n/routing'
 import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
+import { Button } from '@/components/ui/button'
+import { ChevronRight } from 'lucide-react'
 
 const SETTINGS_STATUS_REFRESH_MS = 15000
 
@@ -18,11 +20,100 @@ interface AgentStatusResponse {
   lastError: string | null
 }
 
+interface TenantSettingsResponse {
+  id: string
+  name: string
+  ticketProvider: string
+  ticketConfig: Record<string, unknown> | null
+}
+
+// ---------------------------------------------------------------------------
+// Tenant ticket-provider form
+// ---------------------------------------------------------------------------
+
+type ProviderType = 'jira' | 'github' | 'azuredevops' | 'none'
+
+function TicketProviderForm({ initial }: { initial: TenantSettingsResponse }) {
+  const [provider, setProvider] = useState<ProviderType>(initial.ticketProvider as ProviderType)
+  const [config, setConfig] = useState<Record<string, string>>(
+    (initial.ticketConfig as Record<string, string> | null) ?? {}
+  )
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleSave = async () => {
+    setSaving(true)
+    setSaved(false)
+    setError(null)
+    try {
+      const res = await fetch('/api/tenants/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticketProvider: provider, ticketConfig: config }),
+      })
+      if (res.ok) { setSaved(true) } else { const d = await res.json(); setError(d.error ?? 'Error') }
+    } catch { setError('Network error') } finally { setSaving(false) }
+  }
+
+  const field = (key: string, label: string, secret = false) => (
+    <div key={key}>
+      <label className="block text-xs font-medium text-gray-400 mb-1">{label}</label>
+      <input
+        type={secret ? 'password' : 'text'}
+        className="w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
+        value={config[key] ?? ''}
+        onChange={(e) => setConfig((p) => ({ ...p, [key]: e.target.value }))}
+        autoComplete="off"
+      />
+    </div>
+  )
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="block text-xs font-medium text-gray-400 mb-1">Provider</label>
+        <select
+          className="w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
+          value={provider}
+          onChange={(e) => { setProvider(e.target.value as ProviderType); setConfig({}) }}
+        >
+          <option value="none">None</option>
+          <option value="jira">Jira</option>
+          <option value="github">GitHub</option>
+          <option value="azuredevops">Azure DevOps</option>
+        </select>
+      </div>
+
+      {provider === 'jira' && (
+        <>{field('host', 'Host (e.g. https://org.atlassian.net)')}{field('email', 'Email')}{field('apiToken', 'API Token', true)}{field('projectKey', 'Project Key')}</>
+      )}
+      {provider === 'github' && (
+        <>{field('owner', 'Owner')}{field('repo', 'Repository')}{field('token', 'Personal Access Token', true)}</>
+      )}
+      {provider === 'azuredevops' && (
+        <>{field('organization', 'Organization')}{field('project', 'Project')}{field('personalAccessToken', 'Personal Access Token', true)}</>
+      )}
+
+      {error && <p className="text-xs text-red-400">{error}</p>}
+      {saved && <p className="text-xs text-green-400">Saved successfully.</p>}
+      <Button size="sm" onClick={handleSave} disabled={saving} className="bg-purple-600 hover:bg-purple-700 text-white">
+        {saving ? 'Saving…' : 'Save'}
+      </Button>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Main page
+// ---------------------------------------------------------------------------
+
 export default function SettingsPage() {
   const tCommon = useTranslations('common')
   const tSettings = useTranslations('dashboard.settingsPage')
 
   const [status, setStatus] = useState<AgentStatusResponse | null>(null)
+  const [tenantSettings, setTenantSettings] = useState<TenantSettingsResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [updatedAt, setUpdatedAt] = useState<string | null>(null)
@@ -33,38 +124,27 @@ export default function SettingsPage() {
 
     const loadStatus = async () => {
       try {
-        const response = await fetch('/api/agent/status', { cache: 'no-store' })
-
-        if (!response.ok) {
-          throw new Error(`Failed with status ${response.status}`)
-        }
-
-        const data = (await response.json()) as AgentStatusResponse
-
+        const [statusRes, tenantRes] = await Promise.all([
+          fetch('/api/agent/status', { cache: 'no-store' }),
+          fetch('/api/tenants/settings', { cache: 'no-store' }),
+        ])
+        if (!statusRes.ok) throw new Error(`Status ${statusRes.status}`)
         if (active) {
-          setStatus(data)
+          setStatus(await statusRes.json())
+          if (tenantRes.ok) setTenantSettings(await tenantRes.json())
           setError(null)
           setUpdatedAt(new Date().toISOString())
         }
       } catch {
-        if (active) {
-          setStatus(null)
-          setError(loadErrorMessage)
-        }
+        if (active) { setStatus(null); setError(loadErrorMessage) }
       } finally {
-        if (active) {
-          setLoading(false)
-        }
+        if (active) setLoading(false)
       }
     }
 
     loadStatus()
     const intervalId = setInterval(loadStatus, SETTINGS_STATUS_REFRESH_MS)
-
-    return () => {
-      active = false
-      clearInterval(intervalId)
-    }
+    return () => { active = false; clearInterval(intervalId) }
   }, [loadErrorMessage])
 
   const formatDateTime = (value: string | null) => {
@@ -73,12 +153,7 @@ export default function SettingsPage() {
   }
 
   const lastUpdatedLabel = updatedAt
-    ? tSettings('updatedAt', {
-        time: new Date(updatedAt).toLocaleTimeString([], {
-          hour: '2-digit',
-          minute: '2-digit',
-        }),
-      })
+    ? tSettings('updatedAt', { time: new Date(updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) })
     : null
 
   return (
@@ -90,12 +165,8 @@ export default function SettingsPage() {
               {tCommon('brand.name')}
             </Link>
             <nav className="flex gap-6 items-center">
-              <Link href="/dashboard" className="text-gray-400 hover:text-white transition-colors">
-                {tCommon('navigation.dashboard')}
-              </Link>
-              <Link href="/settings" className="text-purple-400 font-semibold">
-                {tCommon('navigation.settings')}
-              </Link>
+              <Link href="/dashboard" className="text-gray-400 hover:text-white transition-colors">{tCommon('navigation.dashboard')}</Link>
+              <Link href="/settings" className="text-purple-400 font-semibold">{tCommon('navigation.settings')}</Link>
               <LanguageSwitcher />
             </nav>
           </div>
@@ -118,53 +189,59 @@ export default function SettingsPage() {
           </motion.div>
         )}
 
-        {loading ? (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-40 rounded-xl border border-gray-700 bg-gray-800/40 animate-pulse" />
-        ) : status ? (
-          <div className="space-y-6">
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="rounded-xl border border-gray-700/50 bg-gray-800/40 backdrop-blur p-6"
-            >
+        <div className="space-y-6">
+          {/* Agent Status */}
+          {loading ? (
+            <div className="h-40 rounded-xl border border-gray-700 bg-gray-800/40 animate-pulse" />
+          ) : status ? (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl border border-gray-700/50 bg-gray-800/40 backdrop-blur p-6">
+              <h2 className="text-lg font-semibold text-white mb-4">{tSettings('title')}</h2>
               <div className="space-y-3 text-sm text-gray-200">
-                <p>
-                  <span className="font-semibold">{tCommon('labels.status')}:</span>{' '}
-                  {status.isProcessing ? tSettings('status.running') : tSettings('status.idle')}
-                </p>
-                <p>
-                  <span className="font-semibold">{tSettings('status.nextRun')}:</span> {formatDateTime(status.nextRunAt)}
-                </p>
-                <p>
-                  <span className="font-semibold">{tSettings('status.lastRun')}:</span> {formatDateTime(status.lastRunAt)}
-                </p>
-                <p>
-                  <span className="font-semibold">{tSettings('status.lastSuccess')}:</span> {formatDateTime(status.lastSuccessAt)}
-                </p>
-                <p>
-                  <span className="font-semibold">{tSettings('status.consent')}:</span>{' '}
-                  {status.consentRequired ? tSettings('status.yes') : tSettings('status.no')}
-                </p>
-                <p>
-                  <span className="font-semibold">{tSettings('status.refreshToken')}:</span>{' '}
-                  {status.hasRefreshToken ? tSettings('status.yes') : tSettings('status.no')}
-                </p>
+                <p><span className="font-semibold">{tCommon('labels.status')}:</span> {status.isProcessing ? tSettings('status.running') : tSettings('status.idle')}</p>
+                <p><span className="font-semibold">{tSettings('status.nextRun')}:</span> {formatDateTime(status.nextRunAt)}</p>
+                <p><span className="font-semibold">{tSettings('status.lastRun')}:</span> {formatDateTime(status.lastRunAt)}</p>
+                <p><span className="font-semibold">{tSettings('status.lastSuccess')}:</span> {formatDateTime(status.lastSuccessAt)}</p>
+                <p><span className="font-semibold">{tSettings('status.consent')}:</span> {status.consentRequired ? tSettings('status.yes') : tSettings('status.no')}</p>
+                <p><span className="font-semibold">{tSettings('status.refreshToken')}:</span> {status.hasRefreshToken ? tSettings('status.yes') : tSettings('status.no')}</p>
               </div>
             </motion.div>
+          ) : null}
 
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.05 }}
-              className="rounded-xl border border-gray-700/50 bg-gray-800/40 backdrop-blur p-6"
-            >
+          {/* Logs */}
+          {status && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="rounded-xl border border-gray-700/50 bg-gray-800/40 backdrop-blur p-6">
               <h2 className="text-lg font-semibold text-white mb-2">{tSettings('logs.title')}</h2>
               <p className={`text-sm ${status.lastError ? 'text-amber-300' : 'text-gray-400'}`}>
                 {status.lastError || tSettings('logs.empty')}
               </p>
             </motion.div>
-          </div>
-        ) : null}
+          )}
+
+          {/* Ticket Integration */}
+          {tenantSettings && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="rounded-xl border border-gray-700/50 bg-gray-800/40 backdrop-blur p-6">
+              <h2 className="text-lg font-semibold text-white mb-4">Ticket Integration</h2>
+              <TicketProviderForm initial={tenantSettings} />
+            </motion.div>
+          )}
+
+          {/* Projects & Knowledge Sources */}
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="rounded-xl border border-gray-700/50 bg-gray-800/40 backdrop-blur p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-white mb-1">{tSettings('projects.title')}</h2>
+                <p className="text-sm text-gray-400">
+                  {tSettings('projects.description')}
+                </p>
+              </div>
+              <Link href="/projects">
+                <Button variant="secondary" size="sm" className="ml-4 gap-1.5 shrink-0">
+                  {tSettings('projects.manageButton')} <ChevronRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+          </motion.div>
+        </div>
       </main>
     </div>
   )

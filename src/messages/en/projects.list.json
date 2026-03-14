@@ -21,10 +21,54 @@
       "status": {
         "active": "Active",
         "on_hold": "On Hold",
-        "completed": "Completed"
+        "completed": "Completed",
+        "archived": "Archived"
       },
       "empty": "No projects found",
-      "aiSummary": "AI Summary"
+      "newProject": "New Project",
+      "aiSummary": "AI Summary",
+      "manage": {
+        "createTitle": "Create Project",
+        "editTitle": "Edit Project",
+        "name": "Name",
+        "namePlaceholder": "E.g. Mobile App Relaunch",
+        "description": "Description",
+        "descriptionPlaceholder": "Short project description",
+        "owner": "Owner",
+        "ownerPlaceholder": "E.g. jane@company.com",
+        "status": "Status",
+        "aliases": "Aliases (one per line)",
+        "aliasesHint": "Alternate names used in meeting transcripts for this project",
+        "save": "Save",
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "deleteConfirm": "Are you sure you want to delete this project?",
+        "sources": "Knowledge Sources",
+        "addSource": "Add Source",
+        "sourceType": "Type",
+        "sourceLabel": "Label",
+        "sourceLabelPlaceholder": "E.g. Team Wiki",
+        "sourceIdentifier": "Identifier",
+        "sourceIdentifierHint": {
+          "confluence": "Confluence Space Key (e.g. TEAM)",
+          "jira": "Jira Project Key (e.g. PROJ)",
+          "github": "GitHub Repo (e.g. owner/repo)",
+          "sharepoint": "SharePoint Site URL"
+        },
+        "sourceConfig": "Config (optional JSON)",
+        "testConnection": "Test Connection",
+        "testOk": "Connection successful",
+        "testFail": "Connection failed",
+        "sourceTypes": {
+          "confluence": "Confluence",
+          "jira": "Jira",
+          "github": "GitHub",
+          "sharepoint": "SharePoint"
+        },
+        "removeSource": "Remove",
+        "saveError": "Could not save. Please check your input.",
+        "loadError": "Could not load projects."
+      }
     }
   }
 }
