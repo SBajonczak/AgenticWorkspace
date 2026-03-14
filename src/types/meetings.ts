@@ -26,3 +26,5 @@ export interface MeetingsListResponse {
     provider: string
   }
 }
+
+export type MeetingsApiResponse = MeetingListItem[] | MeetingsListResponse

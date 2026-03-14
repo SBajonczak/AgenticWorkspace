@@ -10,25 +10,50 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Meeting {
+// ---------------------------------------------------------------------------
+// Multi-tenancy: each Azure AD tenant maps to one Tenant record.
+// Auto-provisioned on first login using the 'tid' claim from Entra ID.
+// ---------------------------------------------------------------------------
+model Tenant {
   id            String    @id @default(uuid())
-  meetingId     String    @unique // Microsoft Teams meeting ID
-  title         String
-  organizer     String
-  organizerEmail String?
-  startTime     DateTime
-  endTime       DateTime
-  transcript    String?   // Full transcript
-  summary       String?   // AI-generated summary
-  decisions     String?   // JSON array of decisions
-  participants  String?   // JSON array of attendee emails
-  processedAt   DateTime?
+  azureTenantId String    @unique  // Azure AD tenant ID (natural key)
+  name          String    @default("My Organization")
+  // TicketProviderType: 'jira' | 'github' | 'azuredevops' | 'none'
+  ticketProvider String   @default("none")
+  // JSON-serialized TicketProviderConfig – encrypt in production
+  ticketConfig  String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+
+  meetings      Meeting[]
+  users         User[]
+}
+
+model Meeting {
+  id             String    @id @default(uuid())
+  meetingId      String    @unique // Microsoft Teams meeting ID
+  title          String
+  organizer      String
+  organizerEmail String?
+  startTime      DateTime
+  endTime        DateTime
+  transcript     String?   // Full transcript
+  summary        String?   // AI-generated summary
+  decisions      String?   // JSON array of decisions
+  participants   String?   // JSON array of attendee emails
+  processedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Optional tenant association (null = single-tenant / legacy data)
+  tenantId       String?
+  tenant         Tenant?   @relation(fields: [tenantId], references: [id])
 
   todos           Todo[]
   minutes         MeetingMinutes[]
   projectStatuses ProjectStatus[]
+
+  @@index([tenantId])
 }
 
 model Todo {
@@ -45,16 +70,20 @@ model Todo {
   updatedAt     DateTime  @updatedAt
 
   meeting       Meeting   @relation(fields: [meetingId], references: [id], onDelete: Cascade)
-  jiraSync      JiraSync?
+  ticketSync    TicketSync?
 
   @@index([meetingId])
 }
 
-model JiraSync {
+// Generalised ticket sync: replaces JiraSync, supports all providers
+model TicketSync {
   id            String    @id @default(uuid())
   todoId        String    @unique
-  jiraIssueKey  String?   // e.g., "PROJ-123"
-  jiraIssueId   String?
+  // TicketProviderType: 'jira' | 'github' | 'azuredevops' | 'none'
+  provider      String    @default("jira")
+  ticketKey     String?   // e.g. "PROJ-123", "#42", "AB#1234"
+  ticketId      String?   // provider-internal ID
+  ticketUrl     String?   // direct URL to the ticket
   status        String    @default("pending") // pending, synced, failed
   error         String?
   syncedAt      DateTime?
@@ -92,7 +121,9 @@ model ProjectStatus {
   @@index([meetingId])
 }
 
-// NextAuth.js models
+// ---------------------------------------------------------------------------
+// NextAuth.js / Auth.js v5 models
+// ---------------------------------------------------------------------------
 model User {
   id            String    @id @default(uuid())
   name          String?
@@ -101,6 +132,10 @@ model User {
   image         String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+
+  // Optional tenant link – set on first login via Entra ID
+  tenantId      String?
+  tenant        Tenant?   @relation(fields: [tenantId], references: [id])
 
   accounts      Account[]
   sessions      Session[]

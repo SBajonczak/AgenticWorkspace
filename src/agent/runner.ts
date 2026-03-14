@@ -166,15 +166,12 @@ export class AgentRunner {
                   assignee: todo.assigneeHint || undefined,
                 })
 
-                await jiraSyncRepo.markSynced(todo.id, jiraIssue.key, jiraIssue.id)
+                await jiraSyncRepo.markSynced(todo.id, { id: jiraIssue.id, key: jiraIssue.key, url: '', provider: 'jira' as const })
                 console.log(`  ✓ Created: ${jiraIssue.key}`)
                 jiraSynced++
               } catch (error) {
                 console.error(`  ✗ Failed to sync todo ${todo.id}:`, error)
-                await jiraSyncRepo.markFailed(
-                  todo.id,
-                  error instanceof Error ? error.message : 'Unknown error'
-                )
+                await jiraSyncRepo.markFailed(todo.id, 'jira', error instanceof Error ? error.message : 'Unknown error')
               }
             }
           } else {

@@ -8,8 +8,9 @@ import { MeetingRepository } from '../db/repositories/meetingRepository'
 import { TodoRepository } from '../db/repositories/todoRepository'
 import { MeetingMinutesRepository } from '../db/repositories/meetingMinutesRepository'
 import { ProjectStatusRepository } from '../db/repositories/projectStatusRepository'
-import { JiraSyncRepository } from '../db/repositories/jiraSyncRepository'
-import { createJiraClient } from '../jira/client'
+import { TicketSyncRepository } from '../db/repositories/ticketSyncRepository'
+import { TenantRepository } from '../db/repositories/tenantRepository'
+import { createTicketProvider, createTicketProviderFromEnv } from '../tickets/factory'
 
 let isRunning = false
 
@@ -23,22 +24,18 @@ async function runAgentCycle(): Promise<void> {
   try {
     console.log(`[Worker] Starting agent cycle at ${new Date().toISOString()}`)
 
-    // IMPORTANT: Use ClientSecretCredential (app permissions) for headless/daemon operation.
-    // The DeviceCodeCredential used by AgentRunner requires interactive browser auth
-    // and cannot run unattended. GRAPH_TARGET_USER_ID must be set to the UPN or
-    // object ID of the M365 user whose meetings should be processed.
+    // IMPORTANT: Uses ClientSecretCredential (app permissions) – no interactive login.
+    // GRAPH_TARGET_USER_ID must be the UPN or Azure AD object ID of the target user.
     const targetUserId = process.env.GRAPH_TARGET_USER_ID
     if (!targetUserId) {
       throw new Error(
-        'GRAPH_TARGET_USER_ID is required for the background worker. ' +
-          'Set it to the UPN (email) or Azure AD object ID of the target M365 user.'
+        'GRAPH_TARGET_USER_ID is required. Set it to the UPN or Azure AD object ID of the target M365 user.'
       )
     }
 
     const appAuth = createAppGraphAuth()
     const accessToken = await appAuth.getAccessToken()
 
-    // Use user-specific paths (/users/{id}/) since app permissions do not support /me/
     const meetingsClient = new MeetingsClient(accessToken, targetUserId)
     const transcriptsClient = new TranscriptsClient(accessToken, targetUserId)
 
@@ -48,20 +45,37 @@ async function runAgentCycle(): Promise<void> {
       return
     }
 
+    // Resolve tenant for ticket provider (per-tenant config wins over env fallback)
+    const azureTenantId = process.env.AZURE_TENANT_ID
+    const tenantRepo = new TenantRepository()
+    let ticketProvider = createTicketProviderFromEnv()
+    let tenantId: string | undefined
+
+    if (azureTenantId) {
+      const tenant = await tenantRepo.findOrCreate(azureTenantId)
+      tenantId = tenant.id
+      const tenantConfig = await tenantRepo.getTicketConfig(tenant.id)
+      if (tenantConfig) {
+        ticketProvider = createTicketProvider(tenantConfig)
+        console.log(`[Worker] Using tenant ticket provider: ${ticketProvider.type}`)
+      }
+    }
+
     const meetingRepo = new MeetingRepository()
     const todoRepo = new TodoRepository()
     const minutesRepo = new MeetingMinutesRepository()
     const projectStatusRepo = new ProjectStatusRepository()
-    const jiraSyncRepo = new JiraSyncRepository()
+    const ticketSyncRepo = new TicketSyncRepository()
     const llmClient = createLLMClient()
-    const jiraClient = createJiraClient()
 
     const processor = new MeetingProcessor(
       llmClient,
       meetingRepo,
       todoRepo,
       minutesRepo,
-      projectStatusRepo
+      projectStatusRepo,
+      ticketSyncRepo,
+      ticketProvider
     )
 
     let processed = 0
@@ -69,18 +83,11 @@ async function runAgentCycle(): Promise<void> {
     let failed = 0
 
     for (const meeting of meetings) {
-      if (!meeting.id) {
-        skipped++
-        continue
-      }
+      if (!meeting.id) { skipped++; continue }
 
       try {
-        // Skip already processed meetings
         const existing = await meetingRepo.findByMeetingId(meeting.id)
-        if (existing?.processedAt) {
-          skipped++
-          continue
-        }
+        if (existing?.processedAt) { skipped++; continue }
 
         const transcript = await transcriptsClient.getTranscript(meeting.id)
         if (!transcript) {
@@ -97,32 +104,15 @@ async function runAgentCycle(): Promise<void> {
           new Date(meeting.start.dateTime),
           new Date(meeting.end.dateTime),
           transcript,
-          meeting.participants || []
+          meeting.participants || [],
+          tenantId
         )
-
-        // Sync todos to Jira
-        if (jiraClient) {
-          const todos = await todoRepo.findByMeetingId(result.meeting.id)
-          for (const todo of todos) {
-            try {
-              const issue = await jiraClient.createTask({
-                summary: todo.title,
-                description: todo.description,
-                assignee: todo.assigneeHint || undefined,
-              })
-              await jiraSyncRepo.markSynced(todo.id, issue.key, issue.id)
-            } catch (err) {
-              await jiraSyncRepo.markFailed(
-                todo.id,
-                err instanceof Error ? err.message : 'Unknown Jira error'
-              )
-            }
-          }
-        }
 
         processed++
         console.log(
-          `[Worker] Processed: "${meeting.subject}" | Todos: ${result.todosCreated} | Minutes: ${result.minutesCreated}`
+          `[Worker] Processed: "${meeting.subject}" | ` +
+          `Todos: ${result.todosCreated} | ` +
+          `Tickets: ${result.ticketsSynced}/${result.todosCreated} synced`
         )
       } catch (err) {
         failed++
@@ -142,13 +132,12 @@ async function runAgentCycle(): Promise<void> {
 
 export function startWorker(intervalMinutes: number = 30): void {
   const cronExpression = `*/${intervalMinutes} * * * *`
-  console.log(`[Worker] Scheduling agent every ${intervalMinutes} minutes (${cronExpression})`)
+  console.log(`[Worker] Scheduling agent every ${intervalMinutes} minutes`)
 
   cron.schedule(cronExpression, () => {
     runAgentCycle().catch((err) => console.error('[Worker] Scheduled cycle error:', err))
   })
 
-  // Run once immediately on startup
   console.log('[Worker] Running initial cycle...')
   runAgentCycle().catch((err) => console.error('[Worker] Initial cycle error:', err))
 }

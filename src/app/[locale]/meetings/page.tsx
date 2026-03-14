@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 import { useTranslations } from 'next-intl'
 import { Link } from '@/i18n/routing'
 import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
-import { MeetingListItem, MeetingsListResponse } from '@/types/meetings'
+import { MeetingListItem, MeetingsApiResponse } from '@/types/meetings'
 
 export default function MeetingsListPage() {
   const tCommon = useTranslations('common')
@@ -25,12 +25,14 @@ export default function MeetingsListPage() {
           throw new Error(`Failed with status ${response.status}`)
         }
 
-        const data = (await response.json()) as MeetingsListResponse
+        const data = (await response.json()) as MeetingsApiResponse
+        const loadedMeetings = Array.isArray(data) ? data : data.meetings
+
         if (active) {
-          setMeetings(data.meetings || [])
+          setMeetings(loadedMeetings || [])
           setError(null)
         }
-      } catch (err) {
+      } catch {
         if (active) {
           setError('Meetings konnten nicht geladen werden.')
           setMeetings([])
@@ -49,9 +51,9 @@ export default function MeetingsListPage() {
     }
   }, [])
 
-  const filteredMeetings = meetings.filter((m) => {
+  const filteredMeetings = meetings.filter((meeting) => {
     if (filter === 'all') return true
-    return m.status === filter
+    return meeting.status === filter
   })
 
   const getStatusColor = (status: MeetingListItem['status']) => {
@@ -67,7 +69,6 @@ export default function MeetingsListPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
-      {/* Header */}
       <header className="border-b border-gray-800 bg-gray-900/50 backdrop-blur">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -87,7 +88,6 @@ export default function MeetingsListPage() {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="container mx-auto px-4 py-12">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -104,29 +104,27 @@ export default function MeetingsListPage() {
           <p className="text-gray-400">{tList('subtitle')}</p>
         </motion.div>
 
-        {/* Filters */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.1 }}
           className="mb-6 flex gap-3"
         >
-          {(['all', 'completed', 'upcoming'] as const).map((f) => (
+          {(['all', 'completed', 'upcoming'] as const).map((item) => (
             <button
-              key={f}
-              onClick={() => setFilter(f)}
+              key={item}
+              onClick={() => setFilter(item)}
               className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
-                filter === f
+                filter === item
                   ? 'bg-purple-600 text-white'
                   : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
               }`}
             >
-              {tList(`filters.${f}`)}
+              {tList(`filters.${item}`)}
             </button>
           ))}
         </motion.div>
 
-        {/* Meetings List */}
         {loading ? (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
             {[1, 2, 3].map((item) => (
@@ -163,7 +161,6 @@ export default function MeetingsListPage() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.1 * index }}
               >
-
                 <Link
                   href={`/meetings/${meeting.id}`}
                   className="block bg-gray-800/50 backdrop-blur rounded-xl p-6 border border-gray-700 hover:border-purple-500 transition-all"

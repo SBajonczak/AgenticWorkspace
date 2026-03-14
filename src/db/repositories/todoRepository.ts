@@ -15,27 +15,22 @@ export class TodoRepository {
     return prisma.todo.findUnique({
       where: { id },
       include: {
-        jiraSync: true,
+        ticketSync: true,
         meeting: true,
       },
-    })
+    }) as any
   }
 
   async findByMeetingId(meetingId: string): Promise<Todo[]> {
     return prisma.todo.findMany({
       where: { meetingId },
-      include: {
-        jiraSync: true,
-      },
+      include: { ticketSync: true },
       orderBy: { confidence: 'desc' },
-    })
+    }) as any
   }
 
   async update(id: string, data: Prisma.TodoUpdateInput): Promise<Todo> {
-    return prisma.todo.update({
-      where: { id },
-      data,
-    })
+    return prisma.todo.update({ where: { id }, data })
   }
 
   async delete(id: string): Promise<void> {

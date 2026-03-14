@@ -6,7 +6,7 @@ async function main() {
   console.log('🌱 Seeding database...')
 
   // Clear existing data
-  await prisma.jiraSync.deleteMany()
+  await prisma.ticketSync.deleteMany()
   await prisma.todo.deleteMany()
   await prisma.meeting.deleteMany()
 
