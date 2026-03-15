@@ -3,13 +3,22 @@
 import { motion } from 'framer-motion'
 import { useTranslations } from 'next-intl'
 import { Link } from '@/i18n/routing'
-import { Project } from '@/mocks'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Rocket, User } from 'lucide-react'
 
+export interface ActiveProjectItem {
+  id: string
+  name: string
+  aiSummary: string
+  completionPercentage: number
+  owner: string | null
+  openActions: number
+  confirmed: boolean
+}
+
 interface ActiveProjectsWidgetProps {
-  projects: Project[]
+  projects: ActiveProjectItem[]
 }
 
 export default function ActiveProjectsWidget({ projects }: ActiveProjectsWidgetProps) {
@@ -44,13 +53,13 @@ export default function ActiveProjectsWidget({ projects }: ActiveProjectsWidgetP
                   <div className="flex items-start justify-between mb-2">
                     <h4 className="text-foreground font-semibold flex-1">{project.name}</h4>
                     <Badge variant="secondary" className="text-xs shrink-0 ml-2">
-                      {project.completionPercentage}%
+                      {project.confirmed ? `${project.completionPercentage}%` : t('pendingApproval')}
                     </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{project.aiSummary}</p>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <User className="h-3 w-3" />
-                    <span>{project.owner}</span>
+                    <span>{project.owner || t('unassigned')}</span>
                     <span>•</span>
                     <span>
                       {project.openActions} {project.openActions === 1 ? t('openActions') : t('openActions_plural')}

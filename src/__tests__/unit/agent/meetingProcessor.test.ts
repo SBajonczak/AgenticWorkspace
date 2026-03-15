@@ -2,6 +2,7 @@
 import { MeetingProcessor } from '@/agent/meetingProcessor'
 import { NoneTicketProvider } from '@/tickets/providers/none'
 import { AgentResponse } from '@/ai/llmClient'
+import { ProjectRepository } from '@/db/repositories/projectRepository'
 
 // ---------- Mocks ----------
 
@@ -78,10 +79,29 @@ const makeMockTicketSyncRepo = () => ({
   markFailed: jest.fn().mockResolvedValue({}),
 })
 
+const makeMockProjectRepo = () => ({
+  findByNameOrAlias: jest.fn().mockResolvedValue(null),
+  create: jest.fn().mockImplementation(async ({ name, tenantId, description, confirmed, status }) => ({
+    id: `project-${name.toLowerCase().replace(/\s+/g, '-')}`,
+    tenantId,
+    name,
+    description: description ?? null,
+    status: status ?? 'active',
+    owner: null,
+    archived: false,
+    confirmed: confirmed ?? false,
+    aliases: [],
+    sourceLinks: [],
+  })),
+})
+
 // ---------- Tests ----------
 
 describe('MeetingProcessor', () => {
-  const makeProcessor = (ticketProvider = new NoneTicketProvider()) =>
+  const makeProcessor = (
+    ticketProvider = new NoneTicketProvider(),
+    projectRepo = makeMockProjectRepo()
+  ) =>
     new MeetingProcessor(
       makeMockLLMClient() as any,
       makeMockMeetingRepo() as any,
@@ -89,7 +109,8 @@ describe('MeetingProcessor', () => {
       makeMockMinutesRepo() as any,
       makeMockProjectStatusRepo() as any,
       makeMockTicketSyncRepo() as any,
-      ticketProvider
+      ticketProvider,
+      projectRepo as any
     )
 
   describe('processMeeting', () => {
@@ -97,7 +118,7 @@ describe('MeetingProcessor', () => {
       const processor = makeProcessor()
       const result = await processor.processMeeting(
         'ms-teams-id', 'Q3 Planning', 'Alice', 'alice@example.com',
-        new Date(), new Date(), 'transcript text'
+        new Date(), new Date(), 'transcript text', [], 'tenant-1'
       )
 
       expect(result.meeting).toBeDefined()
@@ -115,12 +136,13 @@ describe('MeetingProcessor', () => {
         makeMockMinutesRepo() as any,
         makeMockProjectStatusRepo() as any,
         ticketSyncRepo as any,
-        new NoneTicketProvider()
+        new NoneTicketProvider(),
+        makeMockProjectRepo() as any
       )
 
       await processor.processMeeting(
         'ms-teams-id', 'Q3 Planning', 'Alice', 'alice@example.com',
-        new Date(), new Date(), 'transcript text'
+        new Date(), new Date(), 'transcript text', [], 'tenant-1'
       )
 
       expect(ticketSyncRepo.markSynced).not.toHaveBeenCalled()
@@ -142,12 +164,13 @@ describe('MeetingProcessor', () => {
         makeMockMinutesRepo() as any,
         makeMockProjectStatusRepo() as any,
         ticketSyncRepo as any,
-        mockProvider
+        mockProvider,
+        makeMockProjectRepo() as any
       )
 
       const result = await processor.processMeeting(
         'ms-teams-id', 'Q3 Planning', 'Alice', 'alice@example.com',
-        new Date(), new Date(), 'transcript text'
+        new Date(), new Date(), 'transcript text', [], 'tenant-1'
       )
 
       expect(mockProvider.createTicket).toHaveBeenCalledTimes(1)
@@ -172,12 +195,13 @@ describe('MeetingProcessor', () => {
         makeMockMinutesRepo() as any,
         makeMockProjectStatusRepo() as any,
         ticketSyncRepo as any,
-        mockProvider
+        mockProvider,
+        makeMockProjectRepo() as any
       )
 
       const result = await processor.processMeeting(
         'ms-teams-id', 'Q3 Planning', 'Alice', 'alice@example.com',
-        new Date(), new Date(), 'transcript text'
+        new Date(), new Date(), 'transcript text', [], 'tenant-1'
       )
 
       expect(ticketSyncRepo.markFailed).toHaveBeenCalledWith('todo-1', 'jira', 'Jira unavailable')
@@ -193,16 +217,141 @@ describe('MeetingProcessor', () => {
         makeMockTodoRepo() as any,
         makeMockMinutesRepo() as any,
         makeMockProjectStatusRepo() as any,
-        makeMockTicketSyncRepo() as any
+        makeMockTicketSyncRepo() as any,
+        new NoneTicketProvider(),
+        makeMockProjectRepo() as any
       )
 
       await processor.processMeeting(
         'ms-teams-id', 'Q3 Planning', 'Alice', 'alice@example.com',
-        new Date(), new Date(), 'transcript text'
+        new Date(), new Date(), 'transcript text', [], 'tenant-1'
       )
 
       expect(meetingRepo.create).not.toHaveBeenCalled()
       expect(meetingRepo.update).toHaveBeenCalled()
+    })
+
+    it('auto-creates unconfirmed projects and links matching todos', async () => {
+      const todoRepo = makeMockTodoRepo()
+      const projectRepo = makeMockProjectRepo()
+      const processor = new MeetingProcessor(
+        makeMockLLMClient() as any,
+        makeMockMeetingRepo() as any,
+        todoRepo as any,
+        makeMockMinutesRepo() as any,
+        makeMockProjectStatusRepo() as any,
+        makeMockTicketSyncRepo() as any,
+        new NoneTicketProvider(),
+        projectRepo as any
+      )
+
+      await processor.processMeeting(
+        'ms-teams-id',
+        'Q3 Planning',
+        'Alice',
+        'alice@example.com',
+        new Date('2026-03-14T09:00:00Z'),
+        new Date('2026-03-14T10:00:00Z'),
+        'transcript text',
+        [],
+        'tenant-1'
+      )
+
+      expect(projectRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tenantId: 'tenant-1',
+          name: 'Atlas',
+          confirmed: false,
+        })
+      )
+      expect(todoRepo.createMany).toHaveBeenCalledWith([
+        expect.objectContaining({
+          meetingId: mockMeeting.id,
+          projectId: 'project-atlas',
+        }),
+      ])
+    })
+
+    it('reuses an existing fuzzy-matched project without creating a duplicate', async () => {
+      const todoRepo = makeMockTodoRepo()
+      const projectRepo = makeMockProjectRepo()
+      projectRepo.findByNameOrAlias.mockResolvedValue({
+        id: 'project-atlas-existing',
+        tenantId: 'tenant-1',
+        name: 'Atlas Platform',
+        description: null,
+        status: 'active',
+        owner: null,
+        archived: false,
+        confirmed: true,
+        aliases: [],
+        sourceLinks: [],
+      })
+
+      const processor = new MeetingProcessor(
+        makeMockLLMClient() as any,
+        makeMockMeetingRepo() as any,
+        todoRepo as any,
+        makeMockMinutesRepo() as any,
+        makeMockProjectStatusRepo() as any,
+        makeMockTicketSyncRepo() as any,
+        new NoneTicketProvider(),
+        projectRepo as any
+      )
+
+      await processor.processMeeting(
+        'ms-teams-id',
+        'Q3 Planning',
+        'Alice',
+        'alice@example.com',
+        new Date(),
+        new Date(),
+        'transcript text',
+        [],
+        'tenant-1'
+      )
+
+      expect(projectRepo.create).not.toHaveBeenCalled()
+      expect(todoRepo.createMany).toHaveBeenCalledWith([
+        expect.objectContaining({ projectId: 'project-atlas-existing' }),
+      ])
+    })
+
+    it('auto-creates a project for extracted status even when tenantId is missing', async () => {
+      const todoRepo = makeMockTodoRepo()
+      const projectRepo = makeMockProjectRepo()
+      const processor = new MeetingProcessor(
+        makeMockLLMClient() as any,
+        makeMockMeetingRepo() as any,
+        todoRepo as any,
+        makeMockMinutesRepo() as any,
+        makeMockProjectStatusRepo() as any,
+        makeMockTicketSyncRepo() as any,
+        new NoneTicketProvider(),
+        projectRepo as any
+      )
+
+      await processor.processMeeting(
+        'ms-teams-id',
+        'Q3 Planning',
+        'Alice',
+        'alice@example.com',
+        new Date(),
+        new Date(),
+        'transcript text',
+        []
+      )
+
+      expect(projectRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tenantId: null,
+          name: 'Atlas',
+          confirmed: false,
+        })
+      )
+      expect(todoRepo.createMany).toHaveBeenCalledWith([
+        expect.objectContaining({ projectId: 'project-atlas' }),
+      ])
     })
   })
 })

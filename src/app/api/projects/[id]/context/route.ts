@@ -6,6 +6,16 @@ import { prisma } from '@/db/prisma'
 
 const repo = new ProjectRepository()
 
+type ContextTodo = {
+  id: string
+  title: string
+  assigneeHint: string | null
+  status: string
+  priority: string
+  dueDate: Date | null
+  projectId: string | null
+}
+
 function getTenantId(session: any): string | undefined {
   return (session?.user as any)?.tenantId ?? undefined
 }
@@ -30,7 +40,6 @@ export async function GET(
 
   const fullSession = await auth()
   const tenantId = getTenantId(fullSession)
-  if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 400 })
 
   // Tenant-isolate project lookup
   const project = await repo.findById(params.id)
@@ -57,8 +66,9 @@ export async function GET(
   const meetings = statuses.map((statusRow) => {
     const m = statusRow.meeting
     const decisions = parseDecisions(m.decisions)
-    const openTodos = m.todos
-      .filter((t) => t.status !== 'done')
+    const meetingTodos = m.todos as unknown as ContextTodo[]
+    const openTodos = meetingTodos
+      .filter((t) => t.status !== 'done' && (t.projectId === params.id || t.projectId === null))
       .map((t) => ({
         id: t.id,
         title: t.title,
@@ -86,7 +96,11 @@ export async function GET(
   })
 
   // Aggregate stats
-  const allTodos = statuses.flatMap((s) => s.meeting.todos)
+  const allTodos = statuses.flatMap((s) =>
+    (s.meeting.todos as unknown as ContextTodo[]).filter(
+      (todo) => todo.projectId === params.id || todo.projectId === null
+    )
+  )
   const stats = {
     totalMeetings: meetings.length,
     totalTodos: allTodos.length,

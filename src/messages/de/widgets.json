@@ -33,6 +33,8 @@
       "subtitle": "Laufende Initiativen",
       "viewAll": "Alle Projekte anzeigen",
       "noProjects": "Keine aktiven Projekte",
+      "pendingApproval": "Wartet auf Freigabe",
+      "unassigned": "Nicht zugewiesen",
       "openActions": "offene Aktion",
       "openActions_plural": "offene Aktionen",
       "progress": "Fortschritt"

@@ -33,6 +33,8 @@
       "subtitle": "Current initiatives",
       "viewAll": "View all projects",
       "noProjects": "No active projects",
+      "pendingApproval": "Pending approval",
+      "unassigned": "Unassigned",
       "openActions": "open action",
       "openActions_plural": "open actions",
       "progress": "progress"

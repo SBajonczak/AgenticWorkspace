@@ -15,7 +15,6 @@ import {
   CompanyDirectionWidget
 } from '@/components/widgets'
 import {
-  getActiveProjects,
   mockGoals,
   mockMarketSignals,
   mockWeather,
@@ -38,9 +37,43 @@ const DEFAULT_USER_PROFILE: DashboardUserProfile = {
   avatarUrl: null,
 }
 
+interface DashboardProject {
+  id: string
+  name: string
+  owner: string | null
+  description: string | null
+  status: string
+  confirmed: boolean
+  archived?: boolean
+}
+
+function getCompletionPercentage(status: string): number {
+  switch (status) {
+    case 'completed':
+      return 100
+    case 'on_hold':
+      return 45
+    default:
+      return 65
+  }
+}
+
+function getProjectSummary(project: DashboardProject): string {
+  if (project.description?.trim()) {
+    return project.description.trim()
+  }
+
+  if (!project.confirmed) {
+    return 'Awaiting approval from meeting extraction.'
+  }
+
+  return 'Project is active and available for follow-up.'
+}
+
 export default function DashboardPage() {
   const [recentMeetings, setRecentMeetings] = useState<MeetingListItem[]>([])
   const [upcomingMeetings, setUpcomingMeetings] = useState<MeetingListItem[]>([])
+  const [activeProjects, setActiveProjects] = useState<DashboardProject[]>([])
   const [recentMeetingsUpdatedAt, setRecentMeetingsUpdatedAt] = useState<string | null>(null)
   const [currentUser, setCurrentUser] = useState<DashboardUserProfile>(DEFAULT_USER_PROFILE)
 
@@ -97,19 +130,40 @@ export default function DashboardPage() {
       }
     }
 
+    const loadProjects = async () => {
+      try {
+        const response = await fetch('/api/projects', { cache: 'no-store' })
+        if (!response.ok) throw new Error('Failed to load projects')
+        const data = (await response.json()) as { projects?: DashboardProject[] }
+        if (active) {
+          setActiveProjects(
+            (data.projects ?? [])
+              .filter((project) => !project.archived)
+              .sort((left, right) => Number(left.confirmed) - Number(right.confirmed) || left.name.localeCompare(right.name))
+              .slice(0, 3)
+          )
+        }
+      } catch {
+        if (active) setActiveProjects([])
+      }
+    }
+
     loadMeetingWidgets()
     loadCurrentUser()
+    loadProjects()
 
     const intervalId = setInterval(loadMeetingWidgets, DASHBOARD_MEETINGS_REFRESH_MS)
 
     const handleWindowFocus = () => {
       void loadMeetingWidgets()
       void loadCurrentUser()
+      void loadProjects()
     }
     const handleVisibilityChange = () => {
       if (!document.hidden) {
         void loadMeetingWidgets()
         void loadCurrentUser()
+        void loadProjects()
       }
     }
 
@@ -124,7 +178,6 @@ export default function DashboardPage() {
     }
   }, [])
 
-  const activeProjects = getActiveProjects(3)
   const goals = mockGoals.slice(0, 5)
   const signals = mockMarketSignals
   const weatherForDisplay = {
@@ -179,7 +232,17 @@ export default function DashboardPage() {
         <div className="grid md:grid-cols-2 gap-6">
           <RecentIntelligenceWidget meetings={recentMeetings} lastUpdatedAt={recentMeetingsUpdatedAt} />
           <UpcomingMeetingsWidget meetings={upcomingMeetings} lastUpdatedAt={recentMeetingsUpdatedAt} />
-          <ActiveProjectsWidget projects={activeProjects} />
+          <ActiveProjectsWidget
+            projects={activeProjects.map((project) => ({
+              id: project.id,
+              name: project.name,
+              owner: project.owner,
+              aiSummary: getProjectSummary(project),
+              completionPercentage: getCompletionPercentage(project.status),
+              openActions: project.confirmed ? 0 : 1,
+              confirmed: project.confirmed,
+            }))}
+          />
           <CompanyDirectionWidget goals={goals} signals={signals} />
         </div>
       </main>

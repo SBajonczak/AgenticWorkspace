@@ -24,6 +24,73 @@ export interface ProjectUpdateData {
 }
 
 export class ProjectRepository {
+  private buildTenantScope(tenantId?: string | null): Prisma.ProjectWhereInput {
+    if (tenantId) {
+      return {
+        OR: [{ tenantId }, { tenantId: null }],
+      }
+    }
+
+    return { tenantId: null }
+  }
+
+  private normalizeName(value: string): string {
+    return value
+      .toLowerCase()
+      .normalize('NFKD')
+      .replace(/[^a-z0-9]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+  }
+
+  private tokenizeName(value: string): string[] {
+    return this.normalizeName(value)
+      .split(' ')
+      .map((token) => token.trim())
+      .filter((token) => token.length >= 3)
+  }
+
+  private scoreCandidate(nameOrAlias: string, candidateValues: string[]): number {
+    const normalizedQuery = this.normalizeName(nameOrAlias)
+    if (!normalizedQuery) return 0
+
+    const queryTokens = this.tokenizeName(nameOrAlias)
+
+    let bestScore = 0
+    for (const rawCandidate of candidateValues) {
+      const normalizedCandidate = this.normalizeName(rawCandidate)
+      if (!normalizedCandidate) continue
+
+      if (normalizedCandidate === normalizedQuery) return 100
+
+      if (
+        normalizedCandidate.length >= 6 &&
+        normalizedQuery.length >= 6 &&
+        (normalizedCandidate.includes(normalizedQuery) || normalizedQuery.includes(normalizedCandidate))
+      ) {
+        bestScore = Math.max(bestScore, 80)
+      }
+
+      const candidateTokens = this.tokenizeName(rawCandidate)
+      if (queryTokens.length === 0 || candidateTokens.length === 0) continue
+
+      const overlap = queryTokens.filter((token) => candidateTokens.includes(token)).length
+      if (overlap === 0) continue
+
+      if (overlap === queryTokens.length || overlap === candidateTokens.length) {
+        bestScore = Math.max(bestScore, 70)
+        continue
+      }
+
+      const overlapRatio = overlap / Math.max(queryTokens.length, candidateTokens.length)
+      if (overlapRatio >= 0.6) {
+        bestScore = Math.max(bestScore, 60)
+      }
+    }
+
+    return bestScore
+  }
+
   async create(data: ProjectCreateData): Promise<ProjectWithRelations> {
     return prisma.project.create({
       data: {
@@ -45,10 +112,10 @@ export class ProjectRepository {
     })
   }
 
-  async findByTenant(tenantId: string, includeArchived = false): Promise<ProjectWithRelations[]> {
+  async findByTenant(tenantId?: string | null, includeArchived = false): Promise<ProjectWithRelations[]> {
     return prisma.project.findMany({
       where: {
-        tenantId,
+        ...this.buildTenantScope(tenantId),
         ...(includeArchived ? {} : { archived: false }),
       },
       orderBy: { name: 'asc' },
@@ -76,25 +143,31 @@ export class ProjectRepository {
     nameOrAlias: string,
     tenantId?: string | null
   ): Promise<ProjectWithRelations | null> {
-    const normalised = nameOrAlias.trim().toLowerCase()
-
-    // Fetch tenant-scoped candidates and do robust case-insensitive exact
-    // matching in JS for SQLite compatibility.
     const candidates = await prisma.project.findMany({
       where: {
         archived: false,
-        ...(tenantId ? { tenantId } : {}),
+        ...this.buildTenantScope(tenantId),
       },
       include: { aliases: true, sourceLinks: true },
       orderBy: { name: 'asc' },
     })
 
-    return (
-      candidates.find((p) => {
-        if (p.name.trim().toLowerCase() === normalised) return true
-        return p.aliases.some((a) => a.alias.trim().toLowerCase() === normalised)
-      }) ?? null
-    )
+    let bestMatch: ProjectWithRelations | null = null
+    let bestScore = 0
+
+    for (const candidate of candidates) {
+      const score = this.scoreCandidate(nameOrAlias, [
+        candidate.name,
+        ...candidate.aliases.map((alias) => alias.alias),
+      ])
+
+      if (score > bestScore) {
+        bestScore = score
+        bestMatch = candidate
+      }
+    }
+
+    return bestScore >= 60 ? bestMatch : null
   }
 
   // ---------------------------------------------------------------------------

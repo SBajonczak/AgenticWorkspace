@@ -64,6 +64,7 @@ model Meeting {
 model Todo {
   id            String    @id @default(uuid())
   meetingId     String
+  projectId     String?
   title         String
   description   String
   assigneeHint  String?
@@ -75,9 +76,11 @@ model Todo {
   updatedAt     DateTime  @updatedAt
 
   meeting       Meeting   @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  project       Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
   ticketSync    TicketSync?
 
   @@index([meetingId])
+  @@index([projectId])
 }
 
 // Generalised ticket sync: replaces JiraSync, supports all providers
@@ -150,6 +153,7 @@ model Project {
   aliases     ProjectAlias[]
   sourceLinks ProjectSourceLink[]
   statuses    ProjectStatus[]
+  todos       Todo[]
 
   @@index([tenantId])
   @@index([name])

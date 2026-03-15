@@ -10,6 +10,26 @@ export interface ProjectStatusCreateData {
 }
 
 export class ProjectStatusRepository {
+  private buildTenantScope(tenantId?: string | null) {
+    if (tenantId) {
+      return {
+        OR: [
+          { meeting: { tenantId } },
+          { meeting: { tenantId: null }, project: { tenantId: null } },
+          { project: { tenantId } },
+          { project: { tenantId: null }, meeting: { tenantId: null } },
+        ],
+      }
+    }
+
+    return {
+      OR: [
+        { meeting: { tenantId: null } },
+        { project: { tenantId: null } },
+      ],
+    }
+  }
+
   async createMany(statuses: ProjectStatusCreateData[]): Promise<number> {
     const result = await prisma.projectStatus.createMany({
       data: statuses,
@@ -17,9 +37,12 @@ export class ProjectStatusRepository {
     return result.count
   }
 
-  async findByMeetingId(meetingId: string): Promise<ProjectStatus[]> {
+  async findByMeetingId(meetingId: string, tenantId?: string | null): Promise<ProjectStatus[]> {
     return prisma.projectStatus.findMany({
-      where: { meetingId },
+      where: {
+        meetingId,
+        ...this.buildTenantScope(tenantId),
+      },
       orderBy: { projectName: 'asc' },
     })
   }
@@ -35,9 +58,10 @@ export class ProjectStatusRepository {
     })
   }
 
-  async findLatestPerProject(): Promise<ProjectStatus[]> {
+  async findLatestPerProject(tenantId?: string | null): Promise<ProjectStatus[]> {
     // Get the most recent status for each project
     const allStatuses = await prisma.projectStatus.findMany({
+      where: this.buildTenantScope(tenantId),
       orderBy: { createdAt: 'desc' },
       include: {
         meeting: {
@@ -49,7 +73,7 @@ export class ProjectStatusRepository {
     // Deduplicate: keep only the latest per project name
     const seen = new Set<string>()
     return allStatuses.filter((s) => {
-      const key = s.projectName.toLowerCase()
+      const key = s.projectId ?? s.projectName.toLowerCase()
       if (seen.has(key)) return false
       seen.add(key)
       return true

@@ -62,7 +62,10 @@ Identify any project or initiative mentioned in the meeting and assess its curre
 
 **Rules:**
 - Only include projects/initiatives clearly discussed in the meeting
+- If the team refers to an initiative without a formal name, derive a short working project name from the discussion when there is enough evidence that this is a concrete workstream that should be tracked
+- Prefer one stable project entry per workstream even if multiple variants of the name are mentioned
 - Infer status from context clues: blockers, delays, risks, success mentions
+- Use concise summaries that mention the current state and the most relevant next step or blocker
 - Return an empty array if no projects are identifiable
 
 ---
@@ -105,6 +108,7 @@ Extract actionable tasks assigned to people or implied by the discussion.
 - Maximum 10 todos per meeting (prefer fewer, higher-quality items)
 - Title must start with an action verb (Create, Update, Review, Schedule, etc.)
 - Description must be self-contained – the reader should understand the task without the transcript
+- Mention the project or initiative name in the title or description whenever the task clearly belongs to one specific project
 - Do NOT duplicate tasks
 
 ---

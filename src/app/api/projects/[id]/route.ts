@@ -10,11 +10,16 @@ function getTenantId(session: any): string | undefined {
   return (session?.user as any)?.tenantId ?? undefined
 }
 
-async function resolveProject(id: string, tenantId: string) {
+async function resolveProject(id: string, tenantId?: string) {
   const project = await repo.findById(id)
   if (!project) return null
   // Enforce tenant isolation
-  if (project.tenantId && project.tenantId !== tenantId) return null
+  if (tenantId) {
+    if (project.tenantId && project.tenantId !== tenantId) return null
+    return project
+  }
+
+  if (project.tenantId) return null
   return project
 }
 
@@ -25,7 +30,6 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
   const fullSession = await auth()
   const tenantId = getTenantId(fullSession) as string | undefined
-  if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 400 })
 
   const project = await resolveProject(params.id, tenantId)
   if (!project) return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -50,7 +54,6 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
   const fullSession = await auth()
   const tenantId = getTenantId(fullSession) as string | undefined
-  if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 400 })
 
   const existing = await resolveProject(params.id, tenantId)
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -79,7 +82,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
 
   const fullSession = await auth()
   const tenantId = getTenantId(fullSession) as string | undefined
-  if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 400 })
 
   const existing = await resolveProject(params.id, tenantId)
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })

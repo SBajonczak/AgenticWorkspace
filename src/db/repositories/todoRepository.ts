@@ -29,6 +29,21 @@ export class TodoRepository {
     }) as any
   }
 
+  async findByProjectId(projectId: string): Promise<Todo[]> {
+    return prisma.todo.findMany({
+      where: { projectId },
+      include: { ticketSync: true, meeting: true },
+      orderBy: [{ status: 'asc' }, { confidence: 'desc' }],
+    }) as any
+  }
+
+  async assignProject(todoId: string, projectId: string | null): Promise<Todo> {
+    return prisma.todo.update({
+      where: { id: todoId },
+      data: { projectId },
+    })
+  }
+
   async update(id: string, data: Prisma.TodoUpdateInput): Promise<Todo> {
     return prisma.todo.update({ where: { id }, data })
   }

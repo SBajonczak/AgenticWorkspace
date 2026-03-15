@@ -15,13 +15,7 @@ export async function GET() {
   const { session, error } = await requireAuth()
   if (error) return error
 
-  const fullSession = await auth()
-  const tenantId = getTenantId(fullSession) as string | undefined
-
-  if (!tenantId) {
-    return NextResponse.json({ error: 'No tenant associated with this account' }, { status: 400 })
-  }
-
+  const tenantId = getTenantId(session)
   const projects = await repo.findByTenant(tenantId)
   return NextResponse.json({ projects })
 }
@@ -42,10 +36,6 @@ export async function POST(req: NextRequest) {
   const fullSession = await auth()
   const tenantId = getTenantId(fullSession) as string | undefined
 
-  if (!tenantId) {
-    return NextResponse.json({ error: 'No tenant associated with this account' }, { status: 400 })
-  }
-
   let body: unknown
   try { body = await req.json() } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }) }
 
@@ -55,7 +45,7 @@ export async function POST(req: NextRequest) {
   }
 
   const { aliases, ...data } = parsed.data
-  const project = await repo.create({ ...data, tenantId })
+  const project = await repo.create({ ...data, tenantId: tenantId ?? null })
 
   if (aliases && aliases.length > 0) {
     await repo.setAliases(project.id, aliases)
