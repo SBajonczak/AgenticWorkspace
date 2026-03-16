@@ -45,6 +45,14 @@ function getNextRunAt(intervalMinutes: number): Date {
   return new Date(Date.now() + intervalMinutes * 60 * 1000)
 }
 
+function clampLookaheadDays(value: unknown): number {
+  const fallback = 14
+  const parsed = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(parsed)) return fallback
+  const normalized = Math.trunc(parsed)
+  return Math.max(1, Math.min(31, normalized))
+}
+
 async function runForUser(user: { id: string; email: string | null; tenantId: string | null }, intervalMinutes: number): Promise<void> {
   const syncRepo = new UserSyncStateRepository()
   const tokenService = new UserTokenService(syncRepo)
@@ -65,9 +73,12 @@ async function runForUser(user: { id: string; email: string | null; tenantId: st
     const syncState = await syncRepo.getByUserId(user.id)
     const lastMeetingSyncAt: Date | null = (syncState as any)?.lastMeetingSyncAt ?? null
 
-    const meetings = await meetingsClient.getLatestMeeting(
-      lastMeetingSyncAt ? { startAfter: lastMeetingSyncAt } : undefined
-    )
+    const daysForward = clampLookaheadDays((syncState as any)?.meetingLookaheadDays)
+
+    const meetings = await meetingsClient.getLatestMeeting({
+      ...(lastMeetingSyncAt ? { startAfter: lastMeetingSyncAt } : {}),
+      daysForward,
+    })
     if (!meetings || meetings.length === 0) {
       await syncRepo.markRunSuccess(user.id, nextRunAt, cycleStartedAt)
       return

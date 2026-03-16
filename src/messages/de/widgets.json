@@ -21,6 +21,12 @@
       "agendaPreviewTitle": "Agenda-Vorschau",
       "noAgenda": "Noch keine Agenda-Punkte verfügbar",
       "viewFullPreparation": "Volle Vorbereitung",
+      "prepSummary": "Überträge: {carryOver}, Langläufer: {longRunning}",
+      "prepStatus": {
+        "ready": "Bereit",
+        "attention": "Aufmerksamkeit nötig",
+        "in_progress": "Wird vorbereitet"
+      },
       "conflict": "Konflikt",
       "conflictWith": "Konflikt mit {title}",
       "noMeetings": "Keine bevorstehenden Besprechungen",

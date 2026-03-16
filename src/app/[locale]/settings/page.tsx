@@ -27,6 +27,10 @@ interface TenantSettingsResponse {
   ticketConfig: Record<string, unknown> | null
 }
 
+interface UserSettingsResponse {
+  meetingLookaheadDays: number
+}
+
 // ---------------------------------------------------------------------------
 // Tenant ticket-provider form
 // ---------------------------------------------------------------------------
@@ -114,6 +118,11 @@ export default function SettingsPage() {
 
   const [status, setStatus] = useState<AgentStatusResponse | null>(null)
   const [tenantSettings, setTenantSettings] = useState<TenantSettingsResponse | null>(null)
+  const [userSettings, setUserSettings] = useState<UserSettingsResponse | null>(null)
+  const [lookaheadDraft, setLookaheadDraft] = useState<number>(14)
+  const [lookaheadSaving, setLookaheadSaving] = useState(false)
+  const [lookaheadSaved, setLookaheadSaved] = useState(false)
+  const [lookaheadError, setLookaheadError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [updatedAt, setUpdatedAt] = useState<string | null>(null)
@@ -124,14 +133,20 @@ export default function SettingsPage() {
 
     const loadStatus = async () => {
       try {
-        const [statusRes, tenantRes] = await Promise.all([
+        const [statusRes, tenantRes, userSettingsRes] = await Promise.all([
           fetch('/api/agent/status', { cache: 'no-store' }),
           fetch('/api/tenants/settings', { cache: 'no-store' }),
+          fetch('/api/user/settings', { cache: 'no-store' }),
         ])
         if (!statusRes.ok) throw new Error(`Status ${statusRes.status}`)
         if (active) {
           setStatus(await statusRes.json())
           if (tenantRes.ok) setTenantSettings(await tenantRes.json())
+          if (userSettingsRes.ok) {
+            const userSettingsPayload = (await userSettingsRes.json()) as UserSettingsResponse
+            setUserSettings(userSettingsPayload)
+            setLookaheadDraft(userSettingsPayload.meetingLookaheadDays)
+          }
           setError(null)
           setUpdatedAt(new Date().toISOString())
         }
@@ -155,6 +170,35 @@ export default function SettingsPage() {
   const lastUpdatedLabel = updatedAt
     ? tSettings('updatedAt', { time: new Date(updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) })
     : null
+
+  const handleSaveLookahead = async () => {
+    setLookaheadSaving(true)
+    setLookaheadSaved(false)
+    setLookaheadError(null)
+
+    try {
+      const res = await fetch('/api/user/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ meetingLookaheadDays: lookaheadDraft }),
+      })
+
+      if (!res.ok) {
+        const payload = await res.json().catch(() => null)
+        setLookaheadError(payload?.error ? tSettings('preparation.invalidValue') : tSettings('preparation.saveError'))
+        return
+      }
+
+      const payload = (await res.json()) as UserSettingsResponse
+      setUserSettings(payload)
+      setLookaheadDraft(payload.meetingLookaheadDays)
+      setLookaheadSaved(true)
+    } catch {
+      setLookaheadError(tSettings('preparation.saveError'))
+    } finally {
+      setLookaheadSaving(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
@@ -214,6 +258,51 @@ export default function SettingsPage() {
               <p className={`text-sm ${status.lastError ? 'text-amber-300' : 'text-gray-400'}`}>
                 {status.lastError || tSettings('logs.empty')}
               </p>
+            </motion.div>
+          )}
+
+          {/* Meeting preparation settings */}
+          {userSettings && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="rounded-xl border border-gray-700/50 bg-gray-800/40 backdrop-blur p-6">
+              <h2 className="text-lg font-semibold text-white mb-2">{tSettings('preparation.title')}</h2>
+              <p className="text-sm text-gray-400 mb-4">{tSettings('preparation.description')}</p>
+
+              <div className="space-y-3">
+                <label htmlFor="meeting-lookahead" className="block text-xs font-medium text-gray-400">
+                  {tSettings('preparation.lookaheadLabel')}
+                </label>
+                <input
+                  id="meeting-lookahead"
+                  type="range"
+                  min={1}
+                  max={31}
+                  step={1}
+                  value={lookaheadDraft}
+                  onChange={(event) => setLookaheadDraft(Number(event.target.value))}
+                  className="w-full"
+                />
+
+                <div className="flex items-center justify-between text-xs text-gray-500">
+                  <span>{tSettings('preparation.minLabel')}</span>
+                  <span>{tSettings('preparation.maxLabel')}</span>
+                </div>
+
+                <p className="text-sm text-gray-200">
+                  {tSettings('preparation.currentValue', { days: lookaheadDraft })}
+                </p>
+
+                {lookaheadError && <p className="text-xs text-red-400">{lookaheadError}</p>}
+                {lookaheadSaved && <p className="text-xs text-green-400">{tSettings('preparation.saved')}</p>}
+
+                <Button
+                  size="sm"
+                  onClick={handleSaveLookahead}
+                  disabled={lookaheadSaving || lookaheadDraft === userSettings.meetingLookaheadDays}
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  {lookaheadSaving ? tSettings('preparation.saving') : tSettings('preparation.save')}
+                </Button>
+              </div>
             </motion.div>
           )}
 

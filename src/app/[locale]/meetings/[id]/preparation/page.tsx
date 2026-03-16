@@ -9,7 +9,7 @@ import AppHeader from '@/components/layout/AppHeader'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { MeetingPreparationResponse } from '@/types/meetings'
-import { AlertTriangle, ChevronLeft, Clock, Sparkles } from 'lucide-react'
+import { AlertTriangle, ChevronLeft, Clock, Sparkles, Info } from 'lucide-react'
 
 export default function MeetingPreparationPage() {
   const params = useParams()
@@ -20,6 +20,26 @@ export default function MeetingPreparationPage() {
   const [data, setData] = useState<MeetingPreparationResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const buildScoreTooltip = (item?: {
+    matchedTerms: string[]
+    matchScore: number
+    freshnessScore: number
+  }) => {
+    if (!item) {
+      return t('scoreTooltip', {
+        matchTerms: t('noMatchTerms'),
+        matchScore: 0,
+        freshnessScore: 0,
+      })
+    }
+
+    return t('scoreTooltip', {
+      matchTerms: item.matchedTerms.length > 0 ? item.matchedTerms.join(', ') : t('noMatchTerms'),
+      matchScore: item.matchScore,
+      freshnessScore: item.freshnessScore,
+    })
+  }
 
   useEffect(() => {
     let active = true
@@ -89,6 +109,25 @@ export default function MeetingPreparationPage() {
                 <Clock className="h-3.5 w-3.5" />
                 {new Date(data.upcomingMeeting.startTime).toLocaleString()}
               </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {t('cadence')}: {t(`cadenceType.${data.cadence.type}`)}
+              </p>
+            </motion.div>
+
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+              <Card>
+                <CardHeader className="font-semibold text-foreground">{t('statusTitle')}</CardHeader>
+                <CardContent className="space-y-2">
+                  <p className="text-sm text-muted-foreground">{t(`status.${data.prepStatus.level}`)}</p>
+                  {data.prepStatus.reasons.length > 0 && (
+                    <ul className="space-y-1">
+                      {data.prepStatus.reasons.slice(0, 4).map((reason, index) => (
+                        <li key={`reason-${index}`} className="text-xs text-muted-foreground">• {reason}</li>
+                      ))}
+                    </ul>
+                  )}
+                </CardContent>
+              </Card>
             </motion.div>
 
             <div className="grid lg:grid-cols-3 gap-6 items-start">
@@ -214,6 +253,98 @@ export default function MeetingPreparationPage() {
                               </ul>
                             </div>
                           )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <div className="grid lg:grid-cols-2 gap-6">
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+                <Card>
+                  <CardHeader className="font-semibold text-foreground">{t('carryOverTitle')}</CardHeader>
+                  <CardContent>
+                    {data.carryOverTopics.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">{t('noCarryOver')}</p>
+                    ) : (
+                      <ul className="space-y-2">
+                        {data.carryOverTopics.map((topic, index) => (
+                          <li key={`carry-${index}`} className="text-sm text-muted-foreground">
+                            • {topic.title} ({topic.occurrences}x)
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+                <Card>
+                  <CardHeader className="font-semibold text-foreground">{t('longRunningTitle')}</CardHeader>
+                  <CardContent>
+                    {data.longRunningTasks.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">{t('noLongRunning')}</p>
+                    ) : (
+                      <ul className="space-y-2">
+                        {data.longRunningTasks.map((task, index) => (
+                          <li key={`long-${index}`} className="text-sm text-muted-foreground">
+                            • {task.title} ({task.ageDays}d)
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </div>
+
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+              <Card>
+                <CardHeader className="font-semibold text-foreground">{t('sourcesTitle')}</CardHeader>
+                <CardContent>
+                  {data.projectSourceResults.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">{t('noSources')}</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {data.projectSourceResults.map((sourceResult, index) => (
+                        <div key={`source-result-${index}`} className="rounded-lg border border-border p-3 bg-muted/20">
+                          <p className="text-xs text-muted-foreground mb-1">
+                            {sourceResult.projectName} · {sourceResult.sourceType} ·
+                            <span className="inline-flex items-center gap-1 ml-1">
+                              <span>{t('scoreLabel', { score: sourceResult.score })}</span>
+                              <Info
+                                className="h-3 w-3 text-muted-foreground"
+                                title={buildScoreTooltip(sourceResult.items[0])}
+                                aria-label={buildScoreTooltip(sourceResult.items[0])}
+                              />
+                            </span>
+                          </p>
+                          <p className="text-sm font-medium text-foreground mb-2">{sourceResult.sourceLabel}</p>
+                          <ul className="space-y-2">
+                            {sourceResult.items.slice(0, 3).map((item, itemIndex) => (
+                              <li key={`source-item-${index}-${itemIndex}`}>
+                                <a
+                                  href={item.url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-sm text-primary hover:text-primary/80 underline-offset-2 hover:underline"
+                                >
+                                  {item.title}
+                                </a>
+                                <p className="text-xs text-muted-foreground mt-0.5 inline-flex items-center gap-1.5">
+                                  <span>{item.excerpt} · {t('scoreLabel', { score: item.score })}</span>
+                                  <Info
+                                    className="h-3 w-3 text-muted-foreground"
+                                    title={buildScoreTooltip(item)}
+                                    aria-label={buildScoreTooltip(item)}
+                                  />
+                                </p>
+                              </li>
+                            ))}
+                          </ul>
                         </div>
                       ))}
                     </div>

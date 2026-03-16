@@ -21,6 +21,12 @@
       "agendaPreviewTitle": "Agenda preview",
       "noAgenda": "No agenda items yet",
       "viewFullPreparation": "Full preparation",
+      "prepSummary": "Carry-over: {carryOver}, long-running: {longRunning}",
+      "prepStatus": {
+        "ready": "Ready",
+        "attention": "Needs attention",
+        "in_progress": "Preparing"
+      },
       "conflict": "Conflict",
       "conflictWith": "Conflict with {title}",
       "noMeetings": "No upcoming meetings",

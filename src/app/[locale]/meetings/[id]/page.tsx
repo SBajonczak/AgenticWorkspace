@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { useTranslations } from 'next-intl'
@@ -20,7 +20,10 @@ import {
   XCircle,
   AlertTriangle,
   ExternalLink,
+  Sparkles,
+  Info,
 } from 'lucide-react'
+import { MeetingPreparationResponse } from '@/types/meetings'
 
 type UiTodoStatus = 'open' | 'in_progress' | 'done'
 
@@ -113,8 +116,31 @@ export default function MeetingDetailPage() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState('summary')
+  const [preparation, setPreparation] = useState<MeetingPreparationResponse | null>(null)
+  const [preparationLoading, setPreparationLoading] = useState(false)
+  const [preparationError, setPreparationError] = useState<string | null>(null)
 
   const meetingId = params.id as string
+
+  const loadPreparation = useCallback(async () => {
+    if (!meetingId || preparationLoading || preparation) return
+
+    try {
+      setPreparationLoading(true)
+      setPreparationError(null)
+      const response = await fetch(`/api/meetings/${meetingId}/preparation`, { cache: 'no-store' })
+      if (!response.ok) {
+        throw new Error(`Failed with status ${response.status}`)
+      }
+      const payload = (await response.json()) as MeetingPreparationResponse
+      setPreparation(payload)
+    } catch {
+      setPreparationError(tDetail('preparation.loadError'))
+    } finally {
+      setPreparationLoading(false)
+    }
+  }, [meetingId, preparationLoading, preparation, tDetail])
 
   useEffect(() => {
     let active = true
@@ -139,6 +165,12 @@ export default function MeetingDetailPage() {
     return () => { active = false }
   }, [meetingId])
 
+  useEffect(() => {
+    if (activeTab === 'preparation') {
+      void loadPreparation()
+    }
+  }, [activeTab, loadPreparation])
+
   const decisions = useMemo<string[]>(() => {
     if (!meeting?.decisions) return []
     try {
@@ -157,6 +189,26 @@ export default function MeetingDetailPage() {
       case 'in_progress': return 'border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400'
       default: return 'border-border bg-muted/20 text-muted-foreground'
     }
+  }
+
+  const buildSourceTooltip = (item?: {
+    matchedTerms: string[]
+    matchScore: number
+    freshnessScore: number
+  }) => {
+    if (!item) {
+      return tDetail('preparation.scoreTooltip', {
+        matchTerms: tDetail('preparation.noMatchTerms'),
+        matchScore: 0,
+        freshnessScore: 0,
+      })
+    }
+
+    return tDetail('preparation.scoreTooltip', {
+      matchTerms: item.matchedTerms.length > 0 ? item.matchedTerms.join(', ') : tDetail('preparation.noMatchTerms'),
+      matchScore: item.matchScore,
+      freshnessScore: item.freshnessScore,
+    })
   }
 
   if (loading) {
@@ -302,7 +354,7 @@ export default function MeetingDetailPage() {
               {meeting.title}
             </h1>
 
-            <Tabs defaultValue="summary" className="flex-col w-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-col w-full">
               <TabsList className="border-b border-border rounded-none bg-transparent w-full justify-start gap-1 h-auto pb-0 mb-0">
                 <TabsTrigger
                   value="summary"
@@ -329,12 +381,153 @@ export default function MeetingDetailPage() {
                   )}
                 </TabsTrigger>
                 <TabsTrigger
+                  value="preparation"
+                  onClick={() => { void loadPreparation() }}
+                  className="rounded-none border-b-2 border-transparent data-active:border-primary data-active:text-primary data-active:bg-transparent pb-2 px-4 text-sm font-medium text-muted-foreground data-active:text-foreground"
+                >
+                  {tDetail('tabs.preparation')}
+                </TabsTrigger>
+                <TabsTrigger
                   value="transcript"
                   className="rounded-none border-b-2 border-transparent data-active:border-primary data-active:text-primary data-active:bg-transparent pb-2 px-4 text-sm font-medium text-muted-foreground data-active:text-foreground"
                 >
                   {tDetail('tabs.transcript')}
                 </TabsTrigger>
               </TabsList>
+
+              <TabsContent value="preparation" className="pt-6">
+                <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
+                  <div className="flex items-start justify-between gap-3 mb-4">
+                    <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                      <Sparkles className="h-4 w-4" />
+                      {tDetail('preparation.title')}
+                    </h2>
+                    <Link href={`/meetings/${meeting.id}/preparation`} className="text-xs text-primary hover:text-primary/80">
+                      {tDetail('preparation.openFullPage')} →
+                    </Link>
+                  </div>
+
+                  {preparationLoading && (
+                    <p className="text-sm text-muted-foreground">{tCommon('labels.loading')}</p>
+                  )}
+
+                  {!preparationLoading && preparationError && (
+                    <p className="text-sm text-destructive">{preparationError}</p>
+                  )}
+
+                  {!preparationLoading && !preparationError && preparation && (
+                    <div className="space-y-4">
+                      <Card>
+                        <CardContent className="p-4 space-y-2">
+                          <p className="text-sm font-medium text-foreground">{tDetail('preparation.statusTitle')}</p>
+                          <p className="text-xs text-muted-foreground">{tDetail(`preparation.status.${preparation.prepStatus.level}`)}</p>
+                          {preparation.prepStatus.reasons.length > 0 && (
+                            <ul className="space-y-1">
+                              {preparation.prepStatus.reasons.slice(0, 3).map((reason, index) => (
+                                <li key={`prep-reason-${index}`} className="text-xs text-muted-foreground">• {reason}</li>
+                              ))}
+                            </ul>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            {tDetail('preparation.cadence')}: {tDetail(`preparation.cadenceType.${preparation.cadence.type}`)}
+                          </p>
+                        </CardContent>
+                      </Card>
+
+                      <Card>
+                        <CardContent className="p-4">
+                          <p className="text-sm font-medium text-foreground mb-2">{tDetail('preparation.agendaTitle')}</p>
+                          {preparation.preparedAgenda.length === 0 ? (
+                            <p className="text-xs text-muted-foreground">{tDetail('preparation.noAgenda')}</p>
+                          ) : (
+                            <ul className="space-y-1">
+                              {preparation.preparedAgenda.slice(0, 6).map((item, index) => (
+                                <li key={`prep-agenda-${index}`} className="text-xs text-muted-foreground">• {item.title}</li>
+                              ))}
+                            </ul>
+                          )}
+                        </CardContent>
+                      </Card>
+
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <Card>
+                          <CardContent className="p-4">
+                            <p className="text-sm font-medium text-foreground mb-2">{tDetail('preparation.longRunningTitle')}</p>
+                            {preparation.longRunningTasks.length === 0 ? (
+                              <p className="text-xs text-muted-foreground">{tDetail('preparation.noLongRunning')}</p>
+                            ) : (
+                              <ul className="space-y-1">
+                                {preparation.longRunningTasks.slice(0, 5).map((task, index) => (
+                                  <li key={`prep-long-${index}`} className="text-xs text-muted-foreground">
+                                    • {task.title} ({task.ageDays}d)
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </CardContent>
+                        </Card>
+
+                        <Card>
+                          <CardContent className="p-4">
+                            <p className="text-sm font-medium text-foreground mb-2">{tDetail('preparation.carryOverTitle')}</p>
+                            {preparation.carryOverTopics.length === 0 ? (
+                              <p className="text-xs text-muted-foreground">{tDetail('preparation.noCarryOver')}</p>
+                            ) : (
+                              <ul className="space-y-1">
+                                {preparation.carryOverTopics.slice(0, 5).map((topic, index) => (
+                                  <li key={`prep-carry-${index}`} className="text-xs text-muted-foreground">
+                                    • {topic.title} ({topic.occurrences}x)
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </div>
+
+                      <Card>
+                        <CardContent className="p-4">
+                          <p className="text-sm font-medium text-foreground mb-2">{tDetail('preparation.sourcesTitle')}</p>
+                          {preparation.projectSourceResults.length === 0 ? (
+                            <p className="text-xs text-muted-foreground">{tDetail('preparation.noSources')}</p>
+                          ) : (
+                            <div className="space-y-3">
+                              {preparation.projectSourceResults.slice(0, 4).map((result, index) => (
+                                <div key={`prep-source-${index}`} className="rounded-md border border-border p-2 bg-muted/20">
+                                  <p className="text-[11px] text-muted-foreground mb-1">
+                                    {result.projectName} · {result.sourceType} ·
+                                    <span className="inline-flex items-center gap-1 ml-1">
+                                      <span>{tDetail('preparation.scoreLabel', { score: result.score })}</span>
+                                      <Info
+                                        className="h-3 w-3 text-muted-foreground"
+                                        title={buildSourceTooltip(result.items[0])}
+                                        aria-label={buildSourceTooltip(result.items[0])}
+                                      />
+                                    </span>
+                                  </p>
+                                  {result.items.slice(0, 2).map((item, itemIndex) => (
+                                    <div key={`prep-source-item-${index}-${itemIndex}`} className="text-xs inline-flex items-center gap-1.5">
+                                      <a href={item.url} target="_blank" rel="noreferrer" className="text-primary hover:text-primary/80">
+                                        {item.title}
+                                      </a>
+                                      <span className="text-muted-foreground">{tDetail('preparation.scoreLabel', { score: item.score })}</span>
+                                      <Info
+                                        className="h-3 w-3 text-muted-foreground"
+                                        title={buildSourceTooltip(item)}
+                                        aria-label={buildSourceTooltip(item)}
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )}
+                </motion.div>
+              </TabsContent>
 
               {/* Summary */}
               <TabsContent value="summary" className="pt-6">

@@ -85,4 +85,42 @@ export interface MeetingPreparationResponse {
     }[]
   }[]
   conflicts: MeetingPreparationConflict[]
+  cadence: {
+    isRecurring: boolean
+    type: 'daily' | 'jourfix' | 'recurring' | 'other'
+    label: string
+  }
+  prepStatus: {
+    level: 'ready' | 'attention' | 'in_progress'
+    reasons: string[]
+  }
+  carryOverTopics: {
+    title: string
+    occurrences: number
+    lastSeenAt: string
+  }[]
+  longRunningTasks: {
+    title: string
+    occurrences: number
+    ageDays: number
+    firstSeenAt: string
+  }[]
+  projectSourceResults: {
+    projectName: string
+    sourceType: 'confluence' | 'jira' | 'github' | 'sharepoint'
+    sourceLabel: string
+    identifier: string
+    query: string
+    score: number
+    items: {
+      title: string
+      excerpt: string
+      url: string
+      updatedAt?: string
+      score: number
+      matchedTerms: string[]
+      matchScore: number
+      freshnessScore: number
+    }[]
+  }[]
 }

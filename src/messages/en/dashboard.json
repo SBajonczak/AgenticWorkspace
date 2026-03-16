@@ -39,6 +39,19 @@
         "title": "Latest error",
         "empty": "No error stored"
       },
+      "preparation": {
+        "title": "Meeting Preparation Window",
+        "description": "Control how far into the future meetings are fetched and prepared by the worker.",
+        "lookaheadLabel": "Lookahead days",
+        "minLabel": "1 day",
+        "maxLabel": "31 days",
+        "currentValue": "Current value: {days} days",
+        "save": "Save",
+        "saving": "Saving…",
+        "saved": "Saved successfully.",
+        "saveError": "Could not save meeting preparation setting.",
+        "invalidValue": "Please choose a value between 1 and 31 days."
+      },
       "projects": {
         "title": "Projects & Knowledge Sources",
         "description": "Manage your projects, assign aliases used in meeting transcripts, and link external knowledge sources (Confluence, Jira, GitHub, SharePoint) to each project.",

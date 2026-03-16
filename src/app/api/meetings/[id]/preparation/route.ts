@@ -8,6 +8,9 @@ import {
   MeetingPreparationAgendaItem,
   MeetingPreparationResponse,
 } from '@/types/meetings'
+import { searchProjectSources } from '@/lib/projectSourceSearch'
+
+type CadenceType = 'daily' | 'jourfix' | 'recurring' | 'other'
 
 function overlaps(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date): boolean {
   return aStart.getTime() < bEnd.getTime() && bStart.getTime() < aEnd.getTime()
@@ -21,6 +24,14 @@ function parseDecisions(value: string | null): string[] {
   } catch {
     return []
   }
+}
+
+function clampLookaheadDays(value: unknown): number {
+  const fallback = 14
+  const parsed = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(parsed)) return fallback
+  const normalized = Math.trunc(parsed)
+  return Math.max(1, Math.min(31, normalized))
 }
 
 function buildFallbackAgenda(input: {
@@ -69,6 +80,147 @@ function buildFallbackAgenda(input: {
   return agenda.slice(0, 8)
 }
 
+function detectCadence(title: string): MeetingPreparationResponse['cadence'] {
+  const normalized = title.toLowerCase()
+  if (/(^|\s)(daily|standup|stand-up)(\s|$)/i.test(normalized)) {
+    return { isRecurring: true, type: 'daily', label: 'Daily' }
+  }
+  if (/(jour\s?fix|jourfix|weekly\s+sync|wochen(?:sync|runde))/i.test(normalized)) {
+    return { isRecurring: true, type: 'jourfix', label: 'Jourfix' }
+  }
+  if (/(weekly|biweekly|monthly|sync|review|retro|planning)/i.test(normalized)) {
+    return { isRecurring: true, type: 'recurring', label: 'Recurring' }
+  }
+  return { isRecurring: false, type: 'other', label: 'One-off' }
+}
+
+function normalizeTopic(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9äöüß\s]/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function analyzeOpenTopics(
+  relatedMeetings: MeetingPreparationResponse['relatedMeetings'],
+  upcomingStartTime: Date
+): {
+  carryOverTopics: MeetingPreparationResponse['carryOverTopics']
+  longRunningTasks: MeetingPreparationResponse['longRunningTasks']
+} {
+  const topicMap = new Map<string, {
+    title: string
+    occurrences: number
+    firstSeenAt: string
+    lastSeenAt: string
+  }>()
+
+  for (const relatedMeeting of relatedMeetings) {
+    for (const todo of relatedMeeting.openTodos) {
+      const key = normalizeTopic(todo.title)
+      if (!key) continue
+
+      const existing = topicMap.get(key)
+      if (!existing) {
+        topicMap.set(key, {
+          title: todo.title,
+          occurrences: 1,
+          firstSeenAt: relatedMeeting.startTime,
+          lastSeenAt: relatedMeeting.startTime,
+        })
+        continue
+      }
+
+      const firstSeenAt = new Date(existing.firstSeenAt) <= new Date(relatedMeeting.startTime)
+        ? existing.firstSeenAt
+        : relatedMeeting.startTime
+      const lastSeenAt = new Date(existing.lastSeenAt) >= new Date(relatedMeeting.startTime)
+        ? existing.lastSeenAt
+        : relatedMeeting.startTime
+
+      topicMap.set(key, {
+        ...existing,
+        occurrences: existing.occurrences + 1,
+        firstSeenAt,
+        lastSeenAt,
+      })
+    }
+  }
+
+  const sortedTopics = [...topicMap.values()]
+    .sort((a, b) => b.occurrences - a.occurrences)
+
+  const carryOverTopics = sortedTopics
+    .filter((topic) => topic.occurrences >= 2)
+    .slice(0, 8)
+    .map((topic) => ({
+      title: topic.title,
+      occurrences: topic.occurrences,
+      lastSeenAt: topic.lastSeenAt,
+    }))
+
+  const longRunningTasks = sortedTopics
+    .map((topic) => {
+      const ageDays = Math.max(
+        0,
+        Math.floor((upcomingStartTime.getTime() - new Date(topic.firstSeenAt).getTime()) / (24 * 60 * 60 * 1000))
+      )
+      return {
+        title: topic.title,
+        occurrences: topic.occurrences,
+        ageDays,
+        firstSeenAt: topic.firstSeenAt,
+      }
+    })
+    .filter((topic) => topic.occurrences >= 2 || topic.ageDays >= 14)
+    .sort((a, b) => {
+      if (b.ageDays !== a.ageDays) return b.ageDays - a.ageDays
+      return b.occurrences - a.occurrences
+    })
+    .slice(0, 8)
+
+  return {
+    carryOverTopics,
+    longRunningTasks,
+  }
+}
+
+function buildPrepStatus(input: {
+  conflicts: MeetingPreparationResponse['conflicts']
+  carryOverTopics: MeetingPreparationResponse['carryOverTopics']
+  longRunningTasks: MeetingPreparationResponse['longRunningTasks']
+  cadenceType: CadenceType
+  preparedAgendaCount: number
+}): MeetingPreparationResponse['prepStatus'] {
+  const reasons: string[] = []
+
+  if (input.conflicts.length > 0) {
+    reasons.push(`${input.conflicts.length} scheduling conflict${input.conflicts.length > 1 ? 's' : ''}`)
+  }
+  if (input.longRunningTasks.length > 0) {
+    reasons.push(`${input.longRunningTasks.length} long-running topic${input.longRunningTasks.length > 1 ? 's' : ''}`)
+  }
+  if (input.cadenceType === 'daily' || input.cadenceType === 'jourfix') {
+    reasons.push('recurring status format detected')
+  }
+
+  if (input.preparedAgendaCount === 0) {
+    reasons.push('no prepared agenda items yet')
+    return { level: 'in_progress', reasons }
+  }
+
+  if (input.conflicts.length > 0 || input.longRunningTasks.length > 0) {
+    return { level: 'attention', reasons }
+  }
+
+  if (reasons.length === 0) {
+    reasons.push('agenda and context prepared')
+  }
+
+  return { level: 'ready', reasons }
+}
+
 export async function GET(
   _request: Request,
   { params }: { params: { id: string } }
@@ -97,11 +249,18 @@ export async function GET(
       limit: 5,
     })
 
-    const upcomingMeetings = await meetingRepo.findUpcoming(30, new Date(), tenantId, userEmail)
+    const syncState = await prisma.userSyncState.findUnique({
+      where: { userId: session.user.id },
+    })
+    const lookaheadDays = clampLookaheadDays((syncState as any)?.meetingLookaheadDays)
+    const lookaheadUntil = new Date(Date.now() + lookaheadDays * 24 * 60 * 60 * 1000)
+
+    const upcomingMeetings = await meetingRepo.findUpcoming(100, new Date(), tenantId, userEmail)
     const conflicts = upcomingMeetings
       .filter(
         (candidate) =>
           candidate.id !== meeting.id &&
+          candidate.startTime <= lookaheadUntil &&
           overlaps(candidate.startTime, candidate.endTime, meeting.startTime, meeting.endTime)
       )
       .map((conflict) => ({
@@ -136,6 +295,8 @@ export async function GET(
     const flattenedOpenTodoTitles = relatedPayload.flatMap((meetingItem) =>
       meetingItem.openTodos.map((todo) => todo.title)
     )
+    const cadence = detectCadence(meeting.title)
+    const topicAnalysis = analyzeOpenTopics(relatedPayload, meeting.startTime)
 
     let preparedAgenda: MeetingPreparationAgendaItem[] = []
 
@@ -168,6 +329,7 @@ export async function GET(
       ...new Set(relatedPayload.flatMap((m) => m.projectStatuses.map((ps) => ps.projectName))),
     ]
     const knowledgeBaseItems: MeetingPreparationResponse['knowledgeBaseItems'] = []
+    const projectSourceResults: MeetingPreparationResponse['projectSourceResults'] = []
 
     for (const projectName of projectNames.slice(0, 5)) {
       try {
@@ -205,6 +367,25 @@ export async function GET(
           decisions: decisions.slice(0, 5),
           openTodos: openTodos.slice(0, 5),
         })
+
+        const sourceResults = await searchProjectSources({
+          projectName: proj.name,
+          meetingTitle: meeting.title,
+          agendaTitles: preparedAgenda.map((item) => item.title),
+          sourceLinks: proj.sourceLinks,
+        })
+
+        for (const sourceResult of sourceResults) {
+          projectSourceResults.push({
+            projectName: proj.name,
+            sourceType: sourceResult.sourceType,
+            sourceLabel: sourceResult.sourceLabel,
+            identifier: sourceResult.identifier,
+            query: sourceResult.query,
+            score: sourceResult.score,
+            items: sourceResult.items,
+          })
+        }
       } catch (err) {
         console.warn('[preparation] Could not load KB for project', projectName, err)
       }
@@ -222,6 +403,19 @@ export async function GET(
       preparedAgenda,
       knowledgeBaseItems,
       conflicts,
+      cadence,
+      carryOverTopics: topicAnalysis.carryOverTopics,
+      longRunningTasks: topicAnalysis.longRunningTasks,
+      prepStatus: buildPrepStatus({
+        conflicts,
+        carryOverTopics: topicAnalysis.carryOverTopics,
+        longRunningTasks: topicAnalysis.longRunningTasks,
+        cadenceType: cadence.type,
+        preparedAgendaCount: preparedAgenda.length,
+      }),
+      projectSourceResults: projectSourceResults
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 8),
     }
 
     return NextResponse.json(response)

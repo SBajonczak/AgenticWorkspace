@@ -216,6 +216,7 @@ model UserSyncState {
   isProcessing    Boolean  @default(false)
   hasRefreshToken Boolean  @default(false)
   consentRequired Boolean  @default(false)
+  meetingLookaheadDays Int @default(14)
   lastRunAt         DateTime?
   lastSuccessAt     DateTime?
   nextRunAt         DateTime?

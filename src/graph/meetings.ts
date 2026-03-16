@@ -66,14 +66,17 @@ export class MeetingsClient {
     startAfter?: Date
     /** How many days back to look when no startAfter checkpoint is available (default: 30). */
     daysBack?: number
+    /** How many days forward to look for upcoming meetings (default: 14). */
+    daysForward?: number
   }): Promise<Meeting[]> {
     try {
       const now = new Date()
       const daysBack = options?.daysBack ?? 30
+      const daysForward = options?.daysForward ?? 14
       const startDate = options?.startAfter
         ? new Date(options.startAfter.getTime() - 60 * 60 * 1000) // 1h buffer for overlap
         : new Date(now.getTime() - daysBack * 24 * 60 * 60 * 1000)
-      const endDate = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000)
+      const endDate = new Date(now.getTime() + daysForward * 24 * 60 * 60 * 1000)
 
       const startDateTime = startDate.toISOString()
       const endDateTime = endDate.toISOString()

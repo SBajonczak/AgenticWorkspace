@@ -79,6 +79,7 @@ describe('Worker scheduler', () => {
     }))
 
     ;(UserSyncStateRepository as jest.Mock).mockImplementation(() => ({
+      getByUserId: jest.fn().mockResolvedValue({ meetingLookaheadDays: 14 }),
       markProcessing: jest.fn().mockResolvedValue({}),
       markRunSuccess: jest.fn().mockResolvedValue({}),
       markRunError: jest.fn().mockResolvedValue({}),

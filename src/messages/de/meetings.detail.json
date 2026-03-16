@@ -4,6 +4,19 @@
       "title": "Besprechungsvorbereitung",
       "backToMeeting": "Zurück zur Besprechung",
       "loadError": "Vorbereitung konnte nicht geladen werden.",
+      "statusTitle": "Vorbereitungsstatus",
+      "status": {
+        "ready": "Für das Meeting bereit",
+        "attention": "Vor dem Meeting prüfen",
+        "in_progress": "Vorbereitung läuft noch"
+      },
+      "cadence": "Rhythmus",
+      "cadenceType": {
+        "daily": "Daily",
+        "jourfix": "Jourfix",
+        "recurring": "Wiederkehrend",
+        "other": "Einmalig"
+      },
       "agendaTitle": "Vorbereitete Agendapunkte",
       "noAgenda": "Keine Agendapunkte verfügbar",
       "conflictsTitle": "Konflikte mit anderen Terminen",
@@ -12,6 +25,15 @@
       "noKnowledgeBase": "Keine Knowledge-Base-Integration konfiguriert",
       "historyTitle": "Relevante Vortermine",
       "noHistory": "Keine relevanten Vortermine gefunden",
+      "carryOverTitle": "Übertragene Themen",
+      "noCarryOver": "Keine übertragenen Themen",
+      "longRunningTitle": "Langläufer-Themen",
+      "noLongRunning": "Keine Langläufer-Themen",
+      "sourcesTitle": "Projektquellen-Hinweise",
+      "noSources": "Keine Quellen-Ergebnisse verfügbar",
+      "scoreLabel": "Score {score}%",
+      "scoreTooltip": "Match-Begriffe: {matchTerms} · Match-Score: {matchScore} · Aktualität: {freshnessScore}",
+      "noMatchTerms": "keine",
       "decisionsLabel": "Wichtige Entscheidungen",
       "openTodosLabel": "Offene Aufgaben"
     },
@@ -21,7 +43,37 @@
         "summary": "Zusammenfassung",
         "decisions": "Entscheidungen",
         "actions": "Aktionen",
+        "preparation": "Vorbereitung",
         "transcript": "Transkript"
+      },
+      "preparation": {
+        "title": "Vorbereitung",
+        "openFullPage": "Volle Vorbereitung öffnen",
+        "loadError": "Vorbereitung konnte nicht geladen werden.",
+        "statusTitle": "Vorbereitungsstatus",
+        "status": {
+          "ready": "Gut vorbereitet",
+          "attention": "Vor dem Meeting prüfen",
+          "in_progress": "Vorbereitung läuft noch"
+        },
+        "cadence": "Rhythmus",
+        "cadenceType": {
+          "daily": "Daily",
+          "jourfix": "Jourfix",
+          "recurring": "Wiederkehrend",
+          "other": "Einmalig"
+        },
+        "agendaTitle": "Vorgeschlagene Agenda",
+        "noAgenda": "Keine Agendapunkte verfügbar",
+        "longRunningTitle": "Langläufer-Themen",
+        "noLongRunning": "Keine Langläufer-Themen",
+        "carryOverTitle": "Übertragene Themen",
+        "noCarryOver": "Keine übertragenen Themen",
+        "sourcesTitle": "Projektquellen-Hinweise",
+        "noSources": "Keine Quellen-Ergebnisse verfügbar",
+        "scoreLabel": "Score {score}%",
+        "scoreTooltip": "Match-Begriffe: {matchTerms} · Match-Score: {matchScore} · Aktualität: {freshnessScore}",
+        "noMatchTerms": "keine"
       },
       "summary": {
         "title": "Executive Summary",

@@ -10,6 +10,16 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AlertTriangle, Calendar, ChevronDown, ChevronUp, Sparkles, User } from 'lucide-react'
 
+function getPrepStatusBadgeClass(level: MeetingPreparationResponse['prepStatus']['level']): string {
+  if (level === 'ready') {
+    return 'border-emerald-500/50 text-emerald-600 dark:text-emerald-400'
+  }
+  if (level === 'attention') {
+    return 'border-amber-500/50 text-amber-600 dark:text-amber-400'
+  }
+  return 'border-blue-500/50 text-blue-600 dark:text-blue-400'
+}
+
 interface UpcomingMeetingsWidgetProps {
   meetings: MeetingListItem[]
   lastUpdatedAt: string | null
@@ -134,6 +144,8 @@ export default function UpcomingMeetingsWidget({ meetings, lastUpdatedAt }: Upco
                 const preparation = preparationById[meeting.id]
                 const isLoading = Boolean(loadingById[meeting.id])
                 const preparationError = errorById[meeting.id]
+                const prepStatusLevel = preparation?.prepStatus.level
+                const prepStatusText = prepStatusLevel ? t(`prepStatus.${prepStatusLevel}`) : null
 
                 return (
                 <div
@@ -160,6 +172,11 @@ export default function UpcomingMeetingsWidget({ meetings, lastUpdatedAt }: Upco
                       <Badge variant="secondary" className="text-xs">
                         {getTimeUntil(meeting.startTime)}
                       </Badge>
+                      {prepStatusLevel && prepStatusText && (
+                        <Badge variant="outline" className={`text-[11px] ${getPrepStatusBadgeClass(prepStatusLevel)}`}>
+                          {prepStatusText}
+                        </Badge>
+                      )}
                       {hasConflicts && (
                         <Badge variant="outline" className="text-[11px] border-amber-500/50 text-amber-600 dark:text-amber-400">
                           {t('conflict')}
@@ -195,6 +212,19 @@ export default function UpcomingMeetingsWidget({ meetings, lastUpdatedAt }: Upco
 
                       {!isLoading && !preparationError && preparation && (
                         <>
+                          <p className="text-xs text-muted-foreground">
+                            {t('prepSummary', {
+                              carryOver: preparation.carryOverTopics.length,
+                              longRunning: preparation.longRunningTasks.length,
+                            })}
+                          </p>
+
+                          {preparation.prepStatus.reasons.length > 0 && (
+                            <p className="text-xs text-muted-foreground">
+                              {preparation.prepStatus.reasons[0]}
+                            </p>
+                          )}
+
                           <p className="text-xs font-semibold text-foreground">{t('agendaPreviewTitle')}</p>
                           {preparation.preparedAgenda.length > 0 ? (
                             <ul className="space-y-1">
