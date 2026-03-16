@@ -16,6 +16,7 @@ type MeetingWithDetails = Prisma.MeetingGetPayload<{
     todos: {
       include: {
         ticketSync: true
+        project: true
       }
     }
     projectStatuses: true
@@ -59,7 +60,7 @@ export class MeetingRepository {
     return prisma.meeting.findUnique({
       where: { id },
       include: {
-        todos: { include: { ticketSync: true } },
+        todos: { include: { ticketSync: true, project: true } },
         minutes: true,
         projectStatuses: true,
       },

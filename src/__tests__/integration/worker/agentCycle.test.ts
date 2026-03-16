@@ -76,6 +76,7 @@ describe('Worker scheduler', () => {
     ;(MeetingRepository as jest.Mock).mockImplementation(() => ({
       findByMeetingId: jest.fn().mockResolvedValue(null),
       update: jest.fn().mockResolvedValue({}),
+      updateSyncMeta: jest.fn().mockResolvedValue({}),
     }))
 
     ;(UserSyncStateRepository as jest.Mock).mockImplementation(() => ({
@@ -128,5 +129,23 @@ describe('Worker scheduler', () => {
       select: { id: true, email: true, tenantId: true },
     })
     expect(MeetingProcessor).toHaveBeenCalled()
+  })
+
+  it('does not reprocess already processed meetings', async () => {
+    ;(MeetingRepository as jest.Mock).mockImplementation(() => ({
+      findByMeetingId: jest.fn().mockResolvedValue({
+        id: 'existing-1',
+        processedAt: new Date('2026-03-01T10:30:00Z'),
+        participants: JSON.stringify(['alice@example.com']),
+      }),
+      update: jest.fn().mockResolvedValue({}),
+      updateSyncMeta: jest.fn().mockResolvedValue({}),
+    }))
+
+    const { runAgentCycle } = await import('@/worker/scheduler')
+    await runAgentCycle()
+
+    const processorInstance = (MeetingProcessor as jest.Mock).mock.results[0]?.value
+    expect(processorInstance.processMeeting).not.toHaveBeenCalled()
   })
 })

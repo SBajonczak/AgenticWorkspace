@@ -34,6 +34,12 @@ interface MeetingDetailTodo {
   assigneeHint: string | null
   confidence: number
   status: UiTodoStatus
+  projectId: string | null
+  project: {
+    id: string
+    name: string
+    status: string
+  } | null
   jiraSync: {
     id: string
     jiraIssueKey: string | null
@@ -61,6 +67,12 @@ interface MeetingApiTodo {
   assigneeHint: string | null
   confidence: number
   status: string
+  projectId: string | null
+  project: {
+    id: string
+    name: string
+    status: string
+  } | null
   jiraSync: {
     id: string
     jiraIssueKey: string | null
@@ -79,6 +91,17 @@ interface MeetingApiResponse {
   summary: string | null
   decisions: string | null
   todos: MeetingApiTodo[]
+}
+
+interface ProjectOption {
+  id: string
+  name: string
+  status: string
+  archived: boolean
+}
+
+interface ProjectsApiResponse {
+  projects: ProjectOption[]
 }
 
 function mapTodoStatus(status: string): UiTodoStatus {
@@ -103,6 +126,8 @@ function mapMeetingFromApi(payload: MeetingApiResponse): MeetingDetailModel {
       assigneeHint: todo.assigneeHint,
       confidence: todo.confidence,
       status: mapTodoStatus(todo.status),
+      projectId: todo.projectId,
+      project: todo.project,
       jiraSync: todo.jiraSync,
     })),
   }
@@ -120,6 +145,10 @@ export default function MeetingDetailPage() {
   const [preparation, setPreparation] = useState<MeetingPreparationResponse | null>(null)
   const [preparationLoading, setPreparationLoading] = useState(false)
   const [preparationError, setPreparationError] = useState<string | null>(null)
+  const [projects, setProjects] = useState<ProjectOption[]>([])
+  const [projectsLoading, setProjectsLoading] = useState(false)
+  const [projectUpdateInFlightId, setProjectUpdateInFlightId] = useState<string | null>(null)
+  const [projectUpdateError, setProjectUpdateError] = useState<string | null>(null)
 
   const meetingId = params.id as string
 
@@ -170,6 +199,82 @@ export default function MeetingDetailPage() {
       void loadPreparation()
     }
   }, [activeTab, loadPreparation])
+
+  useEffect(() => {
+    let active = true
+
+    const loadProjects = async () => {
+      try {
+        setProjectsLoading(true)
+        const response = await fetch('/api/projects', { cache: 'no-store' })
+        if (!response.ok) throw new Error(`Failed with status ${response.status}`)
+        const payload = (await response.json()) as ProjectsApiResponse
+        if (active) {
+          setProjects((payload.projects || []).filter((project) => !project.archived && project.status === 'active'))
+        }
+      } catch {
+        if (active) {
+          setProjects([])
+        }
+      } finally {
+        if (active) {
+          setProjectsLoading(false)
+        }
+      }
+    }
+
+    void loadProjects()
+
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const updateTodoProject = useCallback(
+    async (todoId: string, nextProjectId: string | null) => {
+      try {
+        setProjectUpdateError(null)
+        setProjectUpdateInFlightId(todoId)
+
+        const response = await fetch(`/api/todos/${todoId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ projectId: nextProjectId }),
+        })
+
+        if (!response.ok) {
+          throw new Error(`Failed with status ${response.status}`)
+        }
+
+        setMeeting((current) => {
+          if (!current) return current
+          return {
+            ...current,
+            todos: current.todos.map((todo) => {
+              if (todo.id !== todoId) return todo
+              const assignedProject = projects.find((project) => project.id === nextProjectId) ?? null
+              return {
+                ...todo,
+                projectId: nextProjectId,
+                project: assignedProject
+                  ? {
+                      id: assignedProject.id,
+                      name: assignedProject.name,
+                      status: assignedProject.status,
+                    }
+                  : null,
+              }
+            }),
+          }
+        })
+      } catch {
+        setProjectUpdateError(tDetail('actions.project.updateError'))
+      } finally {
+        setProjectUpdateInFlightId(null)
+      }
+    },
+    [projects, tDetail]
+  )
 
   const decisions = useMemo<string[]>(() => {
     if (!meeting?.decisions) return []
@@ -498,11 +603,9 @@ export default function MeetingDetailPage() {
                                     {result.projectName} · {result.sourceType} ·
                                     <span className="inline-flex items-center gap-1 ml-1">
                                       <span>{tDetail('preparation.scoreLabel', { score: result.score })}</span>
-                                      <Info
-                                        className="h-3 w-3 text-muted-foreground"
-                                        title={buildSourceTooltip(result.items[0])}
-                                        aria-label={buildSourceTooltip(result.items[0])}
-                                      />
+                                      <span title={buildSourceTooltip(result.items[0])} aria-label={buildSourceTooltip(result.items[0])}>
+                                        <Info className="h-3 w-3 text-muted-foreground" />
+                                      </span>
                                     </span>
                                   </p>
                                   {result.items.slice(0, 2).map((item, itemIndex) => (
@@ -511,11 +614,9 @@ export default function MeetingDetailPage() {
                                         {item.title}
                                       </a>
                                       <span className="text-muted-foreground">{tDetail('preparation.scoreLabel', { score: item.score })}</span>
-                                      <Info
-                                        className="h-3 w-3 text-muted-foreground"
-                                        title={buildSourceTooltip(item)}
-                                        aria-label={buildSourceTooltip(item)}
-                                      />
+                                      <span title={buildSourceTooltip(item)} aria-label={buildSourceTooltip(item)}>
+                                        <Info className="h-3 w-3 text-muted-foreground" />
+                                      </span>
                                     </div>
                                   ))}
                                 </div>
@@ -566,6 +667,9 @@ export default function MeetingDetailPage() {
               <TabsContent value="actions" className="pt-6">
                 <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
                   <h2 className="text-lg font-semibold text-foreground mb-3">{tDetail('actions.title')}</h2>
+                  {projectUpdateError && (
+                    <p className="text-sm text-destructive mb-3">{projectUpdateError}</p>
+                  )}
                   {meeting.todos.length === 0 ? (
                     <p className="text-muted-foreground text-center py-12">{tDetail('actions.noActions')}</p>
                   ) : (
@@ -591,6 +695,28 @@ export default function MeetingDetailPage() {
                             </div>
 
                             <p className="text-sm text-muted-foreground mb-3">{todo.description}</p>
+
+                            <div className="mb-3">
+                              <label className="block text-xs text-muted-foreground mb-1">
+                                {tDetail('actions.project.label')}
+                              </label>
+                              <select
+                                className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                                value={todo.projectId ?? ''}
+                                disabled={projectsLoading || projectUpdateInFlightId === todo.id}
+                                onChange={(event) => {
+                                  const value = event.target.value
+                                  void updateTodoProject(todo.id, value.length > 0 ? value : null)
+                                }}
+                              >
+                                <option value="">{tDetail('actions.project.unassigned')}</option>
+                                {projects.map((project) => (
+                                  <option key={project.id} value={project.id}>
+                                    {project.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
 
                             <div className="flex items-center justify-between text-xs">
                               <div className="flex items-center gap-3">

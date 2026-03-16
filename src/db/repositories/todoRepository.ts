@@ -48,6 +48,10 @@ export class TodoRepository {
     return prisma.todo.update({ where: { id }, data })
   }
 
+  async deleteByMeetingId(meetingId: string): Promise<void> {
+    await prisma.todo.deleteMany({ where: { meetingId } })
+  }
+
   async delete(id: string): Promise<void> {
     await prisma.todo.delete({ where: { id } })
   }

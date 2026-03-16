@@ -94,6 +94,11 @@
         "title": "Action Items",
         "assignedTo": "Assigned to",
         "confidence": "Confidence",
+        "project": {
+          "label": "Project assignment",
+          "unassigned": "No project",
+          "updateError": "Project assignment could not be updated"
+        },
         "status": {
           "open": "Open",
           "in_progress": "In Progress",

@@ -94,6 +94,11 @@
         "title": "Aktionspunkte",
         "assignedTo": "Zugewiesen an",
         "confidence": "Konfidenz",
+        "project": {
+          "label": "Projektzuweisung",
+          "unassigned": "Kein Projekt",
+          "updateError": "Projektzuweisung konnte nicht aktualisiert werden"
+        },
         "status": {
           "open": "Offen",
           "in_progress": "In Bearbeitung",

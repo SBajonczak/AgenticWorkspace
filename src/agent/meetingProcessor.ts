@@ -216,6 +216,7 @@ export class MeetingProcessor {
     }
 
     // Persist todos
+    await this.todoRepo.deleteByMeetingId(meeting.id)
     const todosData = agentResponse.todos.map((todo) => ({
       meetingId: meeting.id,
       projectId: this.matchTodoToProject(todo, resolvedProjects),

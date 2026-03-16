@@ -121,40 +121,15 @@ async function runForUser(user: { id: string; email: string | null; tenantId: st
       const graphModifiedAt = meeting.lastModifiedDateTime ? new Date(meeting.lastModifiedDateTime) : null
 
       if (existing?.processedAt) {
-        // Determine whether this meeting has been modified in Graph since we last synced it.
-        const hasChangedInGraph =
-          graphModifiedAt !== null &&
-          (existing.lastSyncedAt === null || graphModifiedAt > existing.lastSyncedAt)
-
-        if (hasChangedInGraph) {
-          // Re-process: transcript may have been updated (e.g. corrections added).
-          console.log(`[Worker] Re-processing changed meeting: "${meeting.subject}"`)
-          const transcript = await transcriptsClient.getTranscript(meeting.id)
-          if (transcript) {
-            await processor.processMeeting(
-              meeting.id,
-              meeting.subject,
-              meeting.organizer.emailAddress.name,
-              organizerEmail,
-              new Date(meeting.start.dateTime),
-              new Date(meeting.end.dateTime),
-              transcript,
-              participants,
-              user.tenantId ?? undefined
-            )
-          }
-          // Update sync metadata regardless of transcript availability.
-          await meetingRepo.updateSyncMeta(existing.id, graphModifiedAt, new Date())
-        } else {
-          // Nothing changed – only merge participants to keep the list up to date.
-          const merged = mergeParticipantLists(existing.participants, participants)
-          if (merged.length > 0) {
-            await meetingRepo.update(existing.id, {
-              participants: JSON.stringify(merged),
-            })
-          }
-          await meetingRepo.updateSyncMeta(existing.id, graphModifiedAt, new Date())
+        // Strict once-processing: already processed meetings are never re-crawled.
+        // Keep participant list and sync metadata fresh only.
+        const merged = mergeParticipantLists(existing.participants, participants)
+        if (merged.length > 0) {
+          await meetingRepo.update(existing.id, {
+            participants: JSON.stringify(merged),
+          })
         }
+        await meetingRepo.updateSyncMeta(existing.id, graphModifiedAt, new Date())
         continue
       }
 

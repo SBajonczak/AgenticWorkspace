@@ -74,7 +74,7 @@ export class MeetingsClient {
       const daysBack = options?.daysBack ?? 30
       const daysForward = options?.daysForward ?? 14
       const startDate = options?.startAfter
-        ? new Date(options.startAfter.getTime() - 60 * 60 * 1000) // 1h buffer for overlap
+        ? new Date(options.startAfter.getTime())
         : new Date(now.getTime() - daysBack * 24 * 60 * 60 * 1000)
       const endDate = new Date(now.getTime() + daysForward * 24 * 60 * 60 * 1000)
 

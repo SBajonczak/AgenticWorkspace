@@ -59,6 +59,7 @@ const makeMockMeetingRepo = (existing: typeof mockMeeting | null = null) => ({
 })
 
 const makeMockTodoRepo = () => ({
+  deleteByMeetingId: jest.fn().mockResolvedValue(undefined),
   createMany: jest.fn().mockResolvedValue(1),
   findByMeetingId: jest.fn().mockResolvedValue([
     { id: 'todo-1', title: 'Draft Q3 roadmap doc', description: '...', assigneeHint: 'bob@example.com', priority: 'high', dueDate: null },
@@ -125,6 +126,28 @@ describe('MeetingProcessor', () => {
       expect(result.todosCreated).toBe(1)
       expect(result.minutesCreated).toBe(2) // en + de
       expect(result.projectStatusesCreated).toBe(1)
+    })
+
+    it('deletes existing todos before creating new ones', async () => {
+      const todoRepo = makeMockTodoRepo()
+      const processor = new MeetingProcessor(
+        makeMockLLMClient() as any,
+        makeMockMeetingRepo() as any,
+        todoRepo as any,
+        makeMockMinutesRepo() as any,
+        makeMockProjectStatusRepo() as any,
+        makeMockTicketSyncRepo() as any,
+        new NoneTicketProvider(),
+        makeMockProjectRepo() as any
+      )
+
+      await processor.processMeeting(
+        'ms-teams-id', 'Q3 Planning', 'Alice', 'alice@example.com',
+        new Date(), new Date(), 'transcript text', [], 'tenant-1'
+      )
+
+      expect(todoRepo.deleteByMeetingId).toHaveBeenCalledWith(mockMeeting.id)
+      expect(todoRepo.createMany).toHaveBeenCalled()
     })
 
     it('does not create ticket syncs when provider is none', async () => {
