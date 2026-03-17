@@ -68,7 +68,7 @@ export async function GET(
     const decisions = parseDecisions(m.decisions)
     const meetingTodos = m.todos as unknown as ContextTodo[]
     const openTodos = meetingTodos
-      .filter((t) => t.status !== 'done' && (t.projectId === params.id || t.projectId === null))
+      .filter((t) => t.status !== 'done' && t.projectId === params.id)
       .map((t) => ({
         id: t.id,
         title: t.title,
@@ -98,7 +98,7 @@ export async function GET(
   // Aggregate stats
   const allTodos = statuses.flatMap((s) =>
     (s.meeting.todos as unknown as ContextTodo[]).filter(
-      (todo) => todo.projectId === params.id || todo.projectId === null
+      (todo) => todo.projectId === params.id
     )
   )
   const stats = {

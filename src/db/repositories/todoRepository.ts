@@ -44,6 +44,14 @@ export class TodoRepository {
     })
   }
 
+  async reassignProjectTodos(fromProjectId: string, toProjectId: string): Promise<number> {
+    const result = await prisma.todo.updateMany({
+      where: { projectId: fromProjectId },
+      data: { projectId: toProjectId },
+    })
+    return result.count
+  }
+
   async update(id: string, data: Prisma.TodoUpdateInput): Promise<Todo> {
     return prisma.todo.update({ where: { id }, data })
   }

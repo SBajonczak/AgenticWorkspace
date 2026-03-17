@@ -42,7 +42,7 @@ interface Project {
   sourceLinks: ProjectSourceLink[]
 }
 
-type FilterType = 'all' | 'active' | 'on_hold' | 'completed'
+type FilterType = 'all' | 'active' | 'on_hold' | 'completed' | 'unconfirmed'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -353,6 +353,10 @@ export default function ProjectsListPage() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [editProject, setEditProject] = useState<Project | null | undefined>(undefined) // undefined = closed, null = create
+  const [deleteProject, setDeleteProject] = useState<Project | null>(null)
+  const [reassignToProjectId, setReassignToProjectId] = useState('')
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const loadProjects = useCallback(async () => {
     setLoading(true)
@@ -371,10 +375,53 @@ export default function ProjectsListPage() {
 
   useEffect(() => { loadProjects() }, [loadProjects])
 
-  const handleDelete = async (id: string) => {
-    if (!confirm(tList('manage.deleteConfirm'))) return
-    await fetch(`/api/projects/${id}`, { method: 'DELETE' })
-    setProjects((prev) => prev.filter((p) => p.id !== id))
+  const openDeleteDialog = (project: Project) => {
+    const defaultTarget = projects.find((candidate) =>
+      candidate.id !== project.id &&
+      !candidate.archived &&
+      candidate.confirmed &&
+      candidate.status === 'active'
+    )
+
+    setDeleteProject(project)
+    setDeleteError(null)
+    setReassignToProjectId(defaultTarget?.id ?? '')
+  }
+
+  const closeDeleteDialog = () => {
+    setDeleteProject(null)
+    setDeleteError(null)
+    setReassignToProjectId('')
+    setDeleting(false)
+  }
+
+  const handleDelete = async () => {
+    if (!deleteProject) return
+    if (!reassignToProjectId) {
+      setDeleteError(tList('manage.deleteReassignRequired'))
+      return
+    }
+
+    setDeleting(true)
+    setDeleteError(null)
+    try {
+      const res = await fetch(`/api/projects/${deleteProject.id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reassignToProjectId }),
+      })
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => null)
+        setDeleteError(body?.error ?? tList('manage.deleteErrorGeneric'))
+        return
+      }
+
+      setProjects((prev) => prev.filter((p) => p.id !== deleteProject.id))
+      closeDeleteDialog()
+    } finally {
+      setDeleting(false)
+    }
   }
 
   const handleSaved = (saved: Project) => {
@@ -387,9 +434,19 @@ export default function ProjectsListPage() {
 
   const filteredProjects = projects.filter((p) => {
     if (p.archived) return false
+    if (filter === 'unconfirmed') return !p.confirmed
     if (filter === 'all') return true
     return p.status === filter
   })
+
+  const reassignmentTargets = deleteProject
+    ? projects.filter((candidate) =>
+        candidate.id !== deleteProject.id &&
+        !candidate.archived &&
+        candidate.confirmed &&
+        candidate.status === 'active'
+      )
+    : []
 
   return (
     <div className="min-h-screen bg-background">
@@ -402,6 +459,67 @@ export default function ProjectsListPage() {
           onClose={() => setEditProject(undefined)}
           onSaved={handleSaved}
         />
+      )}
+
+      {deleteProject && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-lg rounded-xl border border-border bg-background p-6 shadow-2xl"
+          >
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-bold text-foreground">{tList('manage.deleteTitle')}</h2>
+              <Button variant="ghost" size="sm" onClick={closeDeleteDialog} disabled={deleting}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <p className="text-sm text-muted-foreground mb-3">
+              {tList('manage.deleteConfirm')}
+            </p>
+            <p className="text-sm text-foreground mb-4">
+              <span className="font-medium">{deleteProject.name}</span>
+            </p>
+
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">
+                {tList('manage.deleteReassignLabel')}
+              </label>
+              <select
+                className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                value={reassignToProjectId}
+                onChange={(e) => setReassignToProjectId(e.target.value)}
+                disabled={deleting || reassignmentTargets.length === 0}
+              >
+                <option value="">{tList('manage.deleteReassignPlaceholder')}</option>
+                {reassignmentTargets.map((candidate) => (
+                  <option key={candidate.id} value={candidate.id}>{candidate.name}</option>
+                ))}
+              </select>
+              {reassignmentTargets.length === 0 && (
+                <p className="mt-2 text-xs text-destructive">{tList('manage.deleteNoTargets')}</p>
+              )}
+            </div>
+
+            {deleteError && <p className="text-xs text-destructive mt-3">{deleteError}</p>}
+
+            <div className="flex justify-end gap-2 pt-5">
+              <Button variant="ghost" size="sm" onClick={closeDeleteDialog} disabled={deleting}>
+                {tList('manage.cancel')}
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleDelete}
+                disabled={deleting || !reassignToProjectId || reassignmentTargets.length === 0}
+              >
+                {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
+                {tList('manage.delete')}
+              </Button>
+            </div>
+          </motion.div>
+        </div>
       )}
 
       <main className="container mx-auto px-4 py-12">
@@ -425,7 +543,7 @@ export default function ProjectsListPage() {
         )}
 
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="mb-6 flex gap-2">
-          {(['all', 'active', 'on_hold', 'completed'] as const).map((f) => (
+          {(['all', 'active', 'on_hold', 'completed', 'unconfirmed'] as const).map((f) => (
             <Button key={f} variant={filter === f ? 'default' : 'secondary'} size="sm" onClick={() => setFilter(f)}>
               {tList(`filters.${f}`)}
             </Button>
@@ -501,7 +619,7 @@ export default function ProjectsListPage() {
                         <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setEditProject(project)}>
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
-                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => handleDelete(project.id)}>
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => openDeleteDialog(project)}>
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                         <Link href={`/projects/${project.id}`}>

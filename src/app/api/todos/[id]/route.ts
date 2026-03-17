@@ -54,6 +54,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       return NextResponse.json({ error: 'Project must be active' }, { status: 400 })
     }
 
+    if (!project.confirmed) {
+      return NextResponse.json({ error: 'Project must be confirmed' }, { status: 400 })
+    }
+
     if (tenantId) {
       if (project.tenantId && project.tenantId !== tenantId) {
         return NextResponse.json({ error: 'Forbidden project scope' }, { status: 403 })

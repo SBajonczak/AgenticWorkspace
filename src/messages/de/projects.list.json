@@ -7,7 +7,8 @@
         "all": "Alle",
         "active": "Aktiv",
         "on_hold": "Pausiert",
-        "completed": "Abgeschlossen"
+        "completed": "Abgeschlossen",
+        "unconfirmed": "Unbestätigt"
       },
       "card": {
         "owner": "Verantwortlich",
@@ -44,6 +45,12 @@
         "cancel": "Abbrechen",
         "delete": "Löschen",
         "deleteConfirm": "Dieses Projekt wirklich löschen?",
+        "deleteTitle": "Projekt löschen",
+        "deleteReassignLabel": "Tasks in folgendes Projekt überführen",
+        "deleteReassignPlaceholder": "Zielprojekt auswählen",
+        "deleteReassignRequired": "Bitte ein Zielprojekt für die Task-Überführung auswählen.",
+        "deleteNoTargets": "Kein geeignetes Zielprojekt verfügbar (aktiv + bestätigt).",
+        "deleteErrorGeneric": "Projekt konnte nicht gelöscht werden.",
         "sources": "Wissensquellen",
         "addSource": "Quelle hinzufügen",
         "sourceType": "Typ",

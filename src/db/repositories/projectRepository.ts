@@ -146,6 +146,7 @@ export class ProjectRepository {
     const candidates = await prisma.project.findMany({
       where: {
         archived: false,
+        confirmed: true,
         ...this.buildTenantScope(tenantId),
       },
       include: { aliases: true, sourceLinks: true },
