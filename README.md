@@ -230,6 +230,56 @@ npm test
 npm run test:e2e
 ```
 
+## ☁️ Azure AKS Deployment (Terraform + GitHub Enterprise)
+
+### Added Infrastructure/Delivery Artifacts
+
+- `terraform/` now includes:
+  - Azure OpenAI (existing)
+  - Azure SQL Serverless resources (target production DB)
+  - GitHub OIDC identity + federated credential + role assignments for RG/ACR/AKS
+- `k8s/` contains namespace, web deployment/service/ingress, worker cronjob, and config templates.
+- `.github/workflows/` contains:
+  - `ci.yml` (lint, typecheck, test, build)
+  - `terraform.yml` (fmt, validate, tflint, tfsec)
+  - `deploy-aks.yml` (OIDC login, image build/push, AKS deploy)
+
+### GitHub Secrets Required (Environment: `production`)
+
+- `AZURE_CLIENT_ID`
+- `AZURE_TENANT_ID`
+- `AZURE_SUBSCRIPTION_ID`
+- `ACR_LOGIN_SERVER`
+- `AKS_RESOURCE_GROUP`
+- `AKS_CLUSTER_NAME`
+
+### Terraform Bootstrapping
+
+```bash
+cd terraform
+cp terraform.tfvars.example terraform.tfvars
+# fill values (AKS/ACR names, SQL admin, GitHub org/repo)
+terraform init
+terraform validate
+terraform plan
+terraform apply
+```
+
+### Kubernetes Bootstrapping
+
+```bash
+kubectl apply -f k8s/namespace.yaml
+# create real secret from k8s/secret.example.yaml values
+kubectl apply -f k8s/configmap.yaml
+kubectl apply -f k8s/web.yaml
+kubectl apply -f k8s/worker-cronjob.yaml
+```
+
+### Important Note
+
+- Current app runtime in this repo is still SQLite-first in Prisma schema.
+- Azure SQL resources are provisioned as target state; before production cutover, complete Prisma provider migration and DB data migration.
+
 ## 🔒 Security
 
 - ✅ No secrets in code - all credentials via environment variables

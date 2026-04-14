@@ -49,7 +49,6 @@ export default function AppHeader({ activeLink }: AppHeaderProps) {
                     : 'text-muted-foreground hover:text-foreground hover:bg-accent'
                 )}
               >
-                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                 {(tCommon as any)(item.labelKey)}
               </Link>
             ))}
@@ -107,7 +106,6 @@ export default function AppHeader({ activeLink }: AppHeaderProps) {
                   : 'text-muted-foreground hover:text-foreground hover:bg-accent'
               )}
             >
-              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
               {(tCommon as any)(item.labelKey)}
             </Link>
           ))}

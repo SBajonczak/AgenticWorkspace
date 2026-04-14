@@ -1,0 +1,59 @@
+name: Deploy AKS
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  IMAGE_NAME: agentic-workspace
+  K8S_NAMESPACE: agentic-workspace
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and Push image to ACR
+        run: |
+          ACR_LOGIN_SERVER="${{ secrets.ACR_LOGIN_SERVER }}"
+          az acr login --name "${ACR_LOGIN_SERVER%%.*}"
+          docker build -t "$ACR_LOGIN_SERVER/$IMAGE_NAME:${{ github.sha }}" .
+          docker push "$ACR_LOGIN_SERVER/$IMAGE_NAME:${{ github.sha }}"
+
+      - name: Set AKS context
+        uses: azure/aks-set-context@v4
+        with:
+          resource-group: ${{ secrets.AKS_RESOURCE_GROUP }}
+          cluster-name: ${{ secrets.AKS_CLUSTER_NAME }}
+
+      - name: Create namespace if missing
+        run: kubectl create namespace "$K8S_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Apply manifests
+        run: kubectl apply -f k8s/
+
+      - name: Update web image
+        run: |
+          kubectl -n "$K8S_NAMESPACE" set image deployment/agentic-web web="${{ secrets.ACR_LOGIN_SERVER }}/$IMAGE_NAME:${{ github.sha }}"
+
+      - name: Update worker image
+        run: |
+          kubectl -n "$K8S_NAMESPACE" set image cronjob/agentic-worker worker="${{ secrets.ACR_LOGIN_SERVER }}/$IMAGE_NAME:${{ github.sha }}"
+
+      - name: Wait for rollout
+        run: kubectl -n "$K8S_NAMESPACE" rollout status deployment/agentic-web --timeout=180s
