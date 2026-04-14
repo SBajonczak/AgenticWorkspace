@@ -230,7 +230,7 @@ npm test
 npm run test:e2e
 ```
 
-## ☁️ Azure AKS Deployment (Terraform + GitHub Enterprise)
+## ☁️ Azure AKS Deployment (Terraform + Helm + GitHub Actions)
 
 ### Added Infrastructure/Delivery Artifacts
 
@@ -238,20 +238,32 @@ npm run test:e2e
   - Azure OpenAI (existing)
   - Azure SQL Serverless resources (target production DB)
   - GitHub OIDC identity + federated credential + role assignments for RG/ACR/AKS
-- `k8s/` contains namespace, web deployment/service/ingress, worker cronjob, and config templates.
+- `helm/agentic-workspace/` contains the Helm chart for web + worker workloads.
+- `k8s/` remains as legacy raw manifests for reference/migration fallback.
 - `.github/workflows/` contains:
   - `ci.yml` (lint, typecheck, test, build)
   - `terraform.yml` (fmt, validate, tflint, tfsec)
-  - `deploy-aks.yml` (OIDC login, image build/push, AKS deploy)
+  - `deploy-aks.yml` (OIDC login, build/push separate web+worker images to ACR, Helm deploy to AKS)
 
-### GitHub Secrets Required (Environment: `production`)
+### GitHub Secrets Required (Environments: `staging`, `production`)
 
 - `AZURE_CLIENT_ID`
 - `AZURE_TENANT_ID`
 - `AZURE_SUBSCRIPTION_ID`
-- `ACR_LOGIN_SERVER`
 - `AKS_RESOURCE_GROUP`
 - `AKS_CLUSTER_NAME`
+- `DATABASE_URL`
+- `NEXTAUTH_SECRET`
+- `NEXTAUTH_URL`
+- `AUTH_MICROSOFT_ENTRA_ID_ID`
+- `AUTH_MICROSOFT_ENTRA_ID_SECRET`
+- `AZURE_OPENAI_API_KEY`
+- `AZURE_OPENAI_ENDPOINT`
+- `AZURE_OPENAI_DEPLOYMENT`
+- `JIRA_HOST`
+- `JIRA_EMAIL`
+- `JIRA_API_TOKEN`
+- `JIRA_PROJECT_KEY`
 
 ### Terraform Bootstrapping
 
@@ -265,15 +277,28 @@ terraform plan
 terraform apply
 ```
 
-### Kubernetes Bootstrapping
+### Helm Deployment Flow
 
 ```bash
-kubectl apply -f k8s/namespace.yaml
-# create real secret from k8s/secret.example.yaml values
-kubectl apply -f k8s/configmap.yaml
-kubectl apply -f k8s/web.yaml
-kubectl apply -f k8s/worker-cronjob.yaml
+# Render staging manifests
+helm template agentic-workspace ./helm/agentic-workspace \
+  -f ./helm/agentic-workspace/values-staging.yaml
+
+# Render production manifests
+helm template agentic-workspace ./helm/agentic-workspace \
+  -f ./helm/agentic-workspace/values-production.yaml
 ```
+
+GitHub Actions workflow behavior:
+
+- Push to `main`:
+  - Builds `web` image (`realcore.azurecr.io/agentic-web:<sha>`) and `worker` image (`realcore.azurecr.io/agentic-worker:<sha>`)
+  - Pushes both images to ACR
+  - Deploys to AKS namespace `agentic-staging` with Helm
+- Manual `workflow_dispatch`:
+  - Requires an existing `image_tag` (commit SHA)
+  - Promotes that tag to namespace `agentic-production` with Helm
+  - Verifies rollout for web deployment and worker cronjob
 
 ### Important Note
 
