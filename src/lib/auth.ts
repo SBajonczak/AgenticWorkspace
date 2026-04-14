@@ -114,6 +114,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
   adapter: PrismaAdapter(prisma),
   session: { strategy: 'jwt' },
+  debug: process.env.NODE_ENV === 'development',
   logger: {
     error(code, ...message) {
       const diagnostics = getAuthErrorDiagnostics(String(code), message)
