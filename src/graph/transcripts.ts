@@ -9,53 +9,86 @@ export interface TranscriptContent {
 
 export class TranscriptsClient {
   private client: Client
+  private accessToken: string
+  // When set, use /users/{userId}/ instead of /me/ (required for app permissions)
+  private userPath: string
 
-  constructor(accessToken: string) {
+  constructor(accessToken: string, userId?: string) {
+    this.accessToken = accessToken
     this.client = Client.init({
       authProvider: (done) => {
         done(null, accessToken)
       },
     })
+    this.userPath = userId ? `/users/${userId}` : '/me'
   }
 
   async getTranscript(meetingId: string): Promise<string | null> {
     try {
-      // Get list of transcripts for the meeting
       const transcriptsResponse = await this.client
-        .api(`/me/onlineMeetings/${meetingId}/transcripts`)
+        .api(`${this.userPath}/onlineMeetings/${meetingId}/transcripts`)
         .get()
 
       const transcripts = transcriptsResponse.value || []
-      
+
       if (transcripts.length === 0) {
         console.log(`No transcripts found for meeting ${meetingId}`)
         return null
       }
 
-      // Get the most recent transcript
       const latestTranscript = transcripts[0]
+      const transcriptContentUrl = latestTranscript.transcriptContentUrl
       const transcriptId = latestTranscript.id
 
-      // Download transcript content
+      if (transcriptContentUrl) {
+        try {
+          const vttResponse = await fetch(transcriptContentUrl, {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${this.accessToken}`,
+              Accept: 'text/vtt',
+            },
+          })
+
+          if (vttResponse.ok) {
+            return await vttResponse.text()
+          }
+
+          console.warn(
+            `Fetching transcriptContentUrl failed (${vttResponse.status}) for meeting ${meetingId}. Falling back to /content endpoint.`
+          )
+        } catch (error) {
+          console.warn(`Fetching transcriptContentUrl failed for meeting ${meetingId}. Falling back to /content endpoint.`, error)
+        }
+      }
+
       const contentResponse = await this.client
-        .api(`/me/onlineMeetings/${meetingId}/transcripts/${transcriptId}/content`)
+        .api(`${this.userPath}/onlineMeetings/${meetingId}/transcripts/${transcriptId}/content`)
+        .header('Accept', 'text/vtt')
         .get()
-console.log("contentResponse:", contentResponse);
+
       return this.parseTranscriptContent(contentResponse)
     } catch (error) {
-      console.error(`Failed to fetch transcript for meeting ${meetingId}:`, error)
+      const err = error as { statusCode?: number; code?: string; message?: string }
+      if (err?.statusCode === 403) {
+        console.warn(
+          `Transcript access denied for meeting ${meetingId}. ` +
+            `Check delegated Graph scopes (OnlineMeetingTranscript.Read.All, OnlineMeetings.Read, Calendars.Read), ` +
+            `admin consent, and whether the signed-in user has access to this meeting.`
+        )
+      } else {
+        console.error(`Failed to fetch transcript for meeting ${meetingId}:`, error)
+      }
       return null
     }
   }
 
   private parseTranscriptContent(content: any): string {
-    // Handle different transcript formats from Microsoft Graph
     if (typeof content === 'string') {
       return content
     }
 
     if (Array.isArray(content)) {
-      // Parse VTT or similar format
       return content
         .map((item: TranscriptContent) => {
           const speaker = item.speaker || 'Unknown'
@@ -66,14 +99,13 @@ console.log("contentResponse:", contentResponse);
         .join('\n')
     }
 
-    // Fallback: stringify
     return JSON.stringify(content, null, 2)
   }
 
   async hasTranscript(meetingId: string): Promise<boolean> {
     try {
       const transcriptsResponse = await this.client
-        .api(`/me/onlineMeetings/${meetingId}/transcripts`)
+        .api(`${this.userPath}/onlineMeetings/${meetingId}/transcripts`)
         .get()
 
       const transcripts = transcriptsResponse.value || []

@@ -3,6 +3,8 @@ import { createLLMClient } from '../ai/llmClient'
 import { MeetingRepository } from '../db/repositories/meetingRepository'
 import { TodoRepository } from '../db/repositories/todoRepository'
 import { JiraSyncRepository } from '../db/repositories/jiraSyncRepository'
+import { MeetingMinutesRepository } from '../db/repositories/meetingMinutesRepository'
+import { ProjectStatusRepository } from '../db/repositories/projectStatusRepository'
 import { createJiraClient } from '../jira/client'
 import { createGraphAuth } from '../graph/auth'
 import { MeetingsClient } from '../graph/meetings'
@@ -18,11 +20,20 @@ export interface AgentRunResult {
   dryRun: boolean
 }
 
+export interface AgentRunOptions {
+  /** Pre-acquired Microsoft Graph access token. Skips device-code flow when provided. */
+  accessToken?: string
+  /** Target user UPN / object ID for /users/{id}/ Graph paths (required with app permissions). */
+  targetUserId?: string
+}
+
 export class AgentRunner {
   private dryRun: boolean
+  private options: AgentRunOptions
 
-  constructor(dryRun: boolean = false) {
+  constructor(dryRun: boolean = false, options: AgentRunOptions = {}) {
     this.dryRun = dryRun
+    this.options = options
   }
 
   async run(): Promise<AgentRunResult | AgentRunResult[]> {
@@ -37,13 +48,21 @@ export class AgentRunner {
       const meetingRepo = new MeetingRepository()
       const todoRepo = new TodoRepository()
       const jiraSyncRepo = new JiraSyncRepository()
+      const minutesRepo = new MeetingMinutesRepository()
+      const projectStatusRepo = new ProjectStatusRepository()
 
       // Get latest meeting from Graph API
       console.log('📞 Fetching latest meeting from Microsoft Graph...')
-      const graphAuth = createGraphAuth()
-      const accessToken = await graphAuth.getAccessToken()
+      let accessToken: string
+      if (this.options.accessToken) {
+        accessToken = this.options.accessToken
+        console.log('Using provided access token')
+      } else {
+        const graphAuth = createGraphAuth()
+        accessToken = await graphAuth.getAccessToken()
+      }
 
-      const meetingsClient = new MeetingsClient(accessToken)
+      const meetingsClient = new MeetingsClient(accessToken, this.options.targetUserId)
       const latestMeetings = await meetingsClient.getLatestMeeting()
       const latestMeeting = latestMeetings ? latestMeetings[0] : null;
 
@@ -65,11 +84,15 @@ export class AgentRunner {
       }
       for (const meeting of latestMeetings) {
         try {
+          if (!meeting.id) {
+            console.warn(`Skipping "${meeting.subject}" – missing online meeting ID`)
+            continue
+          }
           console.log(`Found meeting: ${meeting.subject}`)
 
           // Get transcript
           console.log('📝 Fetching transcript...')
-          const transcriptsClient = new TranscriptsClient(accessToken)
+          const transcriptsClient = new TranscriptsClient(accessToken, this.options.targetUserId)
           const transcript = await transcriptsClient.getTranscript(meeting.id)
 
           if (!transcript) {
@@ -101,7 +124,13 @@ export class AgentRunner {
           // Process meeting with LLM
           console.log('🧠 Processing meeting with AI agent...')
           const llmClient = createLLMClient()
-          const processor = new MeetingProcessor(llmClient, meetingRepo, todoRepo)
+          const processor = new MeetingProcessor(
+            llmClient,
+            meetingRepo,
+            todoRepo,
+            minutesRepo,
+            projectStatusRepo
+          )
 
           const result = await processor.processMeeting(
             meeting.id,
@@ -110,13 +139,16 @@ export class AgentRunner {
             meeting.organizer.emailAddress.address,
             new Date(meeting.start.dateTime),
             new Date(meeting.end.dateTime),
-            transcript
+            transcript,
+            meeting.participants || []
           )
 
           console.log(`\n✅ Meeting processed successfully`)
           console.log(`Summary: ${result.agentResponse.meetingSummary.summary.substring(0, 100)}...`)
           console.log(`Decisions: ${result.agentResponse.meetingSummary.decisions.length}`)
           console.log(`TODOs: ${result.todosCreated}`)
+          console.log(`Minutes: ${result.minutesCreated} language(s)`)
+          console.log(`Project statuses: ${result.projectStatusesCreated}`)
 
           // Sync to Jira
           let jiraSynced = 0
@@ -134,15 +166,12 @@ export class AgentRunner {
                   assignee: todo.assigneeHint || undefined,
                 })
 
-                await jiraSyncRepo.markSynced(todo.id, jiraIssue.key, jiraIssue.id)
+                await jiraSyncRepo.markSynced(todo.id, { id: jiraIssue.id, key: jiraIssue.key, url: '', provider: 'jira' as const })
                 console.log(`  ✓ Created: ${jiraIssue.key}`)
                 jiraSynced++
               } catch (error) {
                 console.error(`  ✗ Failed to sync todo ${todo.id}:`, error)
-                await jiraSyncRepo.markFailed(
-                  todo.id,
-                  error instanceof Error ? error.message : 'Unknown error'
-                )
+                await jiraSyncRepo.markFailed(todo.id, 'jira', error instanceof Error ? error.message : 'Unknown error')
               }
             }
           } else {

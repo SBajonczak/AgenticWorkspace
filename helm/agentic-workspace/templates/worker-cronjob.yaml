@@ -1,0 +1,30 @@
+{{- if .Values.worker.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "agentic-workspace.workerName" . }}
+  namespace: {{ .Values.namespace }}
+spec:
+  schedule: {{ .Values.worker.schedule | quote }}
+  concurrencyPolicy: {{ .Values.worker.concurrencyPolicy }}
+  successfulJobsHistoryLimit: {{ .Values.worker.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.worker.failedJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: {{ .Values.worker.restartPolicy }}
+          containers:
+            - name: worker
+              image: "{{ .Values.worker.image.repository }}:{{ .Values.worker.image.tag }}"
+              imagePullPolicy: {{ .Values.worker.image.pullPolicy }}
+              command:
+{{ toYaml .Values.worker.command | indent 16 }}
+              envFrom:
+                - configMapRef:
+                    name: {{ include "agentic-workspace.configMapName" . }}
+                - secretRef:
+                    name: {{ include "agentic-workspace.secretName" . }}
+              resources:
+{{ toYaml .Values.worker.resources | indent 16 }}
+{{- end }}

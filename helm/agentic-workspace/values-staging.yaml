@@ -1,0 +1,12 @@
+namespace: agentic-staging
+
+config:
+  nodeEnv: production
+
+web:
+  ingress:
+    enabled: true
+    host: agentic-staging.example.com
+
+worker:
+  schedule: "*/30 * * * *"

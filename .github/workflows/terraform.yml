@@ -1,0 +1,48 @@
+name: Terraform Checks
+
+on:
+  pull_request:
+    paths:
+      - terraform/**
+      - .github/workflows/terraform.yml
+  push:
+    branches: [main]
+    paths:
+      - terraform/**
+      - .github/workflows/terraform.yml
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform fmt
+        run: terraform fmt -check -recursive
+
+      - name: Terraform init
+        run: terraform init -backend=false
+
+      - name: Terraform validate
+        run: terraform validate
+
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v4
+
+      - name: TFLint init
+        run: tflint --init
+
+      - name: TFLint
+        run: tflint --recursive
+
+      - name: Tfsec
+        uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          working_directory: terraform

@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agentic-config
+  namespace: agentic-workspace
+data:
+  NODE_ENV: "production"
+  DATABASE_PROVIDER: "postgresql"
+  WORKER_INTERVAL_MINUTES: "30"

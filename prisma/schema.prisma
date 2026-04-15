@@ -6,57 +6,268 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-model Meeting {
+// ---------------------------------------------------------------------------
+// Multi-tenancy: each Azure AD tenant maps to one Tenant record.
+// Auto-provisioned on first login using the 'tid' claim from Entra ID.
+// ---------------------------------------------------------------------------
+model Tenant {
   id            String    @id @default(uuid())
-  meetingId     String    @unique // Microsoft Teams meeting ID
-  title         String
-  organizer     String
-  organizerEmail String?
-  startTime     DateTime
-  endTime       DateTime
-  transcript    String?   // Full transcript
-  summary       String?   // AI-generated summary
-  decisions     String?   // JSON array of decisions
-  processedAt   DateTime?
+  azureTenantId String    @unique  // Azure AD tenant ID (natural key)
+  name          String    @default("My Organization")
+  // TicketProviderType: 'jira' | 'github' | 'azuredevops' | 'none'
+  ticketProvider String   @default("none")
+  // JSON-serialized TicketProviderConfig – encrypt in production
+  ticketConfig  String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  
-  todos         Todo[]
+
+  meetings      Meeting[]
+  users         User[]
+  projects      Project[]
+}
+
+model Meeting {
+  id                  String    @id @default(uuid())
+  meetingId           String    @unique // Microsoft Teams meeting ID
+  title               String
+  organizer           String
+  organizerEmail      String?
+  startTime           DateTime
+  endTime             DateTime
+  transcript          String?   // Full transcript
+  summary             String?   // AI-generated summary
+  decisions           String?   // JSON array of decisions
+  participants        String?   // JSON array of attendee emails
+  processedAt         DateTime?
+  // Delta-sync tracking: avoid re-fetching / re-processing unchanged meetings
+  graphLastModifiedAt DateTime? // Microsoft Graph lastModifiedDateTime for this event
+  lastSyncedAt        DateTime? // When this meeting was last fetched from Graph
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  // Optional tenant association (null = single-tenant / legacy data)
+  tenantId            String?
+  tenant              Tenant?   @relation(fields: [tenantId], references: [id])
+
+  todos               Todo[]
+  minutes             MeetingMinutes[]
+  projectStatuses     ProjectStatus[]
+
+  @@index([tenantId])
+  @@index([graphLastModifiedAt])
 }
 
 model Todo {
   id            String    @id @default(uuid())
   meetingId     String
+  projectId     String?
   title         String
   description   String
   assigneeHint  String?
   confidence    Float
+  priority      String    @default("medium") // high, medium, low
+  dueDate       DateTime?
   status        String    @default("pending") // pending, in_progress, done
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  
+
   meeting       Meeting   @relation(fields: [meetingId], references: [id], onDelete: Cascade)
-  jiraSync      JiraSync?
-  
+  project       Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  ticketSync    TicketSync?
+
   @@index([meetingId])
+  @@index([projectId])
 }
 
-model JiraSync {
+// Generalised ticket sync: replaces JiraSync, supports all providers
+model TicketSync {
   id            String    @id @default(uuid())
   todoId        String    @unique
-  jiraIssueKey  String?   // e.g., "PROJ-123"
-  jiraIssueId   String?
+  // TicketProviderType: 'jira' | 'github' | 'azuredevops' | 'none'
+  provider      String    @default("jira")
+  ticketKey     String?   // e.g. "PROJ-123", "#42", "AB#1234"
+  ticketId      String?   // provider-internal ID
+  ticketUrl     String?   // direct URL to the ticket
   status        String    @default("pending") // pending, synced, failed
   error         String?
   syncedAt      DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  
+
   todo          Todo      @relation(fields: [todoId], references: [id], onDelete: Cascade)
-  
+
   @@index([todoId])
+}
+
+model MeetingMinutes {
+  id        String   @id @default(uuid())
+  meetingId String
+  language  String   // 'de', 'en', etc.
+  content   String   // Markdown formatted minutes
+  createdAt DateTime @default(now())
+
+  meeting   Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  @@unique([meetingId, language])
+  @@index([meetingId])
+}
+
+model ProjectStatus {
+  id          String   @id @default(uuid())
+  meetingId   String
+  projectId   String?  // Link to managed Project (null = unmapped / auto-discovered)
+  projectName String
+  status      String   // 'on_track' | 'at_risk' | 'blocked' | 'completed' | 'in_progress'
+  summary     String
+  createdAt   DateTime @default(now())
+
+  meeting     Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  project     Project? @relation(fields: [projectId], references: [id])
+
+  @@index([meetingId])
+  @@index([projectId])
+}
+
+// ---------------------------------------------------------------------------
+// Managed Projects: tenant-scoped, user-editable project entities.
+// ProjectStatus rows from meeting processing are matched against these by
+// name/alias and linked via projectId (or remain unmapped when no match).
+// ---------------------------------------------------------------------------
+model Project {
+  id          String   @id @default(uuid())
+  tenantId    String?
+  name        String
+  description String?
+  status      String   @default("active")  // active | on_hold | completed | archived
+  owner       String?
+  archived    Boolean  @default(false)
+  confirmed   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant      Tenant?            @relation(fields: [tenantId], references: [id])
+  aliases     ProjectAlias[]
+  sourceLinks ProjectSourceLink[]
+  statuses    ProjectStatus[]
+  todos       Todo[]
+
+  @@index([tenantId])
+  @@index([name])
+}
+
+// Alternate names / abbreviations used in meeting transcripts to match this project.
+model ProjectAlias {
+  id        String  @id @default(uuid())
+  projectId String
+  alias     String
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, alias])
+  @@index([projectId])
+  @@index([alias])
+}
+
+// External knowledge-source links associated with a project.
+// type: 'confluence' | 'jira' | 'github' | 'sharepoint'
+model ProjectSourceLink {
+  id         String   @id @default(uuid())
+  projectId  String
+  type       String   // confluence | jira | github | sharepoint
+  label      String?  // human-readable label, e.g. "Team Wiki"
+  identifier String   // space key, project key, repo "owner/repo", SharePoint site URL
+  config     String?  // JSON: extra provider-specific config (e.g., baseUrl for Confluence)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+// ---------------------------------------------------------------------------
+// NextAuth.js / Auth.js v5 models
+// ---------------------------------------------------------------------------
+model User {
+  id            String    @id @default(uuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Optional tenant link – set on first login via Entra ID
+  tenantId      String?
+  tenant        Tenant?   @relation(fields: [tenantId], references: [id])
+  syncState     UserSyncState?
+
+  accounts      Account[]
+  sessions      Session[]
+}
+
+model UserSyncState {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  isProcessing    Boolean  @default(false)
+  hasRefreshToken Boolean  @default(false)
+  consentRequired Boolean  @default(false)
+  meetingLookaheadDays Int @default(14)
+  lastRunAt         DateTime?
+  lastSuccessAt     DateTime?
+  nextRunAt         DateTime?
+  lastError         String?
+  // Delta-sync checkpoint: start-date for the next incremental Graph calendar query
+  lastMeetingSyncAt DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([isProcessing])
+  @@index([consentRequired])
+  @@index([nextRunAt])
+}
+
+model Account {
+  id                 String  @id @default(uuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?
+  access_token       String?
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user         User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
 }

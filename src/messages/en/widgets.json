@@ -3,6 +3,8 @@
     "recentIntelligence": {
       "title": "Recent Intelligence",
       "subtitle": "Latest processed meetings",
+      "live": "Live",
+      "updatedAt": "Updated {time}",
       "viewAll": "View all meetings",
       "noMeetings": "No meetings processed yet",
       "actionCount": "action",
@@ -11,7 +13,22 @@
     "upcomingMeetings": {
       "title": "Upcoming Meetings",
       "subtitle": "Your schedule",
+      "updatedAt": "Updated {time}",
       "viewSchedule": "View full schedule",
+      "prepare": "Show preparation",
+      "hidePreparation": "Hide preparation",
+      "preparationError": "Failed to load preparation",
+      "agendaPreviewTitle": "Agenda preview",
+      "noAgenda": "No agenda items yet",
+      "viewFullPreparation": "Full preparation",
+      "prepSummary": "Carry-over: {carryOver}, long-running: {longRunning}",
+      "prepStatus": {
+        "ready": "Ready",
+        "attention": "Needs attention",
+        "in_progress": "Preparing"
+      },
+      "conflict": "Conflict",
+      "conflictWith": "Conflict with {title}",
       "noMeetings": "No upcoming meetings",
       "today": "Today",
       "tomorrow": "Tomorrow",
@@ -22,6 +39,8 @@
       "subtitle": "Current initiatives",
       "viewAll": "View all projects",
       "noProjects": "No active projects",
+      "pendingApproval": "Pending approval",
+      "unassigned": "Unassigned",
       "openActions": "open action",
       "openActions_plural": "open actions",
       "progress": "progress"

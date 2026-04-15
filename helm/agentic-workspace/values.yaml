@@ -1,0 +1,82 @@
+namespace: agentic-workspace
+
+nameOverrides:
+  web: agentic-web
+  worker: agentic-worker
+  configMap: agentic-config
+
+config:
+  nodeEnv: production
+  databaseProvider: postgresql
+  workerIntervalMinutes: "30"
+
+secret:
+  create: false
+  name: agentic-secrets
+  data:
+    DATABASE_URL: ""
+    NEXTAUTH_SECRET: ""
+    NEXTAUTH_URL: ""
+    AUTH_MICROSOFT_ENTRA_ID_ID: ""
+    AUTH_MICROSOFT_ENTRA_ID_SECRET: ""
+    AZURE_OPENAI_API_KEY: ""
+    AZURE_OPENAI_ENDPOINT: ""
+    AZURE_OPENAI_DEPLOYMENT: ""
+    JIRA_HOST: ""
+    JIRA_EMAIL: ""
+    JIRA_API_TOKEN: ""
+    JIRA_PROJECT_KEY: ""
+
+web:
+  replicaCount: 1
+  image:
+    repository: realcore.azurecr.io/agentic-web
+    tag: latest
+    pullPolicy: Always
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 3000
+  ingress:
+    enabled: true
+    className: ""
+    annotations: {}
+    host: agentic.example.com
+    path: /
+    pathType: Prefix
+  readinessProbe:
+    initialDelaySeconds: 10
+    periodSeconds: 10
+  livenessProbe:
+    initialDelaySeconds: 30
+    periodSeconds: 15
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "768Mi"
+
+worker:
+  enabled: true
+  schedule: "*/30 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 2
+  restartPolicy: Never
+  command:
+    - npm
+    - run
+    - worker:once
+  image:
+    repository: realcore.azurecr.io/agentic-worker
+    tag: latest
+    pullPolicy: Always
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+    limits:
+      cpu: "500m"
+      memory: "768Mi"

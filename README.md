@@ -91,6 +91,9 @@ Visit `http://localhost:3000` to see the dashboard with demo data.
 
 The application uses SQLite for the MVP. The database is automatically created on first run.
 
+For future migration paths, set `DATABASE_PROVIDER` to `turso` or `mssql` and switch Prisma datasource/provider accordingly.
+Current runtime focus remains SQLite (`DATABASE_PROVIDER=sqlite`).
+
 ```bash
 # Generate Prisma client
 npx prisma generate
@@ -150,35 +153,51 @@ JIRA_PROJECT_KEY=YOUR-PROJECT
 
 ## 🎯 Running the Agent
 
-### Test Mode (Recommended First)
+The agent now runs as an **automatic background worker** for all signed-in users that have valid Microsoft consent + refresh token state.
+
+### Start the Worker
 
 ```bash
-# Dry run - tests without creating Jira issues
-DRY_RUN=true npm run agent
+# Start background worker (runs immediately, then on schedule)
+npm run worker
+```
 
-# Or via API
+The worker:
+- refreshes delegated Microsoft tokens per user in background,
+- fetches each user's meetings periodically,
+- processes only new/unprocessed meetings,
+- stores sync state for UI feedback (`isProcessing`, `nextRunAt`, `lastError`).
+
+### Manual Immediate Trigger (Optional)
+
+```bash
+# Trigger immediate processing for the signed-in user
 curl -X POST http://localhost:3000/api/agent/run \
   -H "Content-Type: application/json" \
-  -d '{"dryRun": true}'
+  -b "<your-auth-cookie>"
 ```
 
-### Production Mode
+### User Processing Status API
 
 ```bash
-# Full run - processes meeting and syncs to Jira
-npm run agent
-
-# Or via API
-curl -X POST http://localhost:3000/api/agent/run
+# Returns current user sync state (processing + next run)
+curl http://localhost:3000/api/agent/status -b "<your-auth-cookie>"
 ```
 
-The agent will:
-1. Authenticate with Microsoft Graph (device code flow)
-2. Fetch the latest Teams meeting
-3. Download the transcript
-4. Process with AI to extract summary, decisions, and TODOs
-5. Store results in database
-6. Sync TODOs to Jira (if configured)
+### Required Microsoft Consent / Tokens
+
+On sign-in, the app validates that delegated Graph consent is present and a refresh token exists.
+
+If consent is missing/expired:
+- the sync state is marked `consentRequired`,
+- `/api/agent/run` returns `409` with `auth_reauth_required`,
+- user should sign in again with consent prompt (`/auth/signin?consent=required`).
+
+### Shared Meeting Visibility (No Double Processing)
+
+- Meetings are processed once by `meetingId` (dedupe).
+- Participant lists are persisted and merged when a meeting is seen from different user contexts.
+- All meeting participants can see the same processed meeting results without duplicate processing.
 
 ## 📊 Dashboard
 
@@ -195,6 +214,7 @@ The dashboard displays:
 - 📱 **Responsive** - Works on desktop and mobile
 - 🎨 **Non-standard layout** - Hero sections, gradient cards, typography-first
 - ⚡ **Real-time** - Fetches latest data from database
+- 👀 **Worker feedback** - UI shows processing state and next scheduled run
 
 ## 🧪 Testing
 
@@ -209,6 +229,81 @@ npm test
 ```bash
 npm run test:e2e
 ```
+
+## ☁️ Azure AKS Deployment (Terraform + Helm + GitHub Actions)
+
+### Added Infrastructure/Delivery Artifacts
+
+- `terraform/` now includes:
+  - Azure OpenAI (existing)
+  - Azure SQL Serverless resources (target production DB)
+  - GitHub OIDC identity + federated credential + role assignments for RG/ACR/AKS
+- `helm/agentic-workspace/` contains the Helm chart for web + worker workloads.
+- `k8s/` remains as legacy raw manifests for reference/migration fallback.
+- `.github/workflows/` contains:
+  - `ci.yml` (lint, typecheck, test, build)
+  - `terraform.yml` (fmt, validate, tflint, tfsec)
+  - `deploy-aks.yml` (OIDC login, build/push separate web+worker images to ACR, Helm deploy to AKS)
+
+### GitHub Secrets Required (Environments: `staging`, `production`)
+
+- `AZURE_CLIENT_ID`
+- `AZURE_TENANT_ID`
+- `AZURE_SUBSCRIPTION_ID`
+- `AKS_RESOURCE_GROUP`
+- `AKS_CLUSTER_NAME`
+- `DATABASE_URL`
+- `NEXTAUTH_SECRET`
+- `NEXTAUTH_URL`
+- `AUTH_MICROSOFT_ENTRA_ID_ID`
+- `AUTH_MICROSOFT_ENTRA_ID_SECRET`
+- `AZURE_OPENAI_API_KEY`
+- `AZURE_OPENAI_ENDPOINT`
+- `AZURE_OPENAI_DEPLOYMENT`
+- `JIRA_HOST`
+- `JIRA_EMAIL`
+- `JIRA_API_TOKEN`
+- `JIRA_PROJECT_KEY`
+
+### Terraform Bootstrapping
+
+```bash
+cd terraform
+cp terraform.tfvars.example terraform.tfvars
+# fill values (AKS/ACR names, SQL admin, GitHub org/repo)
+terraform init
+terraform validate
+terraform plan
+terraform apply
+```
+
+### Helm Deployment Flow
+
+```bash
+# Render staging manifests
+helm template agentic-workspace ./helm/agentic-workspace \
+  -f ./helm/agentic-workspace/values-staging.yaml
+
+# Render production manifests
+helm template agentic-workspace ./helm/agentic-workspace \
+  -f ./helm/agentic-workspace/values-production.yaml
+```
+
+GitHub Actions workflow behavior:
+
+- Push to `main`:
+  - Builds `web` image (`realcore.azurecr.io/agentic-web:<sha>`) and `worker` image (`realcore.azurecr.io/agentic-worker:<sha>`)
+  - Pushes both images to ACR
+  - Deploys to AKS namespace `agentic-staging` with Helm
+- Manual `workflow_dispatch`:
+  - Requires an existing `image_tag` (commit SHA)
+  - Promotes that tag to namespace `agentic-production` with Helm
+  - Verifies rollout for web deployment and worker cronjob
+
+### Important Note
+
+- Current app runtime in this repo is still SQLite-first in Prisma schema.
+- Azure SQL resources are provisioned as target state; before production cutover, complete Prisma provider migration and DB data migration.
 
 ## 🔒 Security
 
@@ -273,6 +368,7 @@ The agent follows strict rules defined in `src/ai/prompts/agent-system.md`:
 │   │   └── prompts/       # System prompts
 │   ├── graph/             # Microsoft Graph API
 │   │   ├── auth.ts        # Device code auth
+│   │   ├── userTokenService.ts # Delegated token refresh service
 │   │   ├── meetings.ts    # Meetings client
 │   │   └── transcripts.ts # Transcripts client
 │   ├── jira/              # Jira integration
@@ -280,6 +376,7 @@ The agent follows strict rules defined in `src/ai/prompts/agent-system.md`:
 │   ├── db/                # Database layer
 │   │   ├── prisma.ts      # Prisma client
 │   │   └── repositories/  # Data access layer
+│   ├── worker/            # Background processing scheduler
 │   └── components/        # React components
 │       ├── cards/         # Card components
 │       └── layout/        # Layout components

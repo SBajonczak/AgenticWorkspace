@@ -3,7 +3,11 @@
     "navigation": {
       "home": "Startseite",
       "dashboard": "Dashboard",
-      "meetings": "Besprechungen"
+      "meetings": "Besprechungen",
+      "projects": "Projekte",
+      "schedule": "Zeitplan",
+      "goals": "Ziele",
+      "settings": "Einstellungen"
     },
     "brand": {
       "name": "Agentic Workplace"

@@ -17,6 +17,47 @@
       "upcomingMeetings": "Upcoming Meetings",
       "activeProjects": "Active Projects",
       "companyGoals": "Company Goals & Market Signals"
+    },
+    "settingsPage": {
+      "title": "Agent Status & Logs",
+      "subtitle": "Detailed status for meeting processing",
+      "backToDashboard": "← Back to Dashboard",
+      "loadError": "Failed to load agent status.",
+      "status": {
+        "running": "Processing in progress",
+        "idle": "No active processing job",
+        "nextRun": "Next run",
+        "lastRun": "Last run",
+        "lastSuccess": "Last successful run",
+        "consent": "Microsoft consent required",
+        "refreshToken": "Refresh token available",
+        "unknown": "Unknown",
+        "yes": "Yes",
+        "no": "No"
+      },
+      "logs": {
+        "title": "Latest error",
+        "empty": "No error stored"
+      },
+      "preparation": {
+        "title": "Meeting Preparation Window",
+        "description": "Control how far into the future meetings are fetched and prepared by the worker.",
+        "lookaheadLabel": "Lookahead days",
+        "minLabel": "1 day",
+        "maxLabel": "31 days",
+        "currentValue": "Current value: {days} days",
+        "save": "Save",
+        "saving": "Saving…",
+        "saved": "Saved successfully.",
+        "saveError": "Could not save meeting preparation setting.",
+        "invalidValue": "Please choose a value between 1 and 31 days."
+      },
+      "projects": {
+        "title": "Projects & Knowledge Sources",
+        "description": "Manage your projects, assign aliases used in meeting transcripts, and link external knowledge sources (Confluence, Jira, GitHub, SharePoint) to each project.",
+        "manageButton": "Manage Projects"
+      },
+      "updatedAt": "Updated: {time}"
     }
   }
 }

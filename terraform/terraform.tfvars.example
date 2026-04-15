@@ -1,0 +1,30 @@
+# Copy this file to terraform.tfvars and fill in your values
+# NEVER commit terraform.tfvars to git (it's in .gitignore)
+
+azure_subscription_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+azure_tenant_id       = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+aks_resource_group_name = "rg-existing-aks"
+aks_cluster_name        = "aks-shared"
+
+acr_resource_group_name = "rg-existing-acr"
+acr_name                = "acragentic"
+
+sql_admin_login    = "sqladmin"
+sql_admin_password = "REPLACE_ME"
+
+github_org_name         = "your-org"
+github_repo_name        = "AgenticWorkspace"
+github_environment_name = "production"
+
+# Optional overrides (defaults are usually fine):
+# resource_group_name    = "rg-agentic-workspace"
+# location               = "westeurope"
+# openai_account_name    = "oai-agentic-workspace"
+# openai_deployment_name = "gpt-4o-mini"
+# openai_capacity        = 30
+# sql_server_name        = "sql-agentic-workspace"
+# sql_database_name      = "agenticdb"
+# sql_sku_name           = "GP_S_Gen5_1"
+# sql_min_capacity       = 0.5
+# sql_auto_pause_delay_in_minutes = 60

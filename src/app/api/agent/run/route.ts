@@ -1,28 +1,38 @@
 import { NextResponse } from 'next/server'
-import { AgentRunner } from '@/agent/runner'
+import { requireAuth } from '@/lib/authz'
+import { runAgentCycleForUser } from '@/worker/scheduler'
+import { UserSyncStateRepository } from '@/db/repositories/userSyncStateRepository'
 
 export async function POST(request: Request) {
+  const { session, error } = await requireAuth()
+  if (error) return error
+
   try {
-    const body = await request.json()
-    const dryRun = body.dryRun ?? process.env.DRY_RUN === 'true'
+    await request.json().catch(() => ({}))
+    const userId = session.user.id
+    const syncRepo = new UserSyncStateRepository()
+    const syncState = await syncRepo.getByUserId(userId)
 
-    const runner = new AgentRunner(dryRun)
-    const result = await runner.run()
+    if (syncState?.consentRequired || !syncState?.hasRefreshToken) {
+      return NextResponse.json(
+        {
+          success: false,
+          code: 'auth_reauth_required',
+          error: 'Microsoft consent or refresh token missing. Please sign in again and grant consent.',
+        },
+        { status: 409 }
+      )
+    }
 
-    // Handle both single result and array of results
-    const success = Array.isArray(result) 
-      ? result.every(r => r.success)
-      : result.success
+    await runAgentCycleForUser(userId)
 
-    return NextResponse.json(result, {
-      status: success ? 200 : 500,
-    })
-  } catch (error) {
-    console.error('API error:', error)
+    return NextResponse.json({ success: true, message: 'Meeting processing triggered successfully.' })
+  } catch (err) {
+    console.error('API error:', err)
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: err instanceof Error ? err.message : 'Unknown error',
       },
       { status: 500 }
     )
@@ -31,7 +41,7 @@ export async function POST(request: Request) {
 
 export async function GET() {
   return NextResponse.json({
-    message: 'Agent API endpoint. Use POST to trigger agent run.',
+    message: 'Agent API endpoint. Use POST to trigger immediate processing for the current user.',
     dryRun: process.env.DRY_RUN === 'true',
   })
 }

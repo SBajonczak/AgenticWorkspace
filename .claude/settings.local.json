@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls /d/sourcen/AgenticWorkspace/src/app/[locale]/)",
+      "Bash(ls /d/sourcen/AgenticWorkspace/src/app/[locale]/meetings/)",
+      "Bash(ls /d/sourcen/AgenticWorkspace/src/app/[locale]/projects/)",
+      "Bash(ls /d/sourcen/AgenticWorkspace/src/app/[locale]/schedule/)",
+      "Bash(ls /d/sourcen/AgenticWorkspace/src/app/[locale]/goals/)",
+      "Bash(npx shadcn@latest init --style new-york --base-color zinc --css-variables yes --yes)",
+      "Bash(npx shadcn@latest init --help)",
+      "Bash(npx shadcn@latest init -d)",
+      "Bash(npx shadcn@latest add card badge avatar progress tabs separator skeleton --yes)",
+      "Bash(npm run:*)",
+      "Bash(npx next:*)",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)"
+    ]
+  }
+}

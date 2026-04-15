@@ -1,12 +1,79 @@
 {
   "meetings": {
+    "preparation": {
+      "title": "Meeting Preparation",
+      "backToMeeting": "Back to meeting",
+      "loadError": "Failed to load preparation.",
+      "statusTitle": "Preparation status",
+      "status": {
+        "ready": "Ready for meeting",
+        "attention": "Review required before meeting",
+        "in_progress": "Preparation still in progress"
+      },
+      "cadence": "Cadence",
+      "cadenceType": {
+        "daily": "Daily",
+        "jourfix": "Jourfix",
+        "recurring": "Recurring",
+        "other": "One-off"
+      },
+      "agendaTitle": "Prepared agenda items",
+      "noAgenda": "No agenda items available",
+      "conflictsTitle": "Conflicts with other meetings",
+      "noConflicts": "No conflicts detected",
+      "kbTitle": "Knowledge base insights",
+      "noKnowledgeBase": "No knowledge-base integration configured",
+      "historyTitle": "Relevant previous meetings",
+      "noHistory": "No related previous meetings found",
+      "carryOverTitle": "Carry-over topics",
+      "noCarryOver": "No carry-over topics",
+      "longRunningTitle": "Long-running topics",
+      "noLongRunning": "No long-running topics",
+      "sourcesTitle": "Project source insights",
+      "noSources": "No source results available",
+      "scoreLabel": "Score {score}%",
+      "scoreTooltip": "Match terms: {matchTerms} · Match score: {matchScore} · Freshness: {freshnessScore}",
+      "noMatchTerms": "none",
+      "decisionsLabel": "Key decisions",
+      "openTodosLabel": "Open action items"
+    },
     "detail": {
       "backToList": "Back to meetings",
       "tabs": {
         "summary": "Summary",
         "decisions": "Decisions",
         "actions": "Actions",
+        "preparation": "Preparation",
         "transcript": "Transcript"
+      },
+      "preparation": {
+        "title": "Preparation",
+        "openFullPage": "Open full preparation",
+        "loadError": "Failed to load preparation.",
+        "statusTitle": "Preparation status",
+        "status": {
+          "ready": "Ready for the meeting",
+          "attention": "Attention required before meeting",
+          "in_progress": "Preparation still in progress"
+        },
+        "cadence": "Cadence",
+        "cadenceType": {
+          "daily": "Daily",
+          "jourfix": "Jourfix",
+          "recurring": "Recurring",
+          "other": "One-off"
+        },
+        "agendaTitle": "Suggested agenda",
+        "noAgenda": "No agenda items available",
+        "longRunningTitle": "Long-running topics",
+        "noLongRunning": "No long-running topics",
+        "carryOverTitle": "Carry-over topics",
+        "noCarryOver": "No carry-over topics",
+        "sourcesTitle": "Project source insights",
+        "noSources": "No source results available",
+        "scoreLabel": "Score {score}%",
+        "scoreTooltip": "Match terms: {matchTerms} · Match score: {matchScore} · Freshness: {freshnessScore}",
+        "noMatchTerms": "none"
       },
       "summary": {
         "title": "Executive Summary",
@@ -27,6 +94,11 @@
         "title": "Action Items",
         "assignedTo": "Assigned to",
         "confidence": "Confidence",
+        "project": {
+          "label": "Project assignment",
+          "unassigned": "No project",
+          "updateError": "Project assignment could not be updated"
+        },
         "status": {
           "open": "Open",
           "in_progress": "In Progress",

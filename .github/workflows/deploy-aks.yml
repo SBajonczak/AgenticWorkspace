@@ -1,0 +1,202 @@
+name: Deploy AKS (Helm)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Image tag to promote to production (commit SHA)
+        required: true
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  ACR_LOGIN_SERVER: realcore.azurecr.io
+  IMAGE_WEB_NAME: agentic-web
+  IMAGE_WORKER_NAME: agentic-worker
+  HELM_RELEASE_NAME: agentic-workspace
+  HELM_CHART_PATH: helm/agentic-workspace
+
+jobs:
+  build-images:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.meta.outputs.image_tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Set image metadata
+        id: meta
+        run: |
+          IMAGE_TAG="${GITHUB_SHA}"
+          echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Build and Push web image to ACR
+        run: |
+          IMAGE_TAG="${{ steps.meta.outputs.image_tag }}"
+          az acr login --name "${ACR_LOGIN_SERVER%%.*}"
+          docker build --target web -t "$ACR_LOGIN_SERVER/$IMAGE_WEB_NAME:$IMAGE_TAG" .
+          docker push "$ACR_LOGIN_SERVER/$IMAGE_WEB_NAME:$IMAGE_TAG"
+
+      - name: Build and Push worker image to ACR
+        run: |
+          IMAGE_TAG="${{ steps.meta.outputs.image_tag }}"
+          docker build --target worker -t "$ACR_LOGIN_SERVER/$IMAGE_WORKER_NAME:$IMAGE_TAG" .
+          docker push "$ACR_LOGIN_SERVER/$IMAGE_WORKER_NAME:$IMAGE_TAG"
+
+  deploy-staging:
+    if: github.event_name == 'push'
+    needs: build-images
+    runs-on: ubuntu-latest
+    environment: staging
+    env:
+      K8S_NAMESPACE: agentic-staging
+      VALUES_FILE: helm/agentic-workspace/values-staging.yaml
+      IMAGE_TAG: ${{ needs.build-images.outputs.image_tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Set AKS context
+        uses: azure/aks-set-context@v4
+        with:
+          resource-group: ${{ secrets.AKS_RESOURCE_GROUP }}
+          cluster-name: ${{ secrets.AKS_CLUSTER_NAME }}
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+
+      - name: Create namespace if missing
+        run: kubectl create namespace "$K8S_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Sync application secret from GitHub Secrets
+        run: |
+          kubectl -n "$K8S_NAMESPACE" create secret generic agentic-secrets \
+            --from-literal=DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+            --from-literal=NEXTAUTH_SECRET="${{ secrets.NEXTAUTH_SECRET }}" \
+            --from-literal=NEXTAUTH_URL="${{ secrets.NEXTAUTH_URL }}" \
+            --from-literal=AUTH_MICROSOFT_ENTRA_ID_ID="${{ secrets.AUTH_MICROSOFT_ENTRA_ID_ID }}" \
+            --from-literal=AUTH_MICROSOFT_ENTRA_ID_SECRET="${{ secrets.AUTH_MICROSOFT_ENTRA_ID_SECRET }}" \
+            --from-literal=AZURE_OPENAI_API_KEY="${{ secrets.AZURE_OPENAI_API_KEY }}" \
+            --from-literal=AZURE_OPENAI_ENDPOINT="${{ secrets.AZURE_OPENAI_ENDPOINT }}" \
+            --from-literal=AZURE_OPENAI_DEPLOYMENT="${{ secrets.AZURE_OPENAI_DEPLOYMENT }}" \
+            --from-literal=JIRA_HOST="${{ secrets.JIRA_HOST }}" \
+            --from-literal=JIRA_EMAIL="${{ secrets.JIRA_EMAIL }}" \
+            --from-literal=JIRA_API_TOKEN="${{ secrets.JIRA_API_TOKEN }}" \
+            --from-literal=JIRA_PROJECT_KEY="${{ secrets.JIRA_PROJECT_KEY }}" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy Helm release to staging
+        run: |
+          helm upgrade --install "$HELM_RELEASE_NAME" "$HELM_CHART_PATH" \
+            --namespace "$K8S_NAMESPACE" \
+            --create-namespace \
+            --wait \
+            --timeout 10m \
+            -f "$VALUES_FILE" \
+            --set namespace="$K8S_NAMESPACE" \
+            --set web.image.repository="$ACR_LOGIN_SERVER/$IMAGE_WEB_NAME" \
+            --set web.image.tag="$IMAGE_TAG" \
+            --set worker.image.repository="$ACR_LOGIN_SERVER/$IMAGE_WORKER_NAME" \
+            --set worker.image.tag="$IMAGE_TAG"
+
+      - name: Verify staging rollout
+        run: |
+          kubectl -n "$K8S_NAMESPACE" rollout status deployment/agentic-web --timeout=180s
+          kubectl -n "$K8S_NAMESPACE" get cronjob agentic-worker
+
+  deploy-production:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      K8S_NAMESPACE: agentic-production
+      VALUES_FILE: helm/agentic-workspace/values-production.yaml
+      IMAGE_TAG: ${{ inputs.image_tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Set AKS context
+        uses: azure/aks-set-context@v4
+        with:
+          resource-group: ${{ secrets.AKS_RESOURCE_GROUP }}
+          cluster-name: ${{ secrets.AKS_CLUSTER_NAME }}
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+
+      - name: Validate promoted image tags exist in ACR
+        run: |
+          WEB_TAG_MATCH="$(az acr repository show-tags --name "${ACR_LOGIN_SERVER%%.*}" --repository "$IMAGE_WEB_NAME" --query "[?@=='$IMAGE_TAG']" -o tsv)"
+          WORKER_TAG_MATCH="$(az acr repository show-tags --name "${ACR_LOGIN_SERVER%%.*}" --repository "$IMAGE_WORKER_NAME" --query "[?@=='$IMAGE_TAG']" -o tsv)"
+          if [ -z "$WEB_TAG_MATCH" ] || [ -z "$WORKER_TAG_MATCH" ]; then
+            echo "Image tag $IMAGE_TAG not found for web or worker repository in $ACR_LOGIN_SERVER"
+            exit 1
+          fi
+
+      - name: Create namespace if missing
+        run: kubectl create namespace "$K8S_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Sync application secret from GitHub Secrets
+        run: |
+          kubectl -n "$K8S_NAMESPACE" create secret generic agentic-secrets \
+            --from-literal=DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+            --from-literal=NEXTAUTH_SECRET="${{ secrets.NEXTAUTH_SECRET }}" \
+            --from-literal=NEXTAUTH_URL="${{ secrets.NEXTAUTH_URL }}" \
+            --from-literal=AUTH_MICROSOFT_ENTRA_ID_ID="${{ secrets.AUTH_MICROSOFT_ENTRA_ID_ID }}" \
+            --from-literal=AUTH_MICROSOFT_ENTRA_ID_SECRET="${{ secrets.AUTH_MICROSOFT_ENTRA_ID_SECRET }}" \
+            --from-literal=AZURE_OPENAI_API_KEY="${{ secrets.AZURE_OPENAI_API_KEY }}" \
+            --from-literal=AZURE_OPENAI_ENDPOINT="${{ secrets.AZURE_OPENAI_ENDPOINT }}" \
+            --from-literal=AZURE_OPENAI_DEPLOYMENT="${{ secrets.AZURE_OPENAI_DEPLOYMENT }}" \
+            --from-literal=JIRA_HOST="${{ secrets.JIRA_HOST }}" \
+            --from-literal=JIRA_EMAIL="${{ secrets.JIRA_EMAIL }}" \
+            --from-literal=JIRA_API_TOKEN="${{ secrets.JIRA_API_TOKEN }}" \
+            --from-literal=JIRA_PROJECT_KEY="${{ secrets.JIRA_PROJECT_KEY }}" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy Helm release to production
+        run: |
+          helm upgrade --install "$HELM_RELEASE_NAME" "$HELM_CHART_PATH" \
+            --namespace "$K8S_NAMESPACE" \
+            --create-namespace \
+            --wait \
+            --timeout 10m \
+            -f "$VALUES_FILE" \
+            --set namespace="$K8S_NAMESPACE" \
+            --set web.image.repository="$ACR_LOGIN_SERVER/$IMAGE_WEB_NAME" \
+            --set web.image.tag="$IMAGE_TAG" \
+            --set worker.image.repository="$ACR_LOGIN_SERVER/$IMAGE_WORKER_NAME" \
+            --set worker.image.tag="$IMAGE_TAG"
+
+      - name: Verify production rollout
+        run: |
+          kubectl -n "$K8S_NAMESPACE" rollout status deployment/agentic-web --timeout=180s
+          kubectl -n "$K8S_NAMESPACE" get cronjob agentic-worker

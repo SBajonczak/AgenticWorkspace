@@ -4,46 +4,69 @@
       "backToList": "Zurück zu Projekten",
       "tabs": {
         "overview": "Übersicht",
-        "updates": "Updates",
-        "meetings": "Verbundene Besprechungen",
-        "actions": "Offene Aktionen"
+        "meetings": "Besprechungen",
+        "tasks": "Aufgaben",
+        "knowledge": "Wissensdatenbank"
       },
       "overview": {
-        "title": "Projektbeschreibung",
-        "aiSummary": "KI-Analyse",
+        "title": "Projektübersicht",
         "description": "Beschreibung",
+        "noDescription": "Keine Beschreibung vorhanden.",
+        "aliases": "Bekannt als",
+        "sources": "Datenquellen",
         "metadata": {
           "owner": "Verantwortlich",
-          "status": "Status",
-          "startDate": "Startdatum",
-          "targetDate": "Zieldatum",
-          "progress": "Fortschritt",
-          "team": "Teammitglieder"
+          "status": "Status"
         }
-      },
-      "updates": {
-        "title": "Aktuelle Updates",
-        "types": {
-          "progress": "Fortschrittsupdate",
-          "blocker": "Blocker",
-          "milestone": "Meilenstein"
-        },
-        "noUpdates": "Noch keine Updates"
       },
       "meetings": {
         "title": "Verbundene Besprechungen",
-        "noMeetings": "Keine verbundenen Besprechungen"
+        "noMeetings": "Noch keine Besprechungen",
+        "view": "Besprechung öffnen",
+        "decisions": "Entscheidungen",
+        "openTodos": "offene Aufgaben"
       },
-      "actions": {
-        "title": "Offene Aktionen",
-        "from": "von",
-        "noActions": "Keine offenen Aktionen"
+      "tasks": {
+        "title": "Aufgaben & Maßnahmen",
+        "noTasks": "Keine Aufgaben gefunden",
+        "from": "aus",
+        "priority": {
+          "high": "Hoch",
+          "medium": "Mittel",
+          "low": "Niedrig"
+        },
+        "statusLabel": {
+          "pending": "Ausstehend",
+          "in_progress": "In Bearbeitung",
+          "done": "Erledigt"
+        }
+      },
+      "knowledge": {
+        "title": "Wissensdatenbank",
+        "openItems": "Offene Punkte",
+        "decisions": "Entscheidungen",
+        "noData": "Noch keine Einträge in der Wissensdatenbank",
+        "fromMeeting": "aus"
+      },
+      "confirmed": {
+        "banner": "Dieses Projekt wurde automatisch aus einem Meeting-Transkript erstellt. Bitte prüfe die Details und bestätige das Projekt.",
+        "action": "Projekt bestätigen",
+        "confirming": "Wird bestätigt..."
       },
       "status": {
         "active": "Aktiv",
         "on_hold": "Pausiert",
-        "completed": "Abgeschlossen"
-      }
+        "completed": "Abgeschlossen",
+        "archived": "Archiviert",
+        "unconfirmed": "Nicht bestätigt"
+      },
+      "stats": {
+        "meetings": "Besprechungen",
+        "todos": "Offene Aufgaben",
+        "decisions": "Entscheidungen"
+      },
+      "loading": "Projekt wird geladen...",
+      "notFound": "Projekt nicht gefunden"
     }
   }
 }

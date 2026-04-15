@@ -4,46 +4,69 @@
       "backToList": "Back to projects",
       "tabs": {
         "overview": "Overview",
-        "updates": "Updates",
-        "meetings": "Related Meetings",
-        "actions": "Open Actions"
+        "meetings": "Meetings",
+        "tasks": "Tasks",
+        "knowledge": "Knowledge Base"
       },
       "overview": {
-        "title": "Project Briefing",
-        "aiSummary": "AI Analysis",
+        "title": "Project Overview",
         "description": "Description",
+        "noDescription": "No description provided.",
+        "aliases": "Known As",
+        "sources": "Data Sources",
         "metadata": {
           "owner": "Owner",
-          "status": "Status",
-          "startDate": "Start Date",
-          "targetDate": "Target Date",
-          "progress": "Progress",
-          "team": "Team Members"
+          "status": "Status"
         }
-      },
-      "updates": {
-        "title": "Recent Updates",
-        "types": {
-          "progress": "Progress Update",
-          "blocker": "Blocker",
-          "milestone": "Milestone"
-        },
-        "noUpdates": "No updates yet"
       },
       "meetings": {
         "title": "Related Meetings",
-        "noMeetings": "No related meetings"
+        "noMeetings": "No related meetings yet",
+        "view": "View Meeting",
+        "decisions": "decisions",
+        "openTodos": "open tasks"
       },
-      "actions": {
-        "title": "Open Actions",
+      "tasks": {
+        "title": "Tasks & Action Items",
+        "noTasks": "No tasks found",
         "from": "from",
-        "noActions": "No open actions"
+        "priority": {
+          "high": "High",
+          "medium": "Medium",
+          "low": "Low"
+        },
+        "statusLabel": {
+          "pending": "Pending",
+          "in_progress": "In Progress",
+          "done": "Done"
+        }
+      },
+      "knowledge": {
+        "title": "Knowledge Base",
+        "openItems": "Open Items",
+        "decisions": "Decisions",
+        "noData": "No knowledge base entries yet",
+        "fromMeeting": "from"
+      },
+      "confirmed": {
+        "banner": "This project was auto-created from a meeting transcript. Review the details and confirm it.",
+        "action": "Confirm Project",
+        "confirming": "Confirming..."
       },
       "status": {
         "active": "Active",
         "on_hold": "On Hold",
-        "completed": "Completed"
-      }
+        "completed": "Completed",
+        "archived": "Archived",
+        "unconfirmed": "Unconfirmed"
+      },
+      "stats": {
+        "meetings": "Meetings",
+        "todos": "Open Tasks",
+        "decisions": "Decisions"
+      },
+      "loading": "Loading project...",
+      "notFound": "Project not found"
     }
   }
 }

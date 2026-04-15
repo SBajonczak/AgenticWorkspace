@@ -3,6 +3,8 @@
     "recentIntelligence": {
       "title": "Aktuelle Erkenntnisse",
       "subtitle": "Zuletzt verarbeitete Besprechungen",
+      "live": "Live",
+      "updatedAt": "Aktualisiert {time}",
       "viewAll": "Alle Besprechungen anzeigen",
       "noMeetings": "Noch keine Besprechungen verarbeitet",
       "actionCount": "Aktion",
@@ -11,7 +13,22 @@
     "upcomingMeetings": {
       "title": "Bevorstehende Besprechungen",
       "subtitle": "Ihr Zeitplan",
+      "updatedAt": "Aktualisiert {time}",
       "viewSchedule": "Vollständigen Zeitplan anzeigen",
+      "prepare": "Vorbereitung anzeigen",
+      "hidePreparation": "Vorbereitung ausblenden",
+      "preparationError": "Vorbereitung konnte nicht geladen werden",
+      "agendaPreviewTitle": "Agenda-Vorschau",
+      "noAgenda": "Noch keine Agenda-Punkte verfügbar",
+      "viewFullPreparation": "Volle Vorbereitung",
+      "prepSummary": "Überträge: {carryOver}, Langläufer: {longRunning}",
+      "prepStatus": {
+        "ready": "Bereit",
+        "attention": "Aufmerksamkeit nötig",
+        "in_progress": "Wird vorbereitet"
+      },
+      "conflict": "Konflikt",
+      "conflictWith": "Konflikt mit {title}",
       "noMeetings": "Keine bevorstehenden Besprechungen",
       "today": "Heute",
       "tomorrow": "Morgen",
@@ -22,6 +39,8 @@
       "subtitle": "Laufende Initiativen",
       "viewAll": "Alle Projekte anzeigen",
       "noProjects": "Keine aktiven Projekte",
+      "pendingApproval": "Wartet auf Freigabe",
+      "unassigned": "Nicht zugewiesen",
       "openActions": "offene Aktion",
       "openActions_plural": "offene Aktionen",
       "progress": "Fortschritt"

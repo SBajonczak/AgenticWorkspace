@@ -17,6 +17,47 @@
       "upcomingMeetings": "Bevorstehende Besprechungen",
       "activeProjects": "Aktive Projekte",
       "companyGoals": "Unternehmensziele & Marktsignale"
+    },
+    "settingsPage": {
+      "title": "Agent-Status & Logs",
+      "subtitle": "Detaillierter Status der Meeting-Verarbeitung",
+      "backToDashboard": "← Zurück zum Dashboard",
+      "loadError": "Agent-Status konnte nicht geladen werden.",
+      "status": {
+        "running": "Verarbeitung läuft",
+        "idle": "Kein laufender Verarbeitungsjob",
+        "nextRun": "Nächster Lauf",
+        "lastRun": "Letzter Lauf",
+        "lastSuccess": "Letzter erfolgreicher Lauf",
+        "consent": "Microsoft-Consent erforderlich",
+        "refreshToken": "Refresh Token verfügbar",
+        "unknown": "Unbekannt",
+        "yes": "Ja",
+        "no": "Nein"
+      },
+      "logs": {
+        "title": "Letzte Fehlermeldung",
+        "empty": "Keine Fehlermeldung gespeichert"
+      },
+      "preparation": {
+        "title": "Meeting-Vorbereitungszeitraum",
+        "description": "Steuern Sie, wie weit in die Zukunft Meetings vom Worker geladen und vorbereitet werden.",
+        "lookaheadLabel": "Vorschau-Tage",
+        "minLabel": "1 Tag",
+        "maxLabel": "31 Tage",
+        "currentValue": "Aktueller Wert: {days} Tage",
+        "save": "Speichern",
+        "saving": "Speichert…",
+        "saved": "Erfolgreich gespeichert.",
+        "saveError": "Die Einstellung konnte nicht gespeichert werden.",
+        "invalidValue": "Bitte wählen Sie einen Wert zwischen 1 und 31 Tagen."
+      },
+      "projects": {
+        "title": "Projekte & Wissensquellen",
+        "description": "Verwalten Sie Ihre Projekte, vergeben Sie Aliase aus Meeting-Transkripten und verknüpfen Sie externe Wissensquellen (Confluence, Jira, GitHub, SharePoint) mit jedem Projekt.",
+        "manageButton": "Projekte verwalten"
+      },
+      "updatedAt": "Aktualisiert: {time}"
     }
   }
 }
