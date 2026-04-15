@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
-    "start": "next start",
+    "start": "npm run prisma:migrate:deploy && next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "jest",
@@ -13,13 +13,14 @@
     "test:e2e": "playwright test",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:seed": "tsx prisma/seed.ts",
     "projects:backfill": "tsx scripts/backfill-projects.ts",
     "todos:dedupe": "tsx scripts/dedupe-meeting-todos.ts",
     "todos:dedupe:apply": "tsx scripts/dedupe-meeting-todos.ts --apply",
     "prisma:studio": "prisma studio",
     "worker": "tsx src/worker/index.ts",
-    "worker:once": "tsx src/worker/run-once.ts",
+    "worker:once": "prisma migrate deploy && tsx src/worker/run-once.ts",
     "worker:dev": "tsx watch src/worker/index.ts"
   },
   "dependencies": {

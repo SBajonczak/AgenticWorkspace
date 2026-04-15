@@ -38,7 +38,6 @@ next-env.d.ts
 # Prisma
 prisma/*.db
 prisma/*.db-journal
-prisma/migrations
 
 # Token cache
 .token-cache

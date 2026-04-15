@@ -7,7 +7,7 @@ nameOverrides:
 
 config:
   nodeEnv: production
-  databaseProvider: mssql
+  databaseProvider: postgresql
   workerIntervalMinutes: "30"
 
 secret:
