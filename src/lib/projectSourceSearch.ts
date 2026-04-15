@@ -173,7 +173,7 @@ async function searchGitHub(
   source: SourceLinkRecord,
   query: string,
   config: Record<string, string>
-): Promise<ProjectSourceResultItem[]> {
+): Promise<RawSourceItem[]> {
   const [owner, repo] = source.identifier.split('/')
   if (!owner || !repo) return []
 
@@ -216,7 +216,7 @@ async function searchJira(
   source: SourceLinkRecord,
   query: string,
   config: Record<string, string>
-): Promise<ProjectSourceResultItem[]> {
+): Promise<RawSourceItem[]> {
   const host = (config.host ?? '').replace(/\/$/, '')
   if (!host) return []
 
@@ -257,7 +257,7 @@ async function searchConfluence(
   source: SourceLinkRecord,
   query: string,
   config: Record<string, string>
-): Promise<ProjectSourceResultItem[]> {
+): Promise<RawSourceItem[]> {
   const baseUrl = (config.baseUrl ?? '').replace(/\/$/, '')
   if (!baseUrl) return []
 
@@ -301,7 +301,7 @@ async function searchConfluence(
   })
 }
 
-function searchSharePoint(source: SourceLinkRecord, query: string): ProjectSourceResultItem[] {
+function searchSharePoint(source: SourceLinkRecord, query: string): RawSourceItem[] {
   const siteUrl = source.identifier.replace(/\/$/, '')
   if (!siteUrl.startsWith('http')) return []
 
@@ -328,7 +328,7 @@ export async function searchProjectSources(input: SearchInput): Promise<ProjectS
     const sourceLabel = source.label ?? `${sourceType}:${source.identifier}`
 
     try {
-      let items: ProjectSourceResultItem[] = []
+      let items: RawSourceItem[] = []
 
       if (sourceType === 'github') {
         items = await searchGitHub(source, query, config)

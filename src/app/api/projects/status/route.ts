@@ -3,6 +3,8 @@ import { ProjectStatusRepository } from '@/db/repositories/projectStatusReposito
 import { requireAuth } from '@/lib/authz'
 import { auth } from '@/lib/auth'
 
+export const dynamic = 'force-dynamic'
+
 function getTenantId(session: any): string | undefined {
   return (session?.user as any)?.tenantId ?? undefined
 }

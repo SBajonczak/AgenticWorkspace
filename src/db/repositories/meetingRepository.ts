@@ -190,7 +190,7 @@ export class MeetingRepository {
       },
       orderBy: { processedAt: 'desc' },
       include: {
-        todos: { include: { ticketSync: true } },
+        todos: { include: { ticketSync: true, project: true } },
         minutes: true,
         projectStatuses: true,
       },

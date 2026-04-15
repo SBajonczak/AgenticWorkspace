@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { MeetingRepository } from '@/db/repositories/meetingRepository'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   try {
     const meetingRepo = new MeetingRepository()

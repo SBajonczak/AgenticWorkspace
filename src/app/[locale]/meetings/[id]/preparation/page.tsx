@@ -317,7 +317,6 @@ export default function MeetingPreparationPage() {
                               <span>{t('scoreLabel', { score: sourceResult.score })}</span>
                               <Info
                                 className="h-3 w-3 text-muted-foreground"
-                                title={buildScoreTooltip(sourceResult.items[0])}
                                 aria-label={buildScoreTooltip(sourceResult.items[0])}
                               />
                             </span>
@@ -338,7 +337,6 @@ export default function MeetingPreparationPage() {
                                   <span>{item.excerpt} · {t('scoreLabel', { score: item.score })}</span>
                                   <Info
                                     className="h-3 w-3 text-muted-foreground"
-                                    title={buildScoreTooltip(item)}
                                     aria-label={buildScoreTooltip(item)}
                                   />
                                 </p>

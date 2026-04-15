@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import createIntlMiddleware from 'next-intl/middleware'
 import NextAuth from 'next-auth'
+import type { Session } from 'next-auth'
 import { authConfig } from './lib/auth.config'
 import { routing } from './i18n/routing'
 
@@ -60,9 +61,9 @@ export default async function middleware(request: NextRequest) {
   }
 
   // Check authentication for protected routes
-  let session: Awaited<ReturnType<typeof auth>> | null = null
+  let session: Session | null = null
   try {
-    session = await auth()
+    session = (await auth()) as Session | null
   } catch {
     if (pathname.startsWith('/api/')) {
       const response = NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

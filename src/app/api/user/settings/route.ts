@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import type { Session } from 'next-auth'
 import { z } from 'zod'
 import { auth } from '@/lib/auth'
 import { UserSyncStateRepository } from '@/db/repositories/userSyncStateRepository'
@@ -11,9 +12,14 @@ const UpdateUserSettingsSchema = z.object({
   meetingLookaheadDays: z.number().int().min(LOOKAHEAD_MIN_DAYS).max(LOOKAHEAD_MAX_DAYS),
 })
 
-function resolveUserId(session: Awaited<ReturnType<typeof auth>>): string | null {
+function resolveUserId(session: Session | null): string | null {
   const user = session?.user as { id?: string } | undefined
   return user?.id ?? null
+}
+
+function readMeetingLookaheadDays(value: unknown): unknown {
+  if (typeof value !== 'object' || value === null) return undefined
+  return (value as { meetingLookaheadDays?: unknown }).meetingLookaheadDays
 }
 
 function clampLookaheadDays(value: unknown): number {
@@ -33,7 +39,7 @@ export async function GET() {
 
   const syncRepo = new UserSyncStateRepository()
   const syncState = await syncRepo.getByUserId(userId)
-  const meetingLookaheadDays = clampLookaheadDays((syncState as any)?.meetingLookaheadDays)
+  const meetingLookaheadDays = clampLookaheadDays(readMeetingLookaheadDays(syncState))
 
   return NextResponse.json({ meetingLookaheadDays })
 }
@@ -63,6 +69,6 @@ export async function PUT(req: NextRequest) {
   const updated = await syncRepo.upsert(userId, { meetingLookaheadDays })
 
   return NextResponse.json({
-    meetingLookaheadDays: clampLookaheadDays((updated as any)?.meetingLookaheadDays),
+    meetingLookaheadDays: clampLookaheadDays(readMeetingLookaheadDays(updated)),
   })
 }

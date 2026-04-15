@@ -1,6 +1,6 @@
 'use client'
 
-import { useSearchParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { buttonVariants } from '@/components/ui/button'
@@ -21,12 +21,20 @@ const errorMessages: Record<string, string> = {
 }
 
 export default function AuthErrorPage() {
-  const searchParams = useSearchParams()
-  const error = searchParams.get('error') || 'Default'
+  const [error, setError] = useState('Default')
+  const [correlationId, setCorrelationId] = useState<string | null>(null)
+  const [traceId, setTraceId] = useState<string | null>(null)
+  const [tenant, setTenant] = useState<string | null>(null)
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search)
+    setError(searchParams.get('error') || 'Default')
+    setCorrelationId(searchParams.get('correlation_id') || searchParams.get('correlationId'))
+    setTraceId(searchParams.get('trace_id') || searchParams.get('traceId'))
+    setTenant(searchParams.get('tenant'))
+  }, [])
+
   const message = errorMessages[error] || errorMessages.Default
-  const correlationId = searchParams.get('correlation_id') || searchParams.get('correlationId')
-  const traceId = searchParams.get('trace_id') || searchParams.get('traceId')
-  const tenant = searchParams.get('tenant')
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">

@@ -1,14 +1,19 @@
 'use client'
 
 import { signIn } from 'next-auth/react'
-import { useSearchParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 
 export default function SignInPage() {
-  const searchParams = useSearchParams()
-  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard'
-  const forceConsent = searchParams.get('consent') === 'required'
+  const [callbackUrl, setCallbackUrl] = useState('/dashboard')
+  const [forceConsent, setForceConsent] = useState(false)
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search)
+    setCallbackUrl(searchParams.get('callbackUrl') || '/dashboard')
+    setForceConsent(searchParams.get('consent') === 'required')
+  }, [])
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
