@@ -6,11 +6,13 @@ config:
 web:
   ingress:
     enabled: true
+    className: nginx
     host: workplace-staging.realapps.org
     tls:
       enabled: true
       secretName: workplace-staging-realapps-org-tls
       issuer: letsencrypt-staging
+      issuerKind: ClusterIssuer
 
 worker:
   replicaCount: 1

@@ -59,8 +59,19 @@ kind: Ingress
 metadata:
   name: {{ include "agentic-workspace.webName" . }}
   namespace: {{ .Values.namespace }}
+  {{- $issuerName := .Values.web.ingress.tls.issuer | default "letsencrypt-prod" }}
+  {{- $issuerKind := .Values.web.ingress.tls.issuerKind | default "ClusterIssuer" }}
   annotations:
-    cert-manager.io/cluster-issuer: {{ .Values.web.ingress.tls.issuer | default "letsencrypt-prod" }}
+  {{- if .Values.web.ingress.className }}
+    kubernetes.io/ingress.class: {{ .Values.web.ingress.className | quote }}
+  {{- end }}
+  {{- if and .Values.web.ingress.tls.enabled $issuerName }}
+    {{- if eq $issuerKind "Issuer" }}
+    cert-manager.io/issuer: {{ $issuerName }}
+    {{- else }}
+    cert-manager.io/cluster-issuer: {{ $issuerName }}
+    {{- end }}
+  {{- end }}
   {{- with .Values.web.ingress.annotations }}
 {{ toYaml . | indent 4 }}
   {{- end }}

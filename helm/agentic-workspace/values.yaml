@@ -39,9 +39,8 @@ web:
     targetPort: 3000
   ingress:
     enabled: true
-    className: ""
-    annotations:
-      cert-manager.io/cluster-issuer: letsencrypt-prod
+    className: nginx
+    annotations: {}
     host: workplace.realapps.org
     path: /
     pathType: Prefix
@@ -49,6 +48,7 @@ web:
       enabled: true
       secretName: workplace-realapps-org-tls
       issuer: letsencrypt-prod
+      issuerKind: ClusterIssuer
   readinessProbe:
     initialDelaySeconds: 10
     periodSeconds: 10
