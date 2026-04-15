@@ -3,12 +3,19 @@ name: Deploy AKS (Helm)
 on:
   push:
     branches: [main]
+    paths:
+      - 'src/**'
+      - 'prisma/**'
+      - 'Dockerfile'
+      - 'helm/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/deploy-aks.yml'
   workflow_dispatch:
-    inputs:
-      image_tag:
-        description: Image tag to promote to production (commit SHA)
-        required: true
-        type: string
+
+concurrency:
+  group: deploy-aks-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   id-token: write
@@ -16,6 +23,7 @@ permissions:
 
 env:
   ACR_LOGIN_SERVER: realcore.azurecr.io
+  ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
   IMAGE_WEB_NAME: agentic-web
   IMAGE_WORKER_NAME: agentic-worker
   HELM_RELEASE_NAME: agentic-workspace
@@ -23,7 +31,7 @@ env:
 
 jobs:
   build-images:
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     outputs:
       image_tag: ${{ steps.meta.outputs.image_tag }}
@@ -31,12 +39,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Azure Login (OIDC)
-        uses: azure/login@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          registry: ${{ env.ACR_LOGIN_SERVER }}
+          username: ${{ env.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
 
       - name: Set image metadata
         id: meta
@@ -44,18 +55,27 @@ jobs:
           IMAGE_TAG="${GITHUB_SHA}"
           echo "image_tag=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
 
-      - name: Build and Push web image to ACR
-        run: |
-          IMAGE_TAG="${{ steps.meta.outputs.image_tag }}"
-          az acr login --name "${ACR_LOGIN_SERVER%%.*}"
-          docker build --target web -t "$ACR_LOGIN_SERVER/$IMAGE_WEB_NAME:$IMAGE_TAG" .
-          docker push "$ACR_LOGIN_SERVER/$IMAGE_WEB_NAME:$IMAGE_TAG"
+      - name: Build and push web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          target: web
+          push: true
+          tags: ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_WEB_NAME }}:${{ steps.meta.outputs.image_tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - name: Build and Push worker image to ACR
-        run: |
-          IMAGE_TAG="${{ steps.meta.outputs.image_tag }}"
-          docker build --target worker -t "$ACR_LOGIN_SERVER/$IMAGE_WORKER_NAME:$IMAGE_TAG" .
-          docker push "$ACR_LOGIN_SERVER/$IMAGE_WORKER_NAME:$IMAGE_TAG"
+      - name: Build and push worker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          target: worker
+          push: true
+          tags: ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_WORKER_NAME }}:${{ steps.meta.outputs.image_tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   deploy-staging:
     if: github.event_name == 'push'
@@ -93,6 +113,7 @@ jobs:
         run: |
           kubectl -n "$K8S_NAMESPACE" create secret generic agentic-secrets \
             --from-literal=DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+            --from-literal=DATABASE_PASSWORD="${{ secrets.DATABASE_PASSWORD }}" \
             --from-literal=NEXTAUTH_SECRET="${{ secrets.NEXTAUTH_SECRET }}" \
             --from-literal=NEXTAUTH_URL="${{ secrets.NEXTAUTH_URL }}" \
             --from-literal=AUTH_MICROSOFT_ENTRA_ID_ID="${{ secrets.AUTH_MICROSOFT_ENTRA_ID_ID }}" \
@@ -100,6 +121,20 @@ jobs:
             --from-literal=AZURE_OPENAI_API_KEY="${{ secrets.AZURE_OPENAI_API_KEY }}" \
             --from-literal=AZURE_OPENAI_ENDPOINT="${{ secrets.AZURE_OPENAI_ENDPOINT }}" \
             --from-literal=AZURE_OPENAI_DEPLOYMENT="${{ secrets.AZURE_OPENAI_DEPLOYMENT }}" \
+            --from-literal=ENTRA_TENANT_ID="${{ secrets.ENTRA_TENANT_ID }}" \
+            --from-literal=ENTRA_CLIENT_ID="${{ secrets.ENTRA_CLIENT_ID }}" \
+            --from-literal=ENTRA_CLIENT_SECRET="${{ secrets.ENTRA_CLIENT_SECRET }}" \
+            --from-literal=ENTRA_AUDIENCE="${{ secrets.ENTRA_AUDIENCE }}" \
+            --from-literal=DEFAULT_TENANT_ID="${{ secrets.DEFAULT_TENANT_ID }}" \
+            --from-literal=JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+            --from-literal=OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
+            --from-literal=ZAMMAD_TOKEN="${{ secrets.ZAMMAD_TOKEN }}" \
+            --from-literal=CONFLUENCE_USERNAME="${{ secrets.CONFLUENCE_USERNAME }}" \
+            --from-literal=CONFLUENCE_API_TOKEN="${{ secrets.CONFLUENCE_API_TOKEN }}" \
+            --from-literal=POSTGRES_PASSWORD="${{ secrets.POSTGRES_PASSWORD }}" \
+            --from-literal=REDIS_PASSWORD="${{ secrets.REDIS_PASSWORD }}" \
+            --from-literal=EXTERNAL_POSTGRES_PASSWORD="${{ secrets.EXTERNAL_POSTGRES_PASSWORD }}" \
+            --from-literal=EXTERNAL_REDIS_PASSWORD="${{ secrets.EXTERNAL_REDIS_PASSWORD }}" \
             --from-literal=JIRA_HOST="${{ secrets.JIRA_HOST }}" \
             --from-literal=JIRA_EMAIL="${{ secrets.JIRA_EMAIL }}" \
             --from-literal=JIRA_API_TOKEN="${{ secrets.JIRA_API_TOKEN }}" \
@@ -127,12 +162,13 @@ jobs:
 
   deploy-production:
     if: github.event_name == 'workflow_dispatch'
+    needs: build-images
     runs-on: ubuntu-latest
     environment: production
     env:
       K8S_NAMESPACE: agentic-production
       VALUES_FILE: helm/agentic-workspace/values-production.yaml
-      IMAGE_TAG: ${{ inputs.image_tag }}
+      IMAGE_TAG: ${{ needs.build-images.outputs.image_tag }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -169,6 +205,7 @@ jobs:
         run: |
           kubectl -n "$K8S_NAMESPACE" create secret generic agentic-secrets \
             --from-literal=DATABASE_URL="${{ secrets.DATABASE_URL }}" \
+            --from-literal=DATABASE_PASSWORD="${{ secrets.DATABASE_PASSWORD }}" \
             --from-literal=NEXTAUTH_SECRET="${{ secrets.NEXTAUTH_SECRET }}" \
             --from-literal=NEXTAUTH_URL="${{ secrets.NEXTAUTH_URL }}" \
             --from-literal=AUTH_MICROSOFT_ENTRA_ID_ID="${{ secrets.AUTH_MICROSOFT_ENTRA_ID_ID }}" \
@@ -176,6 +213,20 @@ jobs:
             --from-literal=AZURE_OPENAI_API_KEY="${{ secrets.AZURE_OPENAI_API_KEY }}" \
             --from-literal=AZURE_OPENAI_ENDPOINT="${{ secrets.AZURE_OPENAI_ENDPOINT }}" \
             --from-literal=AZURE_OPENAI_DEPLOYMENT="${{ secrets.AZURE_OPENAI_DEPLOYMENT }}" \
+            --from-literal=ENTRA_TENANT_ID="${{ secrets.ENTRA_TENANT_ID }}" \
+            --from-literal=ENTRA_CLIENT_ID="${{ secrets.ENTRA_CLIENT_ID }}" \
+            --from-literal=ENTRA_CLIENT_SECRET="${{ secrets.ENTRA_CLIENT_SECRET }}" \
+            --from-literal=ENTRA_AUDIENCE="${{ secrets.ENTRA_AUDIENCE }}" \
+            --from-literal=DEFAULT_TENANT_ID="${{ secrets.DEFAULT_TENANT_ID }}" \
+            --from-literal=JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+            --from-literal=OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
+            --from-literal=ZAMMAD_TOKEN="${{ secrets.ZAMMAD_TOKEN }}" \
+            --from-literal=CONFLUENCE_USERNAME="${{ secrets.CONFLUENCE_USERNAME }}" \
+            --from-literal=CONFLUENCE_API_TOKEN="${{ secrets.CONFLUENCE_API_TOKEN }}" \
+            --from-literal=POSTGRES_PASSWORD="${{ secrets.POSTGRES_PASSWORD }}" \
+            --from-literal=REDIS_PASSWORD="${{ secrets.REDIS_PASSWORD }}" \
+            --from-literal=EXTERNAL_POSTGRES_PASSWORD="${{ secrets.EXTERNAL_POSTGRES_PASSWORD }}" \
+            --from-literal=EXTERNAL_REDIS_PASSWORD="${{ secrets.EXTERNAL_REDIS_PASSWORD }}" \
             --from-literal=JIRA_HOST="${{ secrets.JIRA_HOST }}" \
             --from-literal=JIRA_EMAIL="${{ secrets.JIRA_EMAIL }}" \
             --from-literal=JIRA_API_TOKEN="${{ secrets.JIRA_API_TOKEN }}" \
