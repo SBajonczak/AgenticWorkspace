@@ -48,9 +48,7 @@ export async function GET(request: NextRequest) {
   const userEmail = session.user.email?.toLowerCase()
 
   try {
-    const { searchParams } = request?.url
-      ? new URL(request.url)
-      : new URL('http://localhost/api/meetings')
+    const searchParams = request.nextUrl.searchParams
 
     const kind = parseKind(searchParams.get('kind'))
     const limit = parseLimit(searchParams.get('limit') ?? '50')

@@ -19,6 +19,13 @@ spec:
           imagePullPolicy: {{ .Values.web.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.web.service.targetPort }}
+          env:
+            - name: NEXTAUTH_URL
+              value: {{ printf "https://%s" .Values.web.ingress.host | quote }}
+            - name: AUTH_URL
+              value: {{ printf "https://%s" .Values.web.ingress.host | quote }}
+            - name: AUTH_TRUST_HOST
+              value: "true"
           envFrom:
             - configMapRef:
                 name: {{ include "agentic-workspace.configMapName" . }}
