@@ -32,3 +32,9 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Build web Docker image (smoke check)
+        run: docker build --target web -t agentic-web:ci .
+
+      - name: Build worker Docker image (smoke check)
+        run: docker build --target worker -t agentic-worker:ci .

@@ -1,35 +1,36 @@
-apiVersion: batch/v1
-kind: CronJob
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: agentic-worker
   namespace: agentic-workspace
 spec:
-  schedule: "*/30 * * * *"
-  concurrencyPolicy: Forbid
-  successfulJobsHistoryLimit: 1
-  failedJobsHistoryLimit: 2
-  jobTemplate:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: agentic-worker
+  template:
+    metadata:
+      labels:
+        app: agentic-worker
     spec:
-      template:
-        spec:
-          restartPolicy: Never
-          containers:
-            - name: worker
-              image: REPLACE_WITH_ACR_IMAGE
-              imagePullPolicy: Always
-              command:
-                - npm
-                - run
-                - worker:once
-              envFrom:
-                - configMapRef:
-                    name: agentic-config
-                - secretRef:
-                    name: agentic-secrets
-              resources:
-                requests:
-                  cpu: "100m"
-                  memory: "256Mi"
-                limits:
-                  cpu: "500m"
-                  memory: "768Mi"
+      restartPolicy: Always
+      containers:
+        - name: worker
+          image: REPLACE_WITH_ACR_IMAGE
+          imagePullPolicy: Always
+          command:
+            - npm
+            - run
+            - worker
+          envFrom:
+            - configMapRef:
+                name: agentic-config
+            - secretRef:
+                name: agentic-secrets
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "768Mi"

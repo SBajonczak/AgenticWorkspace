@@ -1,30 +1,31 @@
 {{- if .Values.worker.enabled }}
-apiVersion: batch/v1
-kind: CronJob
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: {{ include "agentic-workspace.workerName" . }}
   namespace: {{ .Values.namespace }}
 spec:
-  schedule: {{ .Values.worker.schedule | quote }}
-  concurrencyPolicy: {{ .Values.worker.concurrencyPolicy }}
-  successfulJobsHistoryLimit: {{ .Values.worker.successfulJobsHistoryLimit }}
-  failedJobsHistoryLimit: {{ .Values.worker.failedJobsHistoryLimit }}
-  jobTemplate:
+  replicas: {{ .Values.worker.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "agentic-workspace.workerName" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "agentic-workspace.workerName" . }}
     spec:
-      template:
-        spec:
-          restartPolicy: {{ .Values.worker.restartPolicy }}
-          containers:
-            - name: worker
-              image: "{{ .Values.worker.image.repository }}:{{ .Values.worker.image.tag }}"
-              imagePullPolicy: {{ .Values.worker.image.pullPolicy }}
-              command:
-{{ toYaml .Values.worker.command | indent 16 }}
-              envFrom:
-                - configMapRef:
-                    name: {{ include "agentic-workspace.configMapName" . }}
-                - secretRef:
-                    name: {{ include "agentic-workspace.secretName" . }}
-              resources:
-{{ toYaml .Values.worker.resources | indent 16 }}
+      restartPolicy: {{ .Values.worker.restartPolicy }}
+      containers:
+        - name: worker
+          image: "{{ .Values.worker.image.repository }}:{{ .Values.worker.image.tag }}"
+          imagePullPolicy: {{ .Values.worker.image.pullPolicy }}
+          command:
+{{ toYaml .Values.worker.command | indent 12 }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "agentic-workspace.configMapName" . }}
+            - secretRef:
+                name: {{ include "agentic-workspace.secretName" . }}
+          resources:
+{{ toYaml .Values.worker.resources | indent 12 }}
 {{- end }}

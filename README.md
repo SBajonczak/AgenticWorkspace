@@ -298,7 +298,7 @@ GitHub Actions workflow behavior:
 - Manual `workflow_dispatch`:
   - Requires an existing `image_tag` (commit SHA)
   - Promotes that tag to namespace `agentic-production` with Helm
-  - Verifies rollout for web deployment and worker cronjob
+  - Verifies rollout for web deployment and worker deployment
 
 ### Important Note
 

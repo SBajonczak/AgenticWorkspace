@@ -195,7 +195,7 @@ jobs:
       - name: Verify staging rollout
         run: |
           kubectl -n "$K8S_NAMESPACE" rollout status deployment/agentic-web --timeout=180s
-          kubectl -n "$K8S_NAMESPACE" get cronjob agentic-worker
+          kubectl -n "$K8S_NAMESPACE" rollout status deployment/agentic-worker --timeout=180s
 
   deploy-production:
     if: github.event_name == 'workflow_dispatch'
@@ -324,4 +324,4 @@ jobs:
       - name: Verify production rollout
         run: |
           kubectl -n "$K8S_NAMESPACE" rollout status deployment/agentic-web --timeout=180s
-          kubectl -n "$K8S_NAMESPACE" get cronjob agentic-worker
+          kubectl -n "$K8S_NAMESPACE" rollout status deployment/agentic-worker --timeout=180s

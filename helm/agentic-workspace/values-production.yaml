@@ -9,4 +9,4 @@ web:
     host: agentic.example.com
 
 worker:
-  schedule: "*/30 * * * *"
+  replicaCount: 1

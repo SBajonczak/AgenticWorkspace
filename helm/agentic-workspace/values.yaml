@@ -60,15 +60,12 @@ web:
 
 worker:
   enabled: true
-  schedule: "*/30 * * * *"
-  concurrencyPolicy: Forbid
-  successfulJobsHistoryLimit: 1
-  failedJobsHistoryLimit: 2
-  restartPolicy: Never
+  replicaCount: 1
+  restartPolicy: Always
   command:
     - npm
     - run
-    - worker:once
+    - worker
   image:
     repository: realcore.azurecr.io/agentic-worker
     tag: latest
