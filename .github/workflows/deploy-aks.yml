@@ -141,17 +141,56 @@ jobs:
 
       - name: Deploy Helm release to staging
         run: |
-          helm upgrade --install "$HELM_RELEASE_NAME" "$HELM_CHART_PATH" \
-            --namespace "$K8S_NAMESPACE" \
-            --create-namespace \
-            --wait \
-            --timeout 10m \
-            -f "$VALUES_FILE" \
-            --set namespace="$K8S_NAMESPACE" \
-            --set web.image.repository="$ACR_LOGIN_SERVER/$IMAGE_WEB_NAME" \
-            --set web.image.tag="$IMAGE_TAG" \
-            --set worker.image.repository="$ACR_LOGIN_SERVER/$IMAGE_WORKER_NAME" \
-            --set worker.image.tag="$IMAGE_TAG"
+          set -euo pipefail
+
+          run_deploy() {
+            helm upgrade --install "$HELM_RELEASE_NAME" "$HELM_CHART_PATH" \
+              --namespace "$K8S_NAMESPACE" \
+              --create-namespace \
+              --wait \
+              --timeout 10m \
+              -f "$VALUES_FILE" \
+              --set namespace="$K8S_NAMESPACE" \
+              --set web.image.repository="$ACR_LOGIN_SERVER/$IMAGE_WEB_NAME" \
+              --set web.image.tag="$IMAGE_TAG" \
+              --set worker.image.repository="$ACR_LOGIN_SERVER/$IMAGE_WORKER_NAME" \
+              --set worker.image.tag="$IMAGE_TAG"
+          }
+
+          set +e
+          DEPLOY_OUTPUT="$(run_deploy 2>&1)"
+          DEPLOY_EXIT=$?
+          set -e
+
+          if [ "$DEPLOY_EXIT" -eq 0 ]; then
+            echo "$DEPLOY_OUTPUT"
+            exit 0
+          fi
+
+          echo "$DEPLOY_OUTPUT"
+          if ! echo "$DEPLOY_OUTPUT" | grep -q "another operation (install/upgrade/rollback) is in progress"; then
+            exit "$DEPLOY_EXIT"
+          fi
+
+          echo "Detected Helm lock. Attempting recovery..."
+          STATUS="$(helm status "$HELM_RELEASE_NAME" -n "$K8S_NAMESPACE" -o json 2>/dev/null | jq -r '.info.status' || true)"
+          case "$STATUS" in
+            pending-install|pending-upgrade|pending-rollback)
+              TARGET_REV="$(helm history "$HELM_RELEASE_NAME" -n "$K8S_NAMESPACE" -o json | jq -r '[.[] | select(.status == "deployed")][-1].revision // empty')"
+              if [ -n "$TARGET_REV" ]; then
+                echo "Rolling back to revision $TARGET_REV"
+                helm rollback "$HELM_RELEASE_NAME" "$TARGET_REV" -n "$K8S_NAMESPACE" --wait --timeout 10m
+              else
+                echo "No deployed revision found. Uninstalling stuck release."
+                helm uninstall "$HELM_RELEASE_NAME" -n "$K8S_NAMESPACE" || true
+              fi
+              ;;
+            *)
+              echo "No pending Helm state detected (status: ${STATUS:-unknown}). Retrying deploy once."
+              ;;
+          esac
+
+          run_deploy
 
       - name: Verify staging rollout
         run: |
@@ -231,17 +270,56 @@ jobs:
 
       - name: Deploy Helm release to production
         run: |
-          helm upgrade --install "$HELM_RELEASE_NAME" "$HELM_CHART_PATH" \
-            --namespace "$K8S_NAMESPACE" \
-            --create-namespace \
-            --wait \
-            --timeout 10m \
-            -f "$VALUES_FILE" \
-            --set namespace="$K8S_NAMESPACE" \
-            --set web.image.repository="$ACR_LOGIN_SERVER/$IMAGE_WEB_NAME" \
-            --set web.image.tag="$IMAGE_TAG" \
-            --set worker.image.repository="$ACR_LOGIN_SERVER/$IMAGE_WORKER_NAME" \
-            --set worker.image.tag="$IMAGE_TAG"
+          set -euo pipefail
+
+          run_deploy() {
+            helm upgrade --install "$HELM_RELEASE_NAME" "$HELM_CHART_PATH" \
+              --namespace "$K8S_NAMESPACE" \
+              --create-namespace \
+              --wait \
+              --timeout 10m \
+              -f "$VALUES_FILE" \
+              --set namespace="$K8S_NAMESPACE" \
+              --set web.image.repository="$ACR_LOGIN_SERVER/$IMAGE_WEB_NAME" \
+              --set web.image.tag="$IMAGE_TAG" \
+              --set worker.image.repository="$ACR_LOGIN_SERVER/$IMAGE_WORKER_NAME" \
+              --set worker.image.tag="$IMAGE_TAG"
+          }
+
+          set +e
+          DEPLOY_OUTPUT="$(run_deploy 2>&1)"
+          DEPLOY_EXIT=$?
+          set -e
+
+          if [ "$DEPLOY_EXIT" -eq 0 ]; then
+            echo "$DEPLOY_OUTPUT"
+            exit 0
+          fi
+
+          echo "$DEPLOY_OUTPUT"
+          if ! echo "$DEPLOY_OUTPUT" | grep -q "another operation (install/upgrade/rollback) is in progress"; then
+            exit "$DEPLOY_EXIT"
+          fi
+
+          echo "Detected Helm lock. Attempting recovery..."
+          STATUS="$(helm status "$HELM_RELEASE_NAME" -n "$K8S_NAMESPACE" -o json 2>/dev/null | jq -r '.info.status' || true)"
+          case "$STATUS" in
+            pending-install|pending-upgrade|pending-rollback)
+              TARGET_REV="$(helm history "$HELM_RELEASE_NAME" -n "$K8S_NAMESPACE" -o json | jq -r '[.[] | select(.status == "deployed")][-1].revision // empty')"
+              if [ -n "$TARGET_REV" ]; then
+                echo "Rolling back to revision $TARGET_REV"
+                helm rollback "$HELM_RELEASE_NAME" "$TARGET_REV" -n "$K8S_NAMESPACE" --wait --timeout 10m
+              else
+                echo "No deployed revision found. Uninstalling stuck release."
+                helm uninstall "$HELM_RELEASE_NAME" -n "$K8S_NAMESPACE" || true
+              fi
+              ;;
+            *)
+              echo "No pending Helm state detected (status: ${STATUS:-unknown}). Retrying deploy once."
+              ;;
+          esac
+
+          run_deploy
 
       - name: Verify production rollout
         run: |
