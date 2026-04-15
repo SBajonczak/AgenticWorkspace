@@ -20,15 +20,6 @@ function readFirstDefinedEnv(keys: string[]): EnvLookupResult {
   return {}
 }
 
-function assertEnv(name: string, lookup: EnvLookupResult): string {
-  if (!lookup.value) {
-    throw new Error(
-      `[auth] Missing required environment variable for ${name}. Checked: ${name}.`
-    )
-  }
-  return lookup.value
-}
-
 function isAllowedTenantId(value: string): boolean {
   const aliases = new Set(['common', 'organizations', 'consumers'])
   if (aliases.has(value)) return true
@@ -38,28 +29,52 @@ function isAllowedTenantId(value: string): boolean {
   return tenantGuid.test(value)
 }
 
-const azureClientId = assertEnv('AZURE_CLIENT_ID', readFirstDefinedEnv([
+const azureClientIdLookup = readFirstDefinedEnv([
   'AZURE_CLIENT_ID',
   'AUTH_MICROSOFT_ENTRA_ID_ID',
-]))
+])
 
-const azureClientSecret = assertEnv('AZURE_CLIENT_SECRET', readFirstDefinedEnv([
+const azureClientSecretLookup = readFirstDefinedEnv([
   'AZURE_CLIENT_SECRET',
   'AUTH_MICROSOFT_ENTRA_ID_SECRET',
-]))
+])
 
-const azureTenantId = assertEnv('AZURE_TENANT_ID', readFirstDefinedEnv([
+const azureTenantIdLookup = readFirstDefinedEnv([
   'AZURE_TENANT_ID',
   'AUTH_MICROSOFT_ENTRA_ID_TENANT_ID',
-]))
+])
 
-if (!isAllowedTenantId(azureTenantId)) {
-  throw new Error(
+const azureClientId = azureClientIdLookup.value
+const azureClientSecret = azureClientSecretLookup.value
+const azureTenantId = azureTenantIdLookup.value
+
+const missingEntraEnv: string[] = []
+if (!azureClientId) missingEntraEnv.push('AZURE_CLIENT_ID|AUTH_MICROSOFT_ENTRA_ID_ID')
+if (!azureClientSecret) missingEntraEnv.push('AZURE_CLIENT_SECRET|AUTH_MICROSOFT_ENTRA_ID_SECRET')
+if (!azureTenantId) missingEntraEnv.push('AZURE_TENANT_ID|AUTH_MICROSOFT_ENTRA_ID_TENANT_ID')
+
+const hasValidTenant = typeof azureTenantId === 'string' && isAllowedTenantId(azureTenantId)
+if (azureTenantId && !hasValidTenant) {
+  console.error(
     `[auth] Invalid AZURE_TENANT_ID format: expected a tenant GUID or one of common|organizations|consumers, got "${azureTenantId}".`
   )
 }
 
-const azureIssuer = `https://login.microsoftonline.com/${azureTenantId}/v2.0`
+const hasValidEntraProviderConfig = missingEntraEnv.length === 0 && hasValidTenant
+
+if (!hasValidEntraProviderConfig) {
+  const reasons = [
+    ...missingEntraEnv,
+    ...(azureTenantId && !hasValidTenant ? ['AZURE_TENANT_ID format invalid'] : []),
+  ]
+  console.warn(
+    `[auth] Microsoft Entra provider disabled due to incomplete configuration: ${reasons.join(', ')}`
+  )
+}
+
+const azureIssuer = hasValidTenant
+  ? `https://login.microsoftonline.com/${azureTenantId}/v2.0`
+  : undefined
 
 const requiredGraphScopes = [
   'Calendars.Read',
@@ -218,27 +233,29 @@ async function resolvePersistedUserId(params: {
 }
 
 export const authConfig = {
-  providers: [
-    MicrosoftEntraID({
-      clientId: azureClientId,
-      clientSecret: azureClientSecret,
-      issuer: azureIssuer,
-      authorization: {
-        params: {
-          scope: [
-            'openid',
-            'profile',
-            'email',
-            'offline_access',
-            'User.Read',
-            'Calendars.Read',
-            'OnlineMeetings.Read',
-            'OnlineMeetingTranscript.Read.All',
-          ].join(' '),
+  providers: hasValidEntraProviderConfig && azureClientId && azureClientSecret && azureIssuer
+    ? [
+      MicrosoftEntraID({
+        clientId: azureClientId,
+        clientSecret: azureClientSecret,
+        issuer: azureIssuer,
+        authorization: {
+          params: {
+            scope: [
+              'openid',
+              'profile',
+              'email',
+              'offline_access',
+              'User.Read',
+              'Calendars.Read',
+              'OnlineMeetings.Read',
+              'OnlineMeetingTranscript.Read.All',
+            ].join(' '),
+          },
         },
-      },
-    }),
-  ],
+      }),
+    ]
+    : [],
   callbacks: {
     async signIn({ user, account, profile }) {
       if (account?.provider !== 'microsoft-entra-id') {
