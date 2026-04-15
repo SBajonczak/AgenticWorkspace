@@ -59,13 +59,20 @@ kind: Ingress
 metadata:
   name: {{ include "agentic-workspace.webName" . }}
   namespace: {{ .Values.namespace }}
-  {{- with .Values.web.ingress.annotations }}
   annotations:
+    cert-manager.io/cluster-issuer: {{ .Values.web.ingress.tls.issuer | default "letsencrypt-prod" }}
+  {{- with .Values.web.ingress.annotations }}
 {{ toYaml . | indent 4 }}
   {{- end }}
 spec:
   {{- if .Values.web.ingress.className }}
   ingressClassName: {{ .Values.web.ingress.className }}
+  {{- end }}
+  {{- if .Values.web.ingress.tls.enabled }}
+  tls:
+    - hosts:
+        - {{ .Values.web.ingress.host }}
+      secretName: {{ .Values.web.ingress.tls.secretName }}
   {{- end }}
   rules:
     - host: {{ .Values.web.ingress.host }}

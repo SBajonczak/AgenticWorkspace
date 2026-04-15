@@ -63,9 +63,15 @@ kind: Ingress
 metadata:
   name: agentic-web
   namespace: agentic-workspace
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
+  tls:
+    - hosts:
+        - workplace.realapps.org
+      secretName: workplace-realapps-org-tls
   rules:
-    - host: agentic.example.com
+    - host: workplace.realapps.org
       http:
         paths:
           - path: /

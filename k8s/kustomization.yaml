@@ -3,6 +3,7 @@ kind: Kustomization
 namespace: agentic-workspace
 resources:
   - namespace.yaml
+  - cert-manager-issuers.yaml
   - configmap.yaml
   - web.yaml
   - worker-cronjob.yaml

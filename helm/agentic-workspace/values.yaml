@@ -40,10 +40,15 @@ web:
   ingress:
     enabled: true
     className: ""
-    annotations: {}
-    host: agentic.example.com
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+    host: workplace.realapps.org
     path: /
     pathType: Prefix
+    tls:
+      enabled: true
+      secretName: workplace-realapps-org-tls
+      issuer: letsencrypt-prod
   readinessProbe:
     initialDelaySeconds: 10
     periodSeconds: 10

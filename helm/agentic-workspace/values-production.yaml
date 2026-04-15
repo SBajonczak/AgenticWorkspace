@@ -6,7 +6,11 @@ config:
 web:
   ingress:
     enabled: true
-    host: agentic.example.com
+    host: workplace.realapps.org
+    tls:
+      enabled: true
+      secretName: workplace-realapps-org-tls
+      issuer: letsencrypt-prod
 
 worker:
   replicaCount: 1
