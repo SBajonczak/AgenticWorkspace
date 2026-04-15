@@ -4,6 +4,63 @@ import { UserSyncStateRepository } from '@/db/repositories/userSyncStateReposito
 import { prisma } from '@/db/prisma'
 import { TenantRepository } from '@/db/repositories/tenantRepository'
 
+type EnvLookupResult = {
+  value?: string
+  key?: string
+}
+
+function readFirstDefinedEnv(keys: string[]): EnvLookupResult {
+  for (const key of keys) {
+    const raw = process.env[key]
+    if (typeof raw !== 'string') continue
+    const value = raw.trim()
+    if (value.length === 0) continue
+    return { value, key }
+  }
+  return {}
+}
+
+function assertEnv(name: string, lookup: EnvLookupResult): string {
+  if (!lookup.value) {
+    throw new Error(
+      `[auth] Missing required environment variable for ${name}. Checked: ${name}.`
+    )
+  }
+  return lookup.value
+}
+
+function isAllowedTenantId(value: string): boolean {
+  const aliases = new Set(['common', 'organizations', 'consumers'])
+  if (aliases.has(value)) return true
+
+  const tenantGuid =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  return tenantGuid.test(value)
+}
+
+const azureClientId = assertEnv('AZURE_CLIENT_ID', readFirstDefinedEnv([
+  'AZURE_CLIENT_ID',
+  'AUTH_MICROSOFT_ENTRA_ID_ID',
+]))
+
+const azureClientSecret = assertEnv('AZURE_CLIENT_SECRET', readFirstDefinedEnv([
+  'AZURE_CLIENT_SECRET',
+  'AUTH_MICROSOFT_ENTRA_ID_SECRET',
+]))
+
+const azureTenantId = assertEnv('AZURE_TENANT_ID', readFirstDefinedEnv([
+  'AZURE_TENANT_ID',
+  'AUTH_MICROSOFT_ENTRA_ID_TENANT_ID',
+]))
+
+if (!isAllowedTenantId(azureTenantId)) {
+  throw new Error(
+    `[auth] Invalid AZURE_TENANT_ID format: expected a tenant GUID or one of common|organizations|consumers, got "${azureTenantId}".`
+  )
+}
+
+const azureIssuer = `https://login.microsoftonline.com/${azureTenantId}/v2.0`
+
 const requiredGraphScopes = [
   'Calendars.Read',
   'OnlineMeetings.Read',
@@ -163,9 +220,9 @@ async function resolvePersistedUserId(params: {
 export const authConfig = {
   providers: [
     MicrosoftEntraID({
-      clientId: process.env.AZURE_CLIENT_ID!,
-      clientSecret: process.env.AZURE_CLIENT_SECRET!,
-      issuer: `https://login.microsoftonline.com/${process.env.AZURE_TENANT_ID}/v2.0`,
+      clientId: azureClientId,
+      clientSecret: azureClientSecret,
+      issuer: azureIssuer,
       authorization: {
         params: {
           scope: [
