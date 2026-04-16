@@ -26,6 +26,24 @@ spec:
               value: {{ printf "https://%s" .Values.web.ingress.host | quote }}
             - name: AUTH_TRUST_HOST
               value: "true"
+            - name: AUTH_MICROSOFT_ENTRA_ID_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "agentic-workspace.secretName" . }}
+                  key: AZURE_CLIENT_ID
+                  optional: true
+            - name: AUTH_MICROSOFT_ENTRA_ID_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "agentic-workspace.secretName" . }}
+                  key: AZURE_CLIENT_SECRET
+                  optional: true
+            - name: AUTH_MICROSOFT_ENTRA_ID_TENANT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "agentic-workspace.secretName" . }}
+                  key: AZURE_TENANT_ID
+                  optional: true
           envFrom:
             - configMapRef:
                 name: {{ include "agentic-workspace.configMapName" . }}
