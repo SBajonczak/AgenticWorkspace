@@ -9,7 +9,8 @@ config:
   nodeEnv: production
   databaseProvider: postgresql
   workerIntervalMinutes: "30"
-  openaiModel: ""
+  dryRun: "true"
+  openaiModel: "gpt-5.1"
   outputLanguages: "de,en"
 
 secret:

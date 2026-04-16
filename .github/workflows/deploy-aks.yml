@@ -113,12 +113,15 @@ jobs:
             --from-literal=DATABASE_URL="${{ secrets.DATABASE_URL }}" \
             --from-literal=DATABASE_PASSWORD="${{ secrets.DATABASE_PASSWORD }}" \
             --from-literal=NEXTAUTH_SECRET="${{ secrets.NEXTAUTH_SECRET }}" \
-            --from-literal=NEXTAUTH_URL="${{ secrets.NEXTAUTH_URL }}" \
+            --from-literal=NEXTAUTH_URL="${{ secrets.NEXTAUTH_URL || vars.NEXTAUTH_URL || '' }}" \
             --from-literal=AUTH_MICROSOFT_ENTRA_ID_ID="${{ secrets.AUTH_MICROSOFT_ENTRA_ID_ID }}" \
             --from-literal=AUTH_MICROSOFT_ENTRA_ID_SECRET="${{ secrets.AUTH_MICROSOFT_ENTRA_ID_SECRET }}" \
+            --from-literal=AUTH_MICROSOFT_ENTRA_ID_TENANT_ID="${{ secrets.AUTH_MICROSOFT_ENTRA_ID_TENANT_ID || secrets.AZURE_TENANT_ID || vars.AZURE_TENANT_ID || '' }}" \
+            --from-literal=AZURE_CLIENT_ID="${{ secrets.AZURE_CLIENT_ID || vars.AZURE_CLIENT_ID || '' }}" \
+            --from-literal=AZURE_TENANT_ID="${{ secrets.AZURE_TENANT_ID || vars.AZURE_TENANT_ID || '' }}" \
             --from-literal=AZURE_OPENAI_API_KEY="${{ secrets.AZURE_OPENAI_API_KEY }}" \
-            --from-literal=AZURE_OPENAI_ENDPOINT="${{ secrets.AZURE_OPENAI_ENDPOINT }}" \
-            --from-literal=AZURE_OPENAI_DEPLOYMENT="${{ secrets.AZURE_OPENAI_DEPLOYMENT }}" \
+            --from-literal=AZURE_OPENAI_ENDPOINT="${{ secrets.AZURE_OPENAI_ENDPOINT || vars.AZURE_OPENAI_ENDPOINT || '' }}" \
+            --from-literal=AZURE_OPENAI_DEPLOYMENT="${{ secrets.AZURE_OPENAI_DEPLOYMENT || vars.AZURE_OPENAI_DEPLOYMENT || '' }}" \
             --from-literal=ENTRA_TENANT_ID="${{ secrets.ENTRA_TENANT_ID }}" \
             --from-literal=ENTRA_CLIENT_ID="${{ secrets.ENTRA_CLIENT_ID }}" \
             --from-literal=ENTRA_CLIENT_SECRET="${{ secrets.ENTRA_CLIENT_SECRET }}" \
@@ -242,12 +245,15 @@ jobs:
             --from-literal=DATABASE_URL="${{ secrets.DATABASE_URL }}" \
             --from-literal=DATABASE_PASSWORD="${{ secrets.DATABASE_PASSWORD }}" \
             --from-literal=NEXTAUTH_SECRET="${{ secrets.NEXTAUTH_SECRET }}" \
-            --from-literal=NEXTAUTH_URL="${{ secrets.NEXTAUTH_URL }}" \
+            --from-literal=NEXTAUTH_URL="${{ secrets.NEXTAUTH_URL || vars.NEXTAUTH_URL || '' }}" \
             --from-literal=AUTH_MICROSOFT_ENTRA_ID_ID="${{ secrets.AUTH_MICROSOFT_ENTRA_ID_ID }}" \
             --from-literal=AUTH_MICROSOFT_ENTRA_ID_SECRET="${{ secrets.AUTH_MICROSOFT_ENTRA_ID_SECRET }}" \
+            --from-literal=AUTH_MICROSOFT_ENTRA_ID_TENANT_ID="${{ secrets.AUTH_MICROSOFT_ENTRA_ID_TENANT_ID || secrets.AZURE_TENANT_ID || vars.AZURE_TENANT_ID || '' }}" \
+            --from-literal=AZURE_CLIENT_ID="${{ secrets.AZURE_CLIENT_ID || vars.AZURE_CLIENT_ID || '' }}" \
+            --from-literal=AZURE_TENANT_ID="${{ secrets.AZURE_TENANT_ID || vars.AZURE_TENANT_ID || '' }}" \
             --from-literal=AZURE_OPENAI_API_KEY="${{ secrets.AZURE_OPENAI_API_KEY }}" \
-            --from-literal=AZURE_OPENAI_ENDPOINT="${{ secrets.AZURE_OPENAI_ENDPOINT }}" \
-            --from-literal=AZURE_OPENAI_DEPLOYMENT="${{ secrets.AZURE_OPENAI_DEPLOYMENT }}" \
+            --from-literal=AZURE_OPENAI_ENDPOINT="${{ secrets.AZURE_OPENAI_ENDPOINT || vars.AZURE_OPENAI_ENDPOINT || '' }}" \
+            --from-literal=AZURE_OPENAI_DEPLOYMENT="${{ secrets.AZURE_OPENAI_DEPLOYMENT || vars.AZURE_OPENAI_DEPLOYMENT || '' }}" \
             --from-literal=ENTRA_TENANT_ID="${{ secrets.ENTRA_TENANT_ID }}" \
             --from-literal=ENTRA_CLIENT_ID="${{ secrets.ENTRA_CLIENT_ID }}" \
             --from-literal=ENTRA_CLIENT_SECRET="${{ secrets.ENTRA_CLIENT_SECRET }}" \
