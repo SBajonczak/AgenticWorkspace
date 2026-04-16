@@ -10,6 +10,9 @@ spec:
       app: {{ include "agentic-workspace.webName" . }}
   template:
     metadata:
+      annotations:
+        checksum/config: {{ include "agentic-workspace.configChecksum" . | quote }}
+        checksum/secret: {{ include "agentic-workspace.secretChecksum" . | quote }}
       labels:
         app: {{ include "agentic-workspace.webName" . }}
     spec:

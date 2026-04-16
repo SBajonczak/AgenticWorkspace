@@ -285,6 +285,10 @@ export function createLLMClient(): LLMClient {
     .filter(Boolean)
   const modelOverride = process.env.OPENAI_MODEL
 
+  console.log(
+    `[LLM] Environment config | AZURE_OPENAI_ENDPOINT=${azureEndpoint ? 'set' : 'missing'} | AZURE_OPENAI_DEPLOYMENT=${azureDeployment ? azureDeployment : 'missing'} | AZURE_OPENAI_API_KEY=${azureApiKey ? 'set' : 'missing'} | OPENAI_API_KEY=${openaiApiKey ? 'set' : 'missing'} | OPENAI_MODEL=${modelOverride || 'unset'} | OUTPUT_LANGUAGES=${outputLanguages.join(',')}`
+  )
+
   if (azureEndpoint && azureDeployment && azureApiKey) {
     return new LLMClient({
       apiKey: azureApiKey,
