@@ -9,6 +9,8 @@ config:
   nodeEnv: production
   databaseProvider: postgresql
   workerIntervalMinutes: "30"
+  openaiModel: ""
+  outputLanguages: "de,en"
 
 secret:
   create: false
@@ -28,10 +30,14 @@ secret:
     AZURE_OPENAI_API_KEY: ""
     AZURE_OPENAI_ENDPOINT: ""
     AZURE_OPENAI_DEPLOYMENT: ""
+    OPENAI_API_KEY: ""
     JIRA_HOST: ""
     JIRA_EMAIL: ""
     JIRA_API_TOKEN: ""
     JIRA_PROJECT_KEY: ""
+
+
+    
 
 web:
   replicaCount: 1

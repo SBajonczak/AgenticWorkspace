@@ -7,3 +7,6 @@ data:
   NODE_ENV: {{ .Values.config.nodeEnv | quote }}
   DATABASE_PROVIDER: {{ .Values.config.databaseProvider | quote }}
   WORKER_INTERVAL_MINUTES: {{ .Values.config.workerIntervalMinutes | quote }}
+  OPENAI_MODEL: {{ .Values.config.openaiModel | quote }}
+  OUTPUT_LANGUAGES: {{ .Values.config.outputLanguages | quote }}
+
