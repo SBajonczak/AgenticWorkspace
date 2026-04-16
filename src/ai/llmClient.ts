@@ -103,30 +103,67 @@ export class LLMClient {
   ): Promise<AgentResponse> {
     const userPrompt = this.buildUserPrompt(meetingMetadata, transcript)
 
-    const completion = await this.client.chat.completions.create({
-      model: this.model,
-      messages: [
-        {
-          role: 'system',
-          content: this.systemPrompt,
-        },
-        {
-          role: 'user',
-          content: userPrompt,
-        },
-      ],
-      response_format: { type: 'json_object' },
-      temperature: 0.3,
-    })
+    console.log(`[LLM] Sending request to model: ${this.model}`)
+    console.log(`[LLM] Transcript length: ${transcript.length} chars | Prompt length: ${userPrompt.length} chars`)
+    console.log(`[LLM] System prompt length: ${this.systemPrompt.length} chars`)
+    console.log(`[LLM] Output languages: ${this.outputLanguages.join(', ')}`)
+
+    let completion: Awaited<ReturnType<typeof this.client.chat.completions.create>>
+    try {
+      completion = await this.client.chat.completions.create({
+        model: this.model,
+        messages: [
+          {
+            role: 'system',
+            content: this.systemPrompt,
+          },
+          {
+            role: 'user',
+            content: userPrompt,
+          },
+        ],
+        response_format: { type: 'json_object' },
+        temperature: 0.3,
+      })
+    } catch (err) {
+      console.error(`[LLM] ❌ API call failed:`, err)
+      throw err
+    }
+
+    const usage = completion.usage
+    if (usage) {
+      console.log(`[LLM] ✅ Response received | prompt_tokens=${usage.prompt_tokens} completion_tokens=${usage.completion_tokens} total=${usage.total_tokens}`)
+    } else {
+      console.log(`[LLM] ✅ Response received (no usage info)`)
+    }
+    console.log(`[LLM] Finish reason: ${completion.choices[0]?.finish_reason}`)
 
     const responseText = completion.choices[0]?.message?.content
     if (!responseText) {
       throw new Error('No response from LLM')
     }
 
+    console.log(`[LLM] Response text length: ${responseText.length} chars`)
+
     // Parse and validate JSON
-    const jsonResponse = JSON.parse(responseText)
-    const validatedResponse = AgentResponseSchema.parse(jsonResponse)
+    let jsonResponse: unknown
+    try {
+      jsonResponse = JSON.parse(responseText)
+    } catch (err) {
+      console.error(`[LLM] ❌ Failed to parse JSON response:`, err)
+      console.error(`[LLM] Raw response (first 500 chars):`, responseText.substring(0, 500))
+      throw err
+    }
+
+    let validatedResponse: AgentResponse
+    try {
+      validatedResponse = AgentResponseSchema.parse(jsonResponse)
+    } catch (err) {
+      console.error(`[LLM] ❌ Schema validation failed:`, err)
+      throw err
+    }
+
+    console.log(`[LLM] Parsed response: summary=${validatedResponse.meetingSummary.summary.length} chars, decisions=${validatedResponse.meetingSummary.decisions.length}, todos=${validatedResponse.todos.length}, projectStatuses=${validatedResponse.projectStatuses.length}`)
 
     return validatedResponse
   }

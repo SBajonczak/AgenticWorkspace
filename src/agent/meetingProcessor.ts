@@ -150,6 +150,8 @@ export class MeetingProcessor {
 
     // LLM analysis
     console.log(`[Processor] Analysing meeting: ${title}`)
+    console.log(`[Processor] Transcript length: ${transcript.length} chars | Participants: ${participants.length}`)
+    console.log(`[Processor] Meeting: ${startTime.toISOString()} → ${endTime.toISOString()} | Organizer: ${organizer}`)
     const agentResponse = await this.llmClient.processTranscript(
       { title, organizer, startTime, endTime },
       transcript
