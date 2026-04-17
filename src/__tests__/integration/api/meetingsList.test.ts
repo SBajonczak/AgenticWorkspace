@@ -6,6 +6,7 @@ jest.mock('@/db/repositories/meetingRepository')
 import { auth } from '@/lib/auth'
 import { MeetingRepository } from '@/db/repositories/meetingRepository'
 import { GET } from '@/app/api/meetings/route'
+import { NextRequest } from 'next/server'
 
 const mockAuth = auth as jest.MockedFunction<typeof auth>
 const MockMeetingRepo = MeetingRepository as jest.MockedClass<typeof MeetingRepository>
@@ -41,6 +42,7 @@ const mockMeetings = [
 ]
 
 const mockFindLatest = jest.fn().mockResolvedValue(mockMeetings)
+const request = new NextRequest('http://localhost/api/meetings')
 
 describe('GET /api/meetings', () => {
   beforeEach(() => {
@@ -53,12 +55,12 @@ describe('GET /api/meetings', () => {
 
   it('returns 401 when not authenticated', async () => {
     ;(mockAuth as any).mockResolvedValue(null)
-    const res = await GET()
+    const res = await GET(request)
     expect(res.status).toBe(401)
   })
 
   it('returns meeting list with todoCount and syncedCount', async () => {
-    const res = await GET()
+    const res = await GET(request)
     expect(res.status).toBe(200)
 
     const data = await res.json()
@@ -77,13 +79,13 @@ describe('GET /api/meetings', () => {
   })
 
   it('passes tenantId to repository for scoping', async () => {
-    await GET()
+    await GET(request)
     expect(mockFindLatest).toHaveBeenCalledWith(50, 'tenant-1', 'alice@example.com')
   })
 
   it('passes undefined tenantId when user has no tenant', async () => {
     ;(mockAuth as any).mockResolvedValue({ user: { id: 'u2', email: 'x@x.com' } })
-    await GET()
+    await GET(request)
     expect(mockFindLatest).toHaveBeenCalledWith(50, undefined, 'x@x.com')
   })
 })
