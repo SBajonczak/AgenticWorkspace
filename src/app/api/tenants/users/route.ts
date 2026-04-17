@@ -15,7 +15,30 @@ export async function GET(req: NextRequest) {
   const { session, error } = await requireAuth()
   if (error) return error
 
-  const tenantId = session.user.tenantId
+  let tenantId = session.user.tenantId
+  const azureTid = session.user.azureTid
+
+  // Fresh sessions may have azureTid already, while tenantId is not yet present in the session token.
+  // Resolve tenantId from azure tenant id to keep user search functional right after sign-in.
+  if (!tenantId && azureTid) {
+    const tenantFromAzureTid = await prisma.tenant.findUnique({
+      where: { azureTenantId: azureTid },
+      select: { id: true },
+    })
+
+    if (tenantFromAzureTid?.id) {
+      tenantId = tenantFromAzureTid.id
+
+      // Best-effort backfill so subsequent requests can use session/user tenant association consistently.
+      if (session.user.id) {
+        await prisma.user.updateMany({
+          where: { id: session.user.id, tenantId: null },
+          data: { tenantId },
+        })
+      }
+    }
+  }
+
   if (!tenantId) {
     return NextResponse.json({ error: 'No tenant associated with this account' }, { status: 400 })
   }
