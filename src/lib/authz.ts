@@ -37,6 +37,13 @@ export async function isMeetingParticipant(meetingId: string, userEmail: string)
 }
 
 /**
+ * Returns true if the session user has the 'projectadmin' Azure AD App Role.
+ */
+export function isProjectAdmin(session: { user?: { appRoles?: string[] } } | null): boolean {
+  return session?.user?.appRoles?.includes('projectadmin') === true
+}
+
+/**
  * Server-side guard for API routes. Returns the session or a 401/403 response.
  *
  * Usage in a route handler:
@@ -53,6 +60,7 @@ export async function requireAuth(): Promise<
           tenantId?: string
           aadObjectId?: string
           azureTid?: string
+          appRoles?: string[]
         }
       }
       error: null
@@ -77,6 +85,7 @@ export async function requireAuth(): Promise<
         tenantId?: string
         aadObjectId?: string
         azureTid?: string
+        appRoles?: string[]
       }
       msGraphConsentRequired?: boolean
     },

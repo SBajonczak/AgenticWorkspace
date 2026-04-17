@@ -216,6 +216,40 @@ export class ProjectRepository {
     })
   }
 
+  /**
+   * Returns ALL non-archived projects for a tenant — no user-access filter.
+   * For use by projectadmin users only.
+   */
+  async findAllByTenant(tenantId: string | null | undefined, includeArchived = false): Promise<ProjectWithRelations[]> {
+    return prisma.project.findMany({
+      where: {
+        ...this.buildTenantScope(tenantId),
+        ...(includeArchived ? {} : { archived: false }),
+      },
+      orderBy: { name: 'asc' },
+      include: { aliases: true, sourceLinks: true },
+    })
+  }
+
+  /**
+   * Updates the owner fields of a project. For use by projectadmin users only.
+   */
+  async updateOwner(
+    projectId: string,
+    data: { ownerOid: string; ownerTid: string; ownerName: string }
+  ): Promise<ProjectWithRelations> {
+    return prisma.project.update({
+      where: { id: projectId },
+      data: {
+        ownerOid: data.ownerOid,
+        ownerTid: data.ownerTid,
+        ownerName: data.ownerName,
+        owner: data.ownerName,
+      },
+      include: { aliases: true, sourceLinks: true },
+    })
+  }
+
   async delete(id: string): Promise<void> {
     await prisma.project.delete({ where: { id } })
   }

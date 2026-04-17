@@ -1,10 +1,13 @@
 'use client'
 
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useTranslations } from 'next-intl'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { CheckCircle } from 'lucide-react'
 
 interface Todo {
   id: string
@@ -29,6 +32,36 @@ interface TodoListProps {
 export default function TodoList({ todos }: TodoListProps) {
   const tMeetings = useTranslations('meetings')
   const tCommon = useTranslations('common')
+
+  const [statusMap, setStatusMap] = useState<Record<string, string>>({})
+  const [loadingSet, setLoadingSet] = useState<Set<string>>(new Set())
+
+  const getEffectiveStatus = (todo: Todo) => statusMap[todo.id] ?? todo.status
+
+  const handleMarkDone = async (todoId: string) => {
+    setLoadingSet((prev) => new Set(prev).add(todoId))
+    setStatusMap((prev) => ({ ...prev, [todoId]: 'done' }))
+    try {
+      await fetch(`/api/todos/${todoId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'done' }),
+      })
+    } catch {
+      // revert optimistic update on error
+      setStatusMap((prev) => {
+        const next = { ...prev }
+        delete next[todoId]
+        return next
+      })
+    } finally {
+      setLoadingSet((prev) => {
+        const next = new Set(prev)
+        next.delete(todoId)
+        return next
+      })
+    }
+  }
 
   const getConfidenceClass = (confidence: number) => {
     if (confidence >= 0.85) return 'text-green-400'
@@ -56,57 +89,81 @@ export default function TodoList({ todos }: TodoListProps) {
             <p className="text-muted-foreground text-center py-8">{tMeetings('actionItems.noItems')}</p>
           ) : (
             <div className="space-y-4">
-              {todos.map((todo, index) => (
-                <motion.div
-                  key={todo.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.3 + index * 0.1 }}
-                >
-                  <Card className="bg-background/50 border-border hover:border-primary/50 transition-colors">
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between mb-3">
-                        <h3 className="text-lg font-semibold text-foreground flex-1">{todo.title}</h3>
-                        <div className="flex items-center gap-3">
-                          <span className={cn('text-sm font-medium', getConfidenceClass(todo.confidence))}>
-                            {getConfidenceLabel(todo.confidence)} ({Math.round(todo.confidence * 100)}%)
-                          </span>
-                          {todo.jiraSync?.status === 'synced' && (
-                            <a
-                              href={`${process.env.NEXT_PUBLIC_JIRA_HOST}/browse/${todo.jiraSync.jiraIssueKey}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              <Badge className="bg-blue-600 text-white hover:bg-blue-700 gap-1">
-                                📋 {todo.jiraSync.jiraIssueKey}
-                              </Badge>
-                            </a>
-                          )}
-                        </div>
-                      </div>
-
-                      <p className="text-muted-foreground mb-4">{todo.description}</p>
-
-                      <div className="flex items-center justify-between text-sm">
-                        <div className="flex items-center gap-4">
-                          {todo.assigneeHint && (
-                            <span className="text-muted-foreground">
-                              👤 <span className="text-primary">{todo.assigneeHint}</span>
+              {todos.map((todo, index) => {
+                const effectiveStatus = getEffectiveStatus(todo)
+                const isDone = effectiveStatus === 'done'
+                return (
+                  <motion.div
+                    key={todo.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.3 + index * 0.1 }}
+                  >
+                    <Card className={cn('bg-background/50 border-border hover:border-primary/50 transition-colors', isDone && 'opacity-60')}>
+                      <CardContent className="p-6">
+                        <div className="flex items-start justify-between mb-3">
+                          <h3 className={cn('text-lg font-semibold text-foreground flex-1', isDone && 'line-through text-muted-foreground')}>{todo.title}</h3>
+                          <div className="flex items-center gap-3">
+                            <span className={cn('text-sm font-medium', getConfidenceClass(todo.confidence))}>
+                              {getConfidenceLabel(todo.confidence)} ({Math.round(todo.confidence * 100)}%)
                             </span>
-                          )}
-                          <span className="text-muted-foreground">
-                            {tCommon('labels.status')}:{' '}
-                            <span className="text-foreground capitalize">{todo.status}</span>
-                          </span>
+                            {todo.jiraSync?.status === 'synced' && (
+                              <a
+                                href={`${process.env.NEXT_PUBLIC_JIRA_HOST}/browse/${todo.jiraSync.jiraIssueKey}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <Badge className="bg-blue-600 text-white hover:bg-blue-700 gap-1">
+                                  📋 {todo.jiraSync.jiraIssueKey}
+                                </Badge>
+                              </a>
+                            )}
+                          </div>
                         </div>
-                        {todo.jiraSync?.status === 'failed' && (
-                          <span className="text-destructive text-xs">❌ {tMeetings('actionItems.jiraSyncFailed')}</span>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
+
+                        <p className="text-muted-foreground mb-4">{todo.description}</p>
+
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-4">
+                            {todo.assigneeHint && (
+                              <span className="text-muted-foreground">
+                                👤 <span className="text-primary">{todo.assigneeHint}</span>
+                              </span>
+                            )}
+                            <span className="text-muted-foreground">
+                              {tCommon('labels.status')}:{' '}
+                              <span className="text-foreground capitalize">{effectiveStatus}</span>
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {todo.jiraSync?.status === 'failed' && (
+                              <span className="text-destructive text-xs">❌ {tMeetings('actionItems.jiraSyncFailed')}</span>
+                            )}
+                            {!isDone && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={loadingSet.has(todo.id)}
+                                onClick={() => handleMarkDone(todo.id)}
+                                className="gap-1 text-xs"
+                              >
+                                <CheckCircle className="h-3.5 w-3.5" />
+                                {tMeetings('actionItems.markDone')}
+                              </Button>
+                            )}
+                            {isDone && (
+                              <Badge variant="secondary" className="gap-1 text-xs bg-green-500/20 text-green-400">
+                                <CheckCircle className="h-3 w-3" />
+                                {tMeetings('actionItems.markedDone')}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                )
+              })}
             </div>
           )}
         </CardContent>

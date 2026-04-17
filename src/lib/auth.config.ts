@@ -367,6 +367,15 @@ export const authConfig = {
         if (aadObjectId) {
           ;(token as Record<string, unknown>).aadObjectId = aadObjectId
         }
+
+        // Extract Azure AD App Roles from the id_token
+        if (account.id_token) {
+          const idTokenPayload = decodeJwtPayload(account.id_token)
+          const roles = idTokenPayload?.roles
+          if (Array.isArray(roles) && roles.every((r) => typeof r === 'string')) {
+            ;(token as Record<string, unknown>).appRoles = roles
+          }
+        }
       }
 
       // Never store large delegated access tokens in the JWT cookie payload.
@@ -411,8 +420,13 @@ export const authConfig = {
       if (session.user && azureTenantId) {
         ;(session.user as { azureTid?: string }).azureTid = azureTenantId
       }
+
+      const appRoles = (token as Record<string, unknown>)?.appRoles
+      if (session.user && Array.isArray(appRoles)) {
+        ;(session.user as { appRoles?: string[] }).appRoles = appRoles as string[]
+      }
+
       if (typeof token?.msGraphConsentRequired === 'boolean') {
-        // @ts-expect-error extended session field
         session.msGraphConsentRequired = token.msGraphConsentRequired
       }
       return session

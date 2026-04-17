@@ -1,15 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { useTheme } from 'next-themes'
 import { Link } from '@/i18n/routing'
 import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
 import { cn } from '@/lib/utils'
-import { Sun, Moon, Menu, X } from 'lucide-react'
+import { Sun, Moon, Menu, X, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
-type ActiveLink = 'dashboard' | 'meetings' | 'projects' | 'schedule' | 'goals'
+type ActiveLink = 'dashboard' | 'meetings' | 'projects' | 'schedule' | 'goals' | 'admin'
 
 interface AppHeaderProps {
   activeLink?: ActiveLink
@@ -27,6 +27,18 @@ export default function AppHeader({ activeLink }: AppHeaderProps) {
   const tCommon = useTranslations('common')
   const { theme, setTheme } = useTheme()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [isProjectAdmin, setIsProjectAdmin] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/user/me')
+      .then((r) => r.json())
+      .then((data: { appRoles?: string[] }) => {
+        if (data.appRoles?.includes('projectadmin')) {
+          setIsProjectAdmin(true)
+        }
+      })
+      .catch(() => {/* silently ignore */})
+  }, [])
 
   return (
     <header className="border-b border-border bg-background/95 backdrop-blur-md sticky top-0 z-50">
@@ -52,6 +64,20 @@ export default function AppHeader({ activeLink }: AppHeaderProps) {
                 {(tCommon as any)(item.labelKey)}
               </Link>
             ))}
+            {isProjectAdmin && (
+              <Link
+                href="/admin/projects"
+                className={cn(
+                  'px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-1',
+                  activeLink === 'admin'
+                    ? 'text-foreground bg-accent font-semibold'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                )}
+              >
+                <ShieldCheck className="h-3.5 w-3.5" />
+                {(tCommon as any)('navigation.admin')}
+              </Link>
+            )}
             <div className="ml-2 flex items-center gap-1">
               <LanguageSwitcher />
               <Button
@@ -109,6 +135,21 @@ export default function AppHeader({ activeLink }: AppHeaderProps) {
               {(tCommon as any)(item.labelKey)}
             </Link>
           ))}
+          {isProjectAdmin && (
+            <Link
+              href="/admin/projects"
+              onClick={() => setMobileOpen(false)}
+              className={cn(
+                'px-3 py-2.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1',
+                activeLink === 'admin'
+                  ? 'text-foreground bg-accent font-semibold'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+              )}
+            >
+              <ShieldCheck className="h-3.5 w-3.5" />
+              {(tCommon as any)('navigation.admin')}
+            </Link>
+          )}
           <div className="pt-2 border-t border-border mt-1">
             <LanguageSwitcher />
           </div>

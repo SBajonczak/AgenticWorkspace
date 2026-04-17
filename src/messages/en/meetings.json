@@ -19,7 +19,9 @@
       "title": "Action Items",
       "noItems": "No action items found",
       "assignedTo": "Assigned to",
-      "jiraSyncFailed": "Jira sync failed"
+      "jiraSyncFailed": "Jira sync failed",
+      "markDone": "Mark as done",
+      "markedDone": "Done"
     }
   }
 }

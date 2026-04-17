@@ -1,0 +1,30 @@
+{
+  "projects": {
+    "title": "Projektverwaltung",
+    "subtitle": "Alle Projekte der Organisation verwalten",
+    "table": {
+      "name": "Projektname",
+      "status": "Status",
+      "owner": "Besitzer",
+      "members": "Mitglieder",
+      "actions": "Aktionen"
+    },
+    "changeOwner": "Besitzer ändern",
+    "changeOwnerDialog": {
+      "title": "Projektbesitzer ändern",
+      "description": "Suchen Sie nach einem Benutzer, der als neuer Besitzer dieses Projekts festgelegt werden soll.",
+      "search": "Benutzer suchen...",
+      "noResults": "Keine Benutzer gefunden",
+      "confirm": "Als Besitzer festlegen",
+      "cancel": "Abbrechen",
+      "success": "Besitzer erfolgreich aktualisiert"
+    },
+    "statusLabels": {
+      "active": "Aktiv",
+      "archived": "Archiviert",
+      "completed": "Abgeschlossen"
+    },
+    "noProjects": "Keine Projekte gefunden",
+    "error": "Projekte konnten nicht geladen werden"
+  }
+}

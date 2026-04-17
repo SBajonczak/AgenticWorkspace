@@ -49,6 +49,7 @@
         "title": "Tasks & Action Items",
         "noTasks": "No tasks found",
         "from": "from",
+        "markDone": "Mark as done",
         "priority": {
           "high": "High",
           "medium": "Medium",

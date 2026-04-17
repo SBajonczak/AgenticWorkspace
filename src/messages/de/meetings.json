@@ -19,7 +19,9 @@
       "title": "Aktionspunkte",
       "noItems": "Keine Aktionspunkte gefunden",
       "assignedTo": "Zugewiesen an",
-      "jiraSyncFailed": "Jira-Synchronisierung fehlgeschlagen"
+      "jiraSyncFailed": "Jira-Synchronisierung fehlgeschlagen",
+      "markDone": "Als erledigt markieren",
+      "markedDone": "Erledigt"
     }
   }
 }

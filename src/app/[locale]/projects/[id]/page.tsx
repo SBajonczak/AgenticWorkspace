@@ -190,6 +190,8 @@ export default function ProjectDetailPage() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [confirming, setConfirming] = useState(false)
+  const [todoStatusMap, setTodoStatusMap] = useState<Record<string, string>>({})
+  const [todoMarkingSet, setTodoMarkingSet] = useState<Set<string>>(new Set())
   const [membersData, setMembersData] = useState<ProjectMembersResponse | null>(null)
   const [membersLoading, setMembersLoading] = useState(false)
   const [memberActionLoading, setMemberActionLoading] = useState(false)
@@ -316,6 +318,30 @@ export default function ProjectDetailPage() {
       }
     } finally {
       setConfirming(false)
+    }
+  }
+
+  const handleMarkTodoDone = async (todoId: string) => {
+    setTodoMarkingSet((prev) => new Set(prev).add(todoId))
+    setTodoStatusMap((prev) => ({ ...prev, [todoId]: 'done' }))
+    try {
+      await fetch(`/api/todos/${todoId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'done' }),
+      })
+    } catch {
+      setTodoStatusMap((prev) => {
+        const next = { ...prev }
+        delete next[todoId]
+        return next
+      })
+    } finally {
+      setTodoMarkingSet((prev) => {
+        const next = new Set(prev)
+        next.delete(todoId)
+        return next
+      })
     }
   }
 
@@ -666,12 +692,15 @@ export default function ProjectDetailPage() {
                   </Card>
                 ) : (
                   <div className="space-y-3">
-                    {allTodos.map((t) => (
-                      <Card key={t.id} className="backdrop-blur rounded-xl">
+                    {allTodos.map((t) => {
+                      const effectiveStatus = todoStatusMap[t.id] ?? t.status
+                      const isDone = effectiveStatus === 'done'
+                      return (
+                      <Card key={t.id} className={cn('backdrop-blur rounded-xl', isDone && 'opacity-60')}>
                         <CardContent className="p-4">
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-foreground">{t.title}</p>
+                              <p className={cn('text-sm font-medium text-foreground', isDone && 'line-through text-muted-foreground')}>{t.title}</p>
                               <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground flex-wrap">
                                 {t.assigneeHint && (
                                   <>
@@ -699,14 +728,27 @@ export default function ProjectDetailPage() {
                                   {tDetail(`tasks.priority.${t.priority}` as Parameters<typeof tDetail>[0])}
                                 </Badge>
                               )}
-                              <Badge variant="outline" className={cn('text-xs capitalize', todoStatusBadgeClass(t.status))}>
-                                {tDetail(`tasks.statusLabel.${t.status}` as Parameters<typeof tDetail>[0]) ?? t.status}
+                              <Badge variant="outline" className={cn('text-xs capitalize', todoStatusBadgeClass(effectiveStatus))}>
+                                {tDetail(`tasks.statusLabel.${effectiveStatus}` as Parameters<typeof tDetail>[0]) ?? effectiveStatus}
                               </Badge>
+                              {!isDone && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={todoMarkingSet.has(t.id)}
+                                  onClick={() => handleMarkTodoDone(t.id)}
+                                  className="gap-1 text-xs h-7"
+                                >
+                                  <CheckCircle className="h-3.5 w-3.5" />
+                                  {tDetail('tasks.markDone')}
+                                </Button>
+                              )}
                             </div>
                           </div>
                         </CardContent>
                       </Card>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
               </motion.div>

@@ -51,6 +51,7 @@ export default getRequestConfig(async ({ requestLocale }) => {
     (await import(`@/messages/${locale}/agent.json`)).default,
     (await import(`@/messages/${locale}/widgets.json`)).default,
     (await import(`@/messages/${locale}/schedule.json`)).default,
+    (await import(`@/messages/${locale}/admin.json`)).default,
   );
 
   return {

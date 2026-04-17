@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { requireAuth, requireMeetingParticipant } from '@/lib/authz'
+import { requireAuth, requireMeetingParticipant, isProjectAdmin } from '@/lib/authz'
 import { TodoRepository } from '@/db/repositories/todoRepository'
 import { ProjectRepository } from '@/db/repositories/projectRepository'
 
 const PatchTodoSchema = z.object({
-  projectId: z.string().min(1).nullable(),
+  projectId: z.string().min(1).nullable().optional(),
+  status: z.enum(['pending', 'in_progress', 'done']).optional(),
 })
 
 function getTenantId(session: any): string | undefined {
@@ -44,16 +45,21 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ error: 'Todo not found' }, { status: 404 })
   }
 
-  const participantCheck = await requireMeetingParticipant(todo.meetingId)
-  if (participantCheck.error) {
-    return participantCheck.error
+  if (!isProjectAdmin(session)) {
+    if (!todo.meetingId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+    const participantCheck = await requireMeetingParticipant(todo.meetingId)
+    if (participantCheck.error) {
+      return participantCheck.error
+    }
   }
 
   const tenantId = getTenantId(session)
   const identity = getIdentity(session)
-  const { projectId } = parsed.data
+  const { projectId, status } = parsed.data
 
-  if (projectId !== null) {
+  if (projectId !== undefined && projectId !== null) {
     const project = await projectRepo.findById(projectId)
     if (!project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 })
@@ -81,12 +87,21 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
   }
 
-  const updated = await todoRepo.assignProject(todo.id, projectId)
+  if (projectId !== undefined) {
+    await todoRepo.assignProject(todo.id, projectId)
+  }
+
+  if (status !== undefined) {
+    await todoRepo.update(todo.id, { status })
+  }
+
+  const updated = await todoRepo.findById(todo.id)
 
   return NextResponse.json({
     todo: {
-      id: updated.id,
-      projectId: updated.projectId,
+      id: updated!.id,
+      projectId: updated!.projectId,
+      status: updated!.status,
     },
   })
 }

@@ -49,6 +49,7 @@
         "title": "Aufgaben & Maßnahmen",
         "noTasks": "Keine Aufgaben gefunden",
         "from": "aus",
+        "markDone": "Als erledigt markieren",
         "priority": {
           "high": "Hoch",
           "medium": "Mittel",

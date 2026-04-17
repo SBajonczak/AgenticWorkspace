@@ -6,4 +6,5 @@ export interface DashboardUserProfile {
   location: string | null
   initials: string
   avatarUrl: string | null
+  appRoles?: string[]
 }

@@ -1,0 +1,30 @@
+{
+  "projects": {
+    "title": "Project Administration",
+    "subtitle": "Manage all projects across the organization",
+    "table": {
+      "name": "Project Name",
+      "status": "Status",
+      "owner": "Owner",
+      "members": "Members",
+      "actions": "Actions"
+    },
+    "changeOwner": "Change Owner",
+    "changeOwnerDialog": {
+      "title": "Change Project Owner",
+      "description": "Search for a user to assign as the new owner of this project.",
+      "search": "Search users...",
+      "noResults": "No users found",
+      "confirm": "Set as Owner",
+      "cancel": "Cancel",
+      "success": "Owner updated successfully"
+    },
+    "statusLabels": {
+      "active": "Active",
+      "archived": "Archived",
+      "completed": "Completed"
+    },
+    "noProjects": "No projects found",
+    "error": "Failed to load projects"
+  }
+}

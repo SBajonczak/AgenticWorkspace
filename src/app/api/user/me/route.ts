@@ -88,6 +88,7 @@ export async function GET() {
     location,
     initials,
     avatarUrl: sessionUser.image ?? (hasGraphToken ? '/api/user/me/photo' : null),
+    appRoles: (sessionUser as { appRoles?: string[] }).appRoles ?? [],
   }
 
   return NextResponse.json(result)
