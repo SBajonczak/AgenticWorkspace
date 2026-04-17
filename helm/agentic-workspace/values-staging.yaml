@@ -15,7 +15,7 @@ web:
     tls:
       enabled: true
       secretName: workplace-staging-realapps-org-tls
-      issuer: letsencrypt-staging
+      issuer: letsencrypt-prod
       issuerKind: ClusterIssuer
 
 worker:
