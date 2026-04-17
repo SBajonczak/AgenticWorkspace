@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
+import { normalizeTenantUsersPayload } from '@/lib/tenantUsersPayload'
 import {
   User,
   Users,
@@ -245,8 +246,8 @@ export default function ProjectDetailPage() {
         const query = trimmed.length > 0 ? `?q=${encodeURIComponent(trimmed)}` : ''
         const res = await fetch(`/api/tenants/users${query}`, { cache: 'no-store' })
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        const payload = (await res.json()) as { users?: UserSearchEntry[] }
-        setSearchResults(payload.users ?? [])
+        const payload = await res.json()
+        setSearchResults(normalizeTenantUsersPayload(payload) as UserSearchEntry[])
       } catch {
         setSearchResults([])
       } finally {

@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { normalizeAdminProjectsPayload } from '@/lib/adminProjectsPayload'
+import { normalizeTenantUsersPayload, TenantUserSearchEntry } from '@/lib/tenantUsersPayload'
 import { ShieldCheck, Loader2, Search, UserCog, CheckCircle, X } from 'lucide-react'
 
 // ---------------------------------------------------------------------------
@@ -35,11 +36,8 @@ interface AdminProject {
     _count?: { members: number }
 }
 
-interface UserSearchResult {
-    id: string
-    oid: string
-    tid?: string
-    displayName: string
+interface UserSearchResult extends TenantUserSearchEntry {
+    id?: string
     mail?: string | null
 }
 
@@ -84,12 +82,15 @@ function OwnerDialog({ project, onClose, onOwnerChanged, t }: OwnerDialogProps) 
         setSearching(true)
         try {
             const res = await fetch(`/api/tenants/users?q=${encodeURIComponent(q)}`)
-            if (res.ok) {
-                const data: UserSearchResult[] = await res.json()
-                setResults(data)
+            const payload = await res.json().catch(() => null)
+            if (!res.ok) {
+                setResults([])
+                return
             }
+
+            setResults(normalizeTenantUsersPayload(payload) as UserSearchResult[])
         } catch {
-            /* ignore */
+            setResults([])
         } finally {
             setSearching(false)
         }

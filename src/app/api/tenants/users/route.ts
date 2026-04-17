@@ -31,10 +31,14 @@ export async function GET(req: NextRequest) {
 
       // Best-effort backfill so subsequent requests can use session/user tenant association consistently.
       if (session.user.id) {
-        await prisma.user.updateMany({
-          where: { id: session.user.id, tenantId: null },
-          data: { tenantId },
-        })
+        try {
+          await prisma.user.updateMany({
+            where: { id: session.user.id, tenantId: null },
+            data: { tenantId },
+          })
+        } catch (persistError) {
+          console.warn('[api/tenants/users] Failed to backfill user tenantId', persistError)
+        }
       }
     }
   }
