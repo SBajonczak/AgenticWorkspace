@@ -124,7 +124,8 @@ export class MeetingProcessor {
     endTime: Date,
     transcript: string,
     participants: string[] = [],
-    tenantId?: string
+    tenantId?: string,
+    ownerIdentity?: { oid?: string | null; tid?: string | null; name?: string | null }
   ): Promise<ProcessingResult> {
     // Upsert meeting record
     const existingMeeting = await this.meetingRepo.findByMeetingId(meetingId)
@@ -176,25 +177,26 @@ export class MeetingProcessor {
     if (dedupedProjectStatuses.length > 0) {
       const statusData = await Promise.all(
         dedupedProjectStatuses.map(async (projectStatus) => {
-          let matched = await this.projectRepo.findByNameOrAlias(projectStatus.projectName, tenantId)
-          if (matched) {
-            console.log(`[Processor] Matched project candidate "${projectStatus.projectName}" to existing project "${matched.name}"`)
-          }
-
-          if (!matched) {
-            try {
-              matched = await this.projectRepo.create({
-                tenantId: tenantId ?? null,
-                name: projectStatus.projectName,
-                status: 'active',
-                confirmed: false,
-                description: this.buildAutoCreatedDescription(projectStatus.summary, startTime),
-              })
-              console.log(`[Processor] Auto-created unconfirmed project: "${projectStatus.projectName}"`)
-            } catch (err) {
-              console.warn(`[Processor] Could not auto-create project "${projectStatus.projectName}":`, err)
+          const matched = await this.projectRepo.findOrCreateByNameOrAlias(
+            projectStatus.projectName,
+            tenantId,
+            {
+              description: this.buildAutoCreatedDescription(projectStatus.summary, startTime),
+              confirmed: false,
+              owner:
+                ownerIdentity?.oid && ownerIdentity?.tid
+                  ? {
+                      oid: ownerIdentity.oid,
+                      tid: ownerIdentity.tid,
+                      name: ownerIdentity.name ?? null,
+                    }
+                  : undefined,
             }
-          }
+          )
+
+          console.log(
+            `[Processor] Resolved project "${projectStatus.projectName}" as "${matched.name}"`
+          )
 
           if (matched) {
             resolvedProjects.push({
@@ -294,7 +296,8 @@ export class MeetingProcessor {
       meeting.endTime,
       meeting.transcript,
       participants,
-      meeting.tenantId ?? undefined
+      meeting.tenantId ?? undefined,
+      undefined
     )
   }
 }

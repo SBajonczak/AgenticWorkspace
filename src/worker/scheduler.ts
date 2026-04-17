@@ -53,7 +53,17 @@ function clampLookaheadDays(value: unknown): number {
   return Math.max(1, Math.min(31, normalized))
 }
 
-async function runForUser(user: { id: string; email: string | null; tenantId: string | null }, intervalMinutes: number): Promise<void> {
+async function runForUser(
+  user: {
+    id: string
+    email: string | null
+    tenantId: string | null
+    aadObjectId: string | null
+    azureTenantId: string | null
+    name: string | null
+  },
+  intervalMinutes: number
+): Promise<void> {
   const syncRepo = new UserSyncStateRepository()
   const tokenService = new UserTokenService(syncRepo)
   const nextRunAt = getNextRunAt(intervalMinutes)
@@ -148,7 +158,12 @@ async function runForUser(user: { id: string; email: string | null; tenantId: st
         new Date(meeting.end.dateTime),
         transcript,
         participants,
-        user.tenantId ?? undefined
+        user.tenantId ?? undefined,
+        {
+          oid: user.aadObjectId,
+          tid: user.azureTenantId,
+          name: user.name ?? user.email,
+        }
       )
 
       // Persist sync metadata for the newly created meeting row.
@@ -181,6 +196,13 @@ export async function runAgentCycleForUser(userId: string): Promise<void> {
       id: true,
       email: true,
       tenantId: true,
+      aadObjectId: true,
+      name: true,
+      tenant: {
+        select: {
+          azureTenantId: true,
+        },
+      },
     },
   })
 
@@ -188,7 +210,17 @@ export async function runAgentCycleForUser(userId: string): Promise<void> {
     throw new Error('User not found')
   }
 
-  await runForUser(user, configuredIntervalMinutes)
+  await runForUser(
+    {
+      id: user.id,
+      email: user.email,
+      tenantId: user.tenantId,
+      aadObjectId: user.aadObjectId,
+      azureTenantId: user.tenant?.azureTenantId ?? null,
+      name: user.name,
+    },
+    configuredIntervalMinutes
+  )
 }
 
 export async function runAgentCycle(): Promise<void> {
@@ -213,11 +245,28 @@ export async function runAgentCycle(): Promise<void> {
         id: true,
         email: true,
         tenantId: true,
+        aadObjectId: true,
+        name: true,
+        tenant: {
+          select: {
+            azureTenantId: true,
+          },
+        },
       },
     })
 
     for (const user of users) {
-      await runForUser(user, configuredIntervalMinutes)
+      await runForUser(
+        {
+          id: user.id,
+          email: user.email,
+          tenantId: user.tenantId,
+          aadObjectId: user.aadObjectId,
+          azureTenantId: user.tenant?.azureTenantId ?? null,
+          name: user.name,
+        },
+        configuredIntervalMinutes
+      )
     }
 
     console.log(`[Worker] Cycle complete for ${users.length} user(s).`)

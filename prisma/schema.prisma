@@ -145,6 +145,9 @@ model Project {
   description String?
   status      String   @default("active")  // active | on_hold | completed | archived
   owner       String?
+  ownerOid    String?
+  ownerTid    String?
+  ownerName   String?
   archived    Boolean  @default(false)
   confirmed   Boolean  @default(true)
   createdAt   DateTime @default(now())
@@ -152,12 +155,36 @@ model Project {
 
   tenant      Tenant?            @relation(fields: [tenantId], references: [id])
   aliases     ProjectAlias[]
+  members     ProjectMember[]
   sourceLinks ProjectSourceLink[]
   statuses    ProjectStatus[]
   todos       Todo[]
 
   @@index([tenantId])
   @@index([name])
+  @@index([ownerTid, ownerOid])
+  @@unique([tenantId, name])
+}
+
+model ProjectMember {
+  id          String   @id @default(uuid())
+  projectId   String
+  userId      String
+  memberOid   String
+  memberTid   String
+  displayName String?
+  email       String?
+  role        String   @default("viewer")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([userId])
+  @@index([memberTid, memberOid])
+  @@unique([projectId, memberTid, memberOid])
 }
 
 // Alternate names / abbreviations used in meeting transcripts to match this project.
@@ -197,6 +224,7 @@ model User {
   id            String    @id @default(uuid())
   name          String?
   email         String?   @unique
+  aadObjectId   String?
   emailVerified DateTime?
   image         String?
   createdAt     DateTime  @default(now())
@@ -205,10 +233,15 @@ model User {
   // Optional tenant link – set on first login via Entra ID
   tenantId      String?
   tenant        Tenant?   @relation(fields: [tenantId], references: [id])
+  projectMemberships ProjectMember[]
   syncState     UserSyncState?
 
   accounts      Account[]
   sessions      Session[]
+
+  @@index([tenantId])
+  @@index([aadObjectId])
+  @@unique([tenantId, aadObjectId])
 }
 
 model UserSyncState {

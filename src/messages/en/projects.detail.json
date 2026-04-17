@@ -4,9 +4,28 @@
       "backToList": "Back to projects",
       "tabs": {
         "overview": "Overview",
+        "team": "Team",
         "meetings": "Meetings",
         "tasks": "Tasks",
         "knowledge": "Knowledge Base"
+      },
+      "team": {
+        "title": "Project Access",
+        "ownerLabel": "Owner",
+        "ownerUnknown": "Unknown owner",
+        "membersTitle": "Team Members",
+        "addTitle": "Add Team Member",
+        "searchPlaceholder": "Search signed-in users (Graph starts at 3 letters)",
+        "searching": "Searching users...",
+        "addAction": "Add",
+        "removeAction": "Remove",
+        "notAssignable": "Sign in first",
+        "empty": "No team members yet.",
+        "loading": "Loading team members...",
+        "graphHint": "User search runs local first. Graph lookup starts after 3 characters.",
+        "loadError": "Could not load team members.",
+        "addError": "Could not add team member.",
+        "removeError": "Could not remove team member."
       },
       "overview": {
         "title": "Project Overview",

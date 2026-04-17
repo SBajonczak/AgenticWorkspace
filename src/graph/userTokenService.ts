@@ -25,6 +25,12 @@ interface TokenResponse {
   token_type?: string
 }
 
+export interface GraphUserSearchResult {
+  oid: string
+  displayName: string
+  email: string | null
+}
+
 export class UserTokenService {
   private syncStateRepository: UserSyncStateRepository
 
@@ -75,6 +81,51 @@ export class UserTokenService {
     return refreshed.access_token
   }
 
+  async searchPeopleForUser(userId: string, query: string, limit = 10): Promise<GraphUserSearchResult[]> {
+    const normalizedQuery = query.trim()
+    if (normalizedQuery.length < 3) return []
+
+    const accessToken = await this.getValidAccessTokenForUser(userId)
+    const endpoint = new URL('https://graph.microsoft.com/v1.0/me/people')
+    endpoint.searchParams.set('$top', String(Math.max(1, Math.min(limit, 25))))
+    endpoint.searchParams.set('$search', `"${normalizedQuery}"`)
+    endpoint.searchParams.set('$select', 'id,displayName,mail,userPrincipalName')
+
+    const response = await fetch(endpoint.toString(), {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      cache: 'no-store',
+    })
+
+    if (!response.ok) {
+      throw new Error(`Graph people search failed (${response.status})`)
+    }
+
+    const payload = (await response.json()) as {
+      value?: Array<{
+        id?: string
+        displayName?: string
+        mail?: string
+        userPrincipalName?: string
+      }>
+    }
+
+    const rows = payload.value ?? []
+    return rows
+      .map((row) => {
+        const oid = row.id?.trim()
+        if (!oid) return null
+        return {
+          oid,
+          displayName: row.displayName?.trim() || row.userPrincipalName?.trim() || row.mail?.trim() || oid,
+          email: row.mail?.trim() || row.userPrincipalName?.trim() || null,
+        }
+      })
+      .filter((row): row is GraphUserSearchResult => Boolean(row))
+  }
+
   private expiresAtWithSafetyWindow(): number {
     return Math.floor(Date.now() / 1000) + TOKEN_EXPIRY_SAFETY_WINDOW_SECONDS
   }
@@ -99,6 +150,7 @@ export class UserTokenService {
         'email',
         'offline_access',
         'User.Read',
+        'People.Read',
         'Calendars.Read',
         'OnlineMeetings.Read',
         'OnlineMeetingTranscript.Read.All',

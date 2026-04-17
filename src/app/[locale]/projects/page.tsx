@@ -141,7 +141,6 @@ function ProjectDialog({
   const isEdit = project !== null
   const [name, setName] = useState(project?.name ?? '')
   const [description, setDescription] = useState(project?.description ?? '')
-  const [owner, setOwner] = useState(project?.owner ?? '')
   const [status, setStatus] = useState(project?.status ?? 'active')
   const [aliasText, setAliasText] = useState(project?.aliases.map((a) => a.alias).join('\n') ?? '')
   const [sources, setSources] = useState<ProjectSourceLink[]>(project?.sourceLinks ?? [])
@@ -184,7 +183,7 @@ function ProjectDialog({
       .split('\n')
       .map((a) => a.trim())
       .filter(Boolean)
-    const payload = { name, description: description || null, owner: owner || null, status, aliases }
+    const payload = { name, description: description || null, status, aliases }
     const res = await fetch(
       isEdit ? `/api/projects/${project!.id}` : '/api/projects',
       {
@@ -240,29 +239,18 @@ function ProjectDialog({
             />
           </div>
 
-          {/* Owner + Status */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">{t('manage.owner')}</label>
-              <input
-                className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder={t('manage.ownerPlaceholder')}
-                value={owner}
-                onChange={(e) => setOwner(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">{t('manage.status')}</label>
-              <select
-                className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-              >
-                {(['active', 'on_hold', 'completed'] as const).map((s) => (
-                  <option key={s} value={s}>{t(`status.${s}`)}</option>
-                ))}
-              </select>
-            </div>
+          {/* Status */}
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground mb-1">{t('manage.status')}</label>
+            <select
+              className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+            >
+              {(['active', 'on_hold', 'completed'] as const).map((s) => (
+                <option key={s} value={s}>{t(`status.${s}`)}</option>
+              ))}
+            </select>
           </div>
 
           {/* Aliases */}

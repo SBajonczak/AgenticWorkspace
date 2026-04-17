@@ -12,6 +12,14 @@ function getTenantId(session: any): string | undefined {
   return (session?.user as any)?.tenantId ?? undefined
 }
 
+function getIdentity(session: any): { oid?: string; tid?: string } {
+  const user = (session?.user as any) ?? {}
+  return {
+    oid: user.aadObjectId ?? undefined,
+    tid: user.azureTid ?? undefined,
+  }
+}
+
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const todoRepo = new TodoRepository()
   const projectRepo = new ProjectRepository()
@@ -42,6 +50,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   const tenantId = getTenantId(session)
+  const identity = getIdentity(session)
   const { projectId } = parsed.data
 
   if (projectId !== null) {
@@ -64,6 +73,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       }
     } else if (project.tenantId) {
       return NextResponse.json({ error: 'Forbidden project scope' }, { status: 403 })
+    }
+
+    const hasAccess = await projectRepo.canUserAccessProject(project.id, identity.tid, identity.oid)
+    if (!hasAccess) {
+      return NextResponse.json({ error: 'Forbidden project access' }, { status: 403 })
     }
   }
 

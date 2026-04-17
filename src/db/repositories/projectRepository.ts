@@ -11,6 +11,9 @@ export interface ProjectCreateData {
   description?: string | null
   status?: string
   owner?: string | null
+  ownerOid?: string | null
+  ownerTid?: string | null
+  ownerName?: string | null
   confirmed?: boolean
 }
 
@@ -19,6 +22,9 @@ export interface ProjectUpdateData {
   description?: string | null
   status?: string
   owner?: string | null
+  ownerOid?: string | null
+  ownerTid?: string | null
+  ownerName?: string | null
   archived?: boolean
   confirmed?: boolean
 }
@@ -99,6 +105,9 @@ export class ProjectRepository {
         description: data.description ?? null,
         status: data.status ?? 'active',
         owner: data.owner ?? null,
+        ownerOid: data.ownerOid ?? null,
+        ownerTid: data.ownerTid ?? null,
+        ownerName: data.ownerName ?? null,
         confirmed: data.confirmed ?? true,
       },
       include: { aliases: true, sourceLinks: true },
@@ -121,6 +130,82 @@ export class ProjectRepository {
       orderBy: { name: 'asc' },
       include: { aliases: true, sourceLinks: true },
     })
+  }
+
+  async findAccessibleByIdentity(
+    tenantId: string | null | undefined,
+    userTid?: string | null,
+    userOid?: string | null,
+    includeArchived = false
+  ): Promise<ProjectWithRelations[]> {
+    if (!userTid || !userOid) {
+      return []
+    }
+
+    return prisma.project.findMany({
+      where: {
+        ...this.buildTenantScope(tenantId),
+        ...(includeArchived ? {} : { archived: false }),
+        OR: [
+          {
+            ownerTid: userTid,
+            ownerOid: userOid,
+          },
+          {
+            members: {
+              some: {
+                memberTid: userTid,
+                memberOid: userOid,
+              },
+            },
+          },
+        ],
+      },
+      orderBy: { name: 'asc' },
+      include: { aliases: true, sourceLinks: true },
+    })
+  }
+
+  async canUserAccessProject(projectId: string, userTid?: string | null, userOid?: string | null): Promise<boolean> {
+    if (!userTid || !userOid) return false
+
+    const project = await prisma.project.findFirst({
+      where: {
+        id: projectId,
+        OR: [
+          {
+            ownerTid: userTid,
+            ownerOid: userOid,
+          },
+          {
+            members: {
+              some: {
+                memberTid: userTid,
+                memberOid: userOid,
+              },
+            },
+          },
+        ],
+      },
+      select: { id: true },
+    })
+
+    return Boolean(project)
+  }
+
+  async isProjectOwner(projectId: string, userTid?: string | null, userOid?: string | null): Promise<boolean> {
+    if (!userTid || !userOid) return false
+
+    const project = await prisma.project.findFirst({
+      where: {
+        id: projectId,
+        ownerTid: userTid,
+        ownerOid: userOid,
+      },
+      select: { id: true },
+    })
+
+    return Boolean(project)
   }
 
   async update(id: string, data: ProjectUpdateData): Promise<ProjectWithRelations> {
@@ -146,7 +231,6 @@ export class ProjectRepository {
     const candidates = await prisma.project.findMany({
       where: {
         archived: false,
-        confirmed: true,
         ...this.buildTenantScope(tenantId),
       },
       include: { aliases: true, sourceLinks: true },
@@ -169,6 +253,39 @@ export class ProjectRepository {
     }
 
     return bestScore >= 60 ? bestMatch : null
+  }
+
+  async findOrCreateByNameOrAlias(
+    nameOrAlias: string,
+    tenantId?: string | null,
+    options?: {
+      description?: string | null
+      owner?: { oid: string; tid: string; name?: string | null }
+      confirmed?: boolean
+    }
+  ): Promise<ProjectWithRelations> {
+    const existing = await this.findByNameOrAlias(nameOrAlias, tenantId)
+    if (existing) return existing
+
+    try {
+      return await this.create({
+        tenantId: tenantId ?? null,
+        name: nameOrAlias,
+        description: options?.description ?? null,
+        status: 'active',
+        confirmed: options?.confirmed ?? false,
+        ownerOid: options?.owner?.oid ?? null,
+        ownerTid: options?.owner?.tid ?? null,
+        ownerName: options?.owner?.name ?? null,
+      })
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        const retry = await this.findByNameOrAlias(nameOrAlias, tenantId)
+        if (retry) return retry
+      }
+
+      throw error
+    }
   }
 
   // ---------------------------------------------------------------------------

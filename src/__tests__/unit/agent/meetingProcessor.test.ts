@@ -81,16 +81,18 @@ const makeMockTicketSyncRepo = () => ({
 })
 
 const makeMockProjectRepo = () => ({
-  findByNameOrAlias: jest.fn().mockResolvedValue(null),
-  create: jest.fn().mockImplementation(async ({ name, tenantId, description, confirmed, status }) => ({
+  findOrCreateByNameOrAlias: jest.fn().mockImplementation(async (name, tenantId, options) => ({
     id: `project-${name.toLowerCase().replace(/\s+/g, '-')}`,
     tenantId,
     name,
-    description: description ?? null,
-    status: status ?? 'active',
+    description: options?.description ?? null,
+    status: 'active',
     owner: null,
+    ownerOid: options?.owner?.oid ?? null,
+    ownerTid: options?.owner?.tid ?? null,
+    ownerName: options?.owner?.name ?? null,
     archived: false,
-    confirmed: confirmed ?? false,
+    confirmed: options?.confirmed ?? false,
     aliases: [],
     sourceLinks: [],
   })),
@@ -280,10 +282,10 @@ describe('MeetingProcessor', () => {
         'tenant-1'
       )
 
-      expect(projectRepo.create).toHaveBeenCalledWith(
+      expect(projectRepo.findOrCreateByNameOrAlias).toHaveBeenCalledWith(
+        'Atlas',
+        'tenant-1',
         expect.objectContaining({
-          tenantId: 'tenant-1',
-          name: 'Atlas',
           confirmed: false,
         })
       )
@@ -298,13 +300,16 @@ describe('MeetingProcessor', () => {
     it('reuses an existing fuzzy-matched project without creating a duplicate', async () => {
       const todoRepo = makeMockTodoRepo()
       const projectRepo = makeMockProjectRepo()
-      projectRepo.findByNameOrAlias.mockResolvedValue({
+      projectRepo.findOrCreateByNameOrAlias.mockResolvedValue({
         id: 'project-atlas-existing',
         tenantId: 'tenant-1',
         name: 'Atlas Platform',
         description: null,
         status: 'active',
         owner: null,
+        ownerOid: null,
+        ownerTid: null,
+        ownerName: null,
         archived: false,
         confirmed: true,
         aliases: [],
@@ -334,7 +339,6 @@ describe('MeetingProcessor', () => {
         'tenant-1'
       )
 
-      expect(projectRepo.create).not.toHaveBeenCalled()
       expect(todoRepo.createMany).toHaveBeenCalledWith([
         expect.objectContaining({ projectId: 'project-atlas-existing' }),
       ])
@@ -365,10 +369,10 @@ describe('MeetingProcessor', () => {
         []
       )
 
-      expect(projectRepo.create).toHaveBeenCalledWith(
+      expect(projectRepo.findOrCreateByNameOrAlias).toHaveBeenCalledWith(
+        'Atlas',
+        undefined,
         expect.objectContaining({
-          tenantId: null,
-          name: 'Atlas',
           confirmed: false,
         })
       )

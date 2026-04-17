@@ -11,28 +11,39 @@ function getTenantId(session: any): string | undefined {
   return (session?.user as any)?.tenantId ?? undefined
 }
 
-async function resolveProject(id: string, tenantId?: string) {
+function getIdentity(session: any): { oid?: string; tid?: string } {
+  const user = (session?.user as any) ?? {}
+  return {
+    oid: user.aadObjectId ?? undefined,
+    tid: user.azureTid ?? undefined,
+  }
+}
+
+async function resolveProject(id: string, tenantId?: string, identity?: { oid?: string; tid?: string }) {
   const project = await repo.findById(id)
   if (!project) return null
   // Enforce tenant isolation
   if (tenantId) {
     if (project.tenantId && project.tenantId !== tenantId) return null
-    return project
+    const hasAccess = await repo.canUserAccessProject(id, identity?.tid, identity?.oid)
+    return hasAccess ? project : null
   }
 
   if (project.tenantId) return null
-  return project
+  const hasAccess = await repo.canUserAccessProject(id, identity?.tid, identity?.oid)
+  return hasAccess ? project : null
 }
 
 /** GET /api/projects/[id] */
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  const { error } = await requireAuth()
+  const { session, error } = await requireAuth()
   if (error) return error
 
   const fullSession = await auth()
   const tenantId = getTenantId(fullSession) as string | undefined
+  const identity = getIdentity(session)
 
-  const project = await resolveProject(params.id, tenantId)
+  const project = await resolveProject(params.id, tenantId, identity)
   if (!project) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   return NextResponse.json({ project })
@@ -42,7 +53,6 @@ const UpdateProjectSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   description: z.string().max(2000).optional().nullable(),
   status: z.enum(['active', 'on_hold', 'completed', 'archived']).optional(),
-  owner: z.string().max(200).optional().nullable(),
   archived: z.boolean().optional(),
   confirmed: z.boolean().optional(),
   aliases: z.array(z.string().min(1).max(200)).optional(),
@@ -54,14 +64,20 @@ const DeleteProjectSchema = z.object({
 
 /** PUT /api/projects/[id] */
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
-  const { error } = await requireAuth()
+  const { session, error } = await requireAuth()
   if (error) return error
 
   const fullSession = await auth()
   const tenantId = getTenantId(fullSession) as string | undefined
+  const identity = getIdentity(session)
 
-  const existing = await resolveProject(params.id, tenantId)
+  const existing = await resolveProject(params.id, tenantId, identity)
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+  const isOwner = await repo.isProjectOwner(params.id, identity.tid, identity.oid)
+  if (!isOwner) {
+    return NextResponse.json({ error: 'Forbidden: only owner can update project' }, { status: 403 })
+  }
 
   let body: unknown
   try { body = await req.json() } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }) }
@@ -82,14 +98,20 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
 /** DELETE /api/projects/[id] */
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
-  const { error } = await requireAuth()
+  const { session, error } = await requireAuth()
   if (error) return error
 
   const fullSession = await auth()
   const tenantId = getTenantId(fullSession) as string | undefined
+  const identity = getIdentity(session)
 
-  const existing = await resolveProject(params.id, tenantId)
+  const existing = await resolveProject(params.id, tenantId, identity)
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+  const isOwner = await repo.isProjectOwner(params.id, identity.tid, identity.oid)
+  if (!isOwner) {
+    return NextResponse.json({ error: 'Forbidden: only owner can delete project' }, { status: 403 })
+  }
 
   let body: unknown
   try {
@@ -107,7 +129,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     return NextResponse.json({ error: 'Cannot reassign todos to the same project' }, { status: 400 })
   }
 
-  const target = await resolveProject(reassignToProjectId, tenantId)
+  const target = await resolveProject(reassignToProjectId, tenantId, identity)
   if (!target) return NextResponse.json({ error: 'Reassignment target not found' }, { status: 404 })
 
   if (target.archived || target.status !== 'active') {

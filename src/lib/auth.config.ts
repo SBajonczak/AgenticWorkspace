@@ -80,6 +80,7 @@ const requiredGraphScopes = [
   'Calendars.Read',
   'OnlineMeetings.Read',
   'OnlineMeetingTranscript.Read.All',
+  'People.Read',
   'offline_access',
 ]
 
@@ -132,6 +133,33 @@ function extractAzureTenantId(params: {
   if (idTokenTenantId) return idTokenTenantId
 
   return process.env.AZURE_TENANT_ID
+}
+
+function extractAzureObjectId(params: {
+  account?: { id_token?: string | null } | null
+  profile?: Record<string, unknown> | null
+  token?: Record<string, unknown> | null
+}): string | undefined {
+  const profileObjectId =
+    getString(params.profile?.oid) ??
+    getString(params.profile?.objectId)
+
+  if (profileObjectId) return profileObjectId
+
+  const tokenObjectId =
+    getString(params.token?.aadObjectId) ??
+    getString(params.token?.oid)
+
+  if (tokenObjectId) return tokenObjectId
+
+  const idTokenPayload = params.account?.id_token ? decodeJwtPayload(params.account.id_token) : null
+  const idTokenObjectId =
+    getString(idTokenPayload?.oid) ??
+    getString(idTokenPayload?.objectId)
+
+  if (idTokenObjectId) return idTokenObjectId
+
+  return undefined
 }
 
 async function resolveStoredTenantId(params: {
@@ -247,6 +275,7 @@ export const authConfig = {
               'email',
               'offline_access',
               'User.Read',
+              'People.Read',
               'Calendars.Read',
               'OnlineMeetings.Read',
               'OnlineMeetingTranscript.Read.All',
@@ -289,6 +318,21 @@ export const authConfig = {
           tenantName: user?.name,
         })
 
+        const aadObjectId = extractAzureObjectId({
+          account,
+          profile: (profile as Record<string, unknown> | undefined) ?? null,
+        })
+
+        if (aadObjectId) {
+          await prisma.user.update({
+            where: { id: persistedUserId },
+            data: {
+              // Use an index signature cast to avoid stale TS diagnostics during schema rollout.
+              ['aadObjectId' as string]: aadObjectId,
+            } as Record<string, unknown>,
+          })
+        }
+
         const existingAccount = await prisma.account.findFirst({
           where: {
             userId: persistedUserId,
@@ -314,6 +358,15 @@ export const authConfig = {
     async jwt({ token, account, profile, user }) {
       if (account?.provider === 'microsoft-entra-id') {
         token.msGraphConsentRequired = !account.refresh_token || !hasAllRequiredScopes(account.scope)
+
+        const aadObjectId = extractAzureObjectId({
+          account,
+          profile: (profile as Record<string, unknown> | undefined) ?? null,
+          token: token as Record<string, unknown>,
+        })
+        if (aadObjectId) {
+          ;(token as Record<string, unknown>).aadObjectId = aadObjectId
+        }
       }
 
       // Never store large delegated access tokens in the JWT cookie payload.
@@ -347,6 +400,16 @@ export const authConfig = {
       const tenantId = getString(token?.tenantId)
       if (session.user && tenantId) {
         ;(session.user as { tenantId?: string }).tenantId = tenantId
+      }
+
+      const aadObjectId = getString((token as Record<string, unknown>)?.aadObjectId)
+      if (session.user && aadObjectId) {
+        ;(session.user as { aadObjectId?: string }).aadObjectId = aadObjectId
+      }
+
+      const azureTenantId = getString((token as Record<string, unknown>)?.azureTenantId)
+      if (session.user && azureTenantId) {
+        ;(session.user as { azureTid?: string }).azureTid = azureTenantId
       }
       if (typeof token?.msGraphConsentRequired === 'boolean') {
         // @ts-expect-error extended session field

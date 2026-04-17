@@ -20,6 +20,14 @@ function getTenantId(session: any): string | undefined {
   return (session?.user as any)?.tenantId ?? undefined
 }
 
+function getIdentity(session: any): { oid?: string; tid?: string } {
+  const user = (session?.user as any) ?? {}
+  return {
+    oid: user.aadObjectId ?? undefined,
+    tid: user.azureTid ?? undefined,
+  }
+}
+
 function parseDecisions(value: string | null): string[] {
   if (!value) return []
   try {
@@ -40,11 +48,17 @@ export async function GET(
 
   const fullSession = await auth()
   const tenantId = getTenantId(fullSession)
+  const identity = getIdentity(fullSession)
 
   // Tenant-isolate project lookup
   const project = await repo.findById(params.id)
   if (!project) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   if (project.tenantId && project.tenantId !== tenantId) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
+  const hasAccess = await repo.canUserAccessProject(params.id, identity.tid, identity.oid)
+  if (!hasAccess) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 

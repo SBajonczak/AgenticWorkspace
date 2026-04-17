@@ -35,6 +35,7 @@ describe('PATCH /api/todos/[id]', () => {
 
   const mockProjectRepo = {
     findById: jest.fn(),
+    canUserAccessProject: jest.fn(),
   }
 
   beforeEach(() => {
@@ -44,17 +45,34 @@ describe('PATCH /api/todos/[id]', () => {
     MockProjectRepo.mockImplementation(() => mockProjectRepo as any)
 
     mockRequireAuth.mockResolvedValue({
-      session: { user: { id: 'user-1', email: 'alice@example.com', tenantId: 'tenant-1' } } as any,
+      session: {
+        user: {
+          id: 'user-1',
+          email: 'alice@example.com',
+          tenantId: 'tenant-1',
+          aadObjectId: 'oid-user-1',
+          azureTid: 'azure-tid-1',
+        },
+      } as any,
       error: null,
     })
 
     mockRequireMeetingParticipant.mockResolvedValue({
-      session: { user: { id: 'user-1', email: 'alice@example.com', tenantId: 'tenant-1' } } as any,
+      session: {
+        user: {
+          id: 'user-1',
+          email: 'alice@example.com',
+          tenantId: 'tenant-1',
+          aadObjectId: 'oid-user-1',
+          azureTid: 'azure-tid-1',
+        },
+      } as any,
       error: null,
     })
 
     mockTodoRepo.findById.mockResolvedValue({ id: 'todo-1', meetingId: 'meeting-internal-1' })
     mockTodoRepo.assignProject.mockResolvedValue({ id: 'todo-1', projectId: 'project-1' })
+    mockProjectRepo.canUserAccessProject.mockResolvedValue(true)
   })
 
   it('returns auth error from requireAuth', async () => {

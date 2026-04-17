@@ -44,7 +44,19 @@ export async function isMeetingParticipant(meetingId: string, userEmail: string)
  *   if (error) return error
  */
 export async function requireAuth(): Promise<
-  | { session: { user: { id: string; email: string; name?: string | null } }; error: null }
+  | {
+      session: {
+        user: {
+          id: string
+          email: string
+          name?: string | null
+          tenantId?: string
+          aadObjectId?: string
+          azureTid?: string
+        }
+      }
+      error: null
+    }
   | { session: null; error: NextResponse }
 > {
   const session = await auth()
@@ -58,7 +70,14 @@ export async function requireAuth(): Promise<
 
   return {
     session: session as {
-      user: { id: string; email: string; name?: string | null; tenantId?: string }
+      user: {
+        id: string
+        email: string
+        name?: string | null
+        tenantId?: string
+        aadObjectId?: string
+        azureTid?: string
+      }
       msGraphConsentRequired?: boolean
     },
     error: null,

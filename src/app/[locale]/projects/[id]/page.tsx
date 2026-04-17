@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 import {
   User,
+  Users,
   Calendar,
   ChevronLeft,
   AlertTriangle,
@@ -23,6 +24,8 @@ import {
   BookOpen,
   ListTodo,
   Link as LinkIcon,
+  UserPlus,
+  Trash2,
 }  from 'lucide-react'
 
 // ---------------------------------------------------------------------------
@@ -104,6 +107,36 @@ interface ContextResponse {
   }
 }
 
+interface ProjectMember {
+  id: string
+  userId: string
+  oid: string
+  tid: string
+  displayName: string
+  email: string | null
+  role: string
+}
+
+interface ProjectMembersResponse {
+  canManage: boolean
+  owner: {
+    oid: string | null
+    tid: string | null
+    name: string | null
+  }
+  members: ProjectMember[]
+}
+
+interface UserSearchEntry {
+  userId: string | null
+  oid: string
+  tid: string
+  displayName: string
+  email: string | null
+  source: 'local' | 'graph'
+  canAssign: boolean
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -157,6 +190,13 @@ export default function ProjectDetailPage() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [confirming, setConfirming] = useState(false)
+  const [membersData, setMembersData] = useState<ProjectMembersResponse | null>(null)
+  const [membersLoading, setMembersLoading] = useState(false)
+  const [memberActionLoading, setMemberActionLoading] = useState(false)
+  const [memberError, setMemberError] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchingUsers, setSearchingUsers] = useState(false)
+  const [searchResults, setSearchResults] = useState<UserSearchEntry[]>([])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -174,6 +214,93 @@ export default function ProjectDetailPage() {
   }, [id])
 
   useEffect(() => { load() }, [load])
+
+  const loadMembers = useCallback(async () => {
+    setMembersLoading(true)
+    setMemberError(null)
+    try {
+      const res = await fetch(`/api/projects/${id}/members`, { cache: 'no-store' })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      setMembersData(await res.json())
+    } catch {
+      setMemberError(tDetail('team.loadError'))
+    } finally {
+      setMembersLoading(false)
+    }
+  }, [id, tDetail])
+
+  useEffect(() => {
+    loadMembers()
+  }, [loadMembers])
+
+  useEffect(() => {
+    const trimmed = searchQuery.trim()
+    const timeout = setTimeout(async () => {
+      if (!membersData?.canManage) return
+
+      try {
+        setSearchingUsers(true)
+        const query = trimmed.length > 0 ? `?q=${encodeURIComponent(trimmed)}` : ''
+        const res = await fetch(`/api/tenants/users${query}`, { cache: 'no-store' })
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const payload = (await res.json()) as { users?: UserSearchEntry[] }
+        setSearchResults(payload.users ?? [])
+      } catch {
+        setSearchResults([])
+      } finally {
+        setSearchingUsers(false)
+      }
+    }, 250)
+
+    return () => clearTimeout(timeout)
+  }, [searchQuery, membersData?.canManage])
+
+  const addMember = async (candidate: UserSearchEntry) => {
+    if (!candidate.userId) return
+    setMemberActionLoading(true)
+    setMemberError(null)
+    try {
+      const res = await fetch(`/api/projects/${id}/members`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: candidate.userId }),
+      })
+      if (!res.ok) {
+        const payload = await res.json().catch(() => null)
+        throw new Error(payload?.error ?? 'failed')
+      }
+
+      setSearchQuery('')
+      setSearchResults([])
+      await loadMembers()
+    } catch (error) {
+      setMemberError(error instanceof Error ? error.message : tDetail('team.addError'))
+    } finally {
+      setMemberActionLoading(false)
+    }
+  }
+
+  const removeMember = async (member: ProjectMember) => {
+    setMemberActionLoading(true)
+    setMemberError(null)
+    try {
+      const res = await fetch(`/api/projects/${id}/members`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberOid: member.oid, memberTid: member.tid }),
+      })
+      if (!res.ok) {
+        const payload = await res.json().catch(() => null)
+        throw new Error(payload?.error ?? 'failed')
+      }
+
+      await loadMembers()
+    } catch (error) {
+      setMemberError(error instanceof Error ? error.message : tDetail('team.removeError'))
+    } finally {
+      setMemberActionLoading(false)
+    }
+  }
 
   const confirmProject = async () => {
     if (!data) return
@@ -303,7 +430,7 @@ export default function ProjectDetailPage() {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}>
           <Tabs defaultValue="overview" className="flex-col w-full">
             <TabsList className="border-b border-border rounded-none bg-transparent w-full justify-start gap-1 h-auto pb-0 mb-6">
-              {(['overview', 'meetings', 'tasks', 'knowledge'] as const).map((tab) => (
+              {(['overview', 'team', 'meetings', 'tasks', 'knowledge'] as const).map((tab) => (
                 <TabsTrigger
                   key={tab}
                   value={tab}
@@ -372,6 +499,104 @@ export default function ProjectDetailPage() {
                     </CardContent>
                   </Card>
                 )}
+              </motion.div>
+            </TabsContent>
+
+            {/* ── Team ── */}
+            <TabsContent value="team">
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+                <Card className="backdrop-blur rounded-xl">
+                  <CardContent className="p-6 space-y-3">
+                    <h3 className="text-lg font-bold text-foreground">{tDetail('team.title')}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {tDetail('team.ownerLabel')}: {membersData?.owner.name ?? tDetail('team.ownerUnknown')}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{tDetail('team.graphHint')}</p>
+                  </CardContent>
+                </Card>
+
+                {membersData?.canManage && (
+                  <Card className="backdrop-blur rounded-xl">
+                    <CardContent className="p-6 space-y-3">
+                      <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                        <UserPlus className="h-4 w-4" />
+                        {tDetail('team.addTitle')}
+                      </div>
+                      <input
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder={tDetail('team.searchPlaceholder')}
+                        className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                      {searchingUsers && (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          {tDetail('team.searching')}
+                        </div>
+                      )}
+                      {!searchingUsers && searchResults.length > 0 && (
+                        <div className="space-y-2">
+                          {searchResults.map((candidate) => (
+                            <div key={`${candidate.tid}:${candidate.oid}`} className="flex items-center justify-between rounded-lg border border-border p-3">
+                              <div className="min-w-0">
+                                <p className="text-sm text-foreground truncate">{candidate.displayName}</p>
+                                <p className="text-xs text-muted-foreground truncate">{candidate.email ?? candidate.oid}</p>
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={!candidate.canAssign || memberActionLoading}
+                                onClick={() => addMember(candidate)}
+                              >
+                                {candidate.canAssign ? tDetail('team.addAction') : tDetail('team.notAssignable')}
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                <Card className="backdrop-blur rounded-xl">
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-2 text-sm font-medium text-foreground mb-3">
+                      <Users className="h-4 w-4" />
+                      {tDetail('team.membersTitle')}
+                    </div>
+                    {membersLoading ? (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        {tDetail('team.loading')}
+                      </div>
+                    ) : membersData && membersData.members.length > 0 ? (
+                      <div className="space-y-2">
+                        {membersData.members.map((member) => (
+                          <div key={member.id} className="flex items-center justify-between rounded-lg border border-border p-3">
+                            <div className="min-w-0">
+                              <p className="text-sm text-foreground truncate">{member.displayName}</p>
+                              <p className="text-xs text-muted-foreground truncate">{member.email ?? `${member.tid}:${member.oid}`}</p>
+                            </div>
+                            {membersData.canManage && (
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                disabled={memberActionLoading}
+                                onClick={() => removeMember(member)}
+                                aria-label={tDetail('team.removeAction')}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">{tDetail('team.empty')}</p>
+                    )}
+                    {memberError && <p className="text-xs text-destructive mt-3">{memberError}</p>}
+                  </CardContent>
+                </Card>
               </motion.div>
             </TabsContent>
 

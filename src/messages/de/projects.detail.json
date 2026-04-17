@@ -4,9 +4,28 @@
       "backToList": "Zurück zu Projekten",
       "tabs": {
         "overview": "Übersicht",
+        "team": "Team",
         "meetings": "Besprechungen",
         "tasks": "Aufgaben",
         "knowledge": "Wissensdatenbank"
+      },
+      "team": {
+        "title": "Projektzugriff",
+        "ownerLabel": "Owner",
+        "ownerUnknown": "Owner unbekannt",
+        "membersTitle": "Teammitglieder",
+        "addTitle": "Teammitglied hinzufügen",
+        "searchPlaceholder": "Angemeldete Nutzer suchen (Graph ab 3 Buchstaben)",
+        "searching": "Nutzer werden gesucht...",
+        "addAction": "Hinzufügen",
+        "removeAction": "Entfernen",
+        "notAssignable": "Erst anmelden",
+        "empty": "Noch keine Teammitglieder.",
+        "loading": "Teammitglieder werden geladen...",
+        "graphHint": "Die Suche läuft zuerst lokal. Graph-Abfrage startet ab 3 Zeichen.",
+        "loadError": "Teammitglieder konnten nicht geladen werden.",
+        "addError": "Teammitglied konnte nicht hinzugefügt werden.",
+        "removeError": "Teammitglied konnte nicht entfernt werden."
       },
       "overview": {
         "title": "Projektübersicht",
