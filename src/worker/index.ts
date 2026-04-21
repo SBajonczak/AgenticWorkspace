@@ -13,6 +13,7 @@
  *   AZURE_TENANT_ID          – Microsoft Entra ID tenant
  *   AZURE_CLIENT_ID          – App registration client ID
  *   AZURE_CLIENT_SECRET      – App registration client secret (refresh token exchange)
+ *   DEBUG_GRAPH_MEETINGS      – defaults to enabled; set to "false" to disable Graph meeting request logs
  *   OPENAI_API_KEY or AZURE_OPENAI_* – LLM credentials
  *   JIRA_*                   – Jira integration (optional)
  */

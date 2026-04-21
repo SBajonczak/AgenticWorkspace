@@ -53,6 +53,10 @@ function clampLookaheadDays(value: unknown): number {
   return Math.max(1, Math.min(31, normalized))
 }
 
+function shouldDebugMeetingSync(): boolean {
+  return process.env.DEBUG_GRAPH_MEETINGS !== 'false'
+}
+
 async function runForUser(
   user: {
     id: string
@@ -85,13 +89,31 @@ async function runForUser(
 
     const daysForward = clampLookaheadDays((syncState as any)?.meetingLookaheadDays)
 
+    if (shouldDebugMeetingSync()) {
+      console.log(
+        `[Worker][Meetings] user=${user.id} checkpoint.before=${lastMeetingSyncAt ? lastMeetingSyncAt.toISOString() : 'null'} checkpoint.next=${cycleStartedAt.toISOString()} overlapHours=48 daysForward=${daysForward}`
+      )
+    }
+
     const meetings = await meetingsClient.getLatestMeeting({
       ...(lastMeetingSyncAt ? { startAfter: lastMeetingSyncAt } : {}),
       daysForward,
+      overlapHours: 48,
     })
     if (!meetings || meetings.length === 0) {
+      if (shouldDebugMeetingSync()) {
+        console.log(
+          `[Worker][Meetings] user=${user.id} fetched=0 checkpoint.persisted=${cycleStartedAt.toISOString()}`
+        )
+      }
       await syncRepo.markRunSuccess(user.id, nextRunAt, cycleStartedAt)
       return
+    }
+
+    if (shouldDebugMeetingSync()) {
+      console.log(
+        `[Worker][Meetings] user=${user.id} fetched=${meetings.length} checkpoint.persisted=${cycleStartedAt.toISOString()}`
+      )
     }
 
     const tenantRepo = new TenantRepository()

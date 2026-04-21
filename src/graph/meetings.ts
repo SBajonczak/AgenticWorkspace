@@ -50,6 +50,7 @@ export class MeetingsClient {
   private client: Client
   // When set, use /users/{userId}/ instead of /me/ (required for app permissions)
   private userPath: string
+  private debugRequests: boolean
 
   constructor(accessToken: string, userId?: string) {
     this.client = Client.init({
@@ -59,6 +60,42 @@ export class MeetingsClient {
     })
     // userId can be UPN (email) or Azure AD object ID
     this.userPath = userId ? `/users/${userId}` : '/me'
+    this.debugRequests = process.env.DEBUG_GRAPH_MEETINGS !== 'false'
+  }
+
+  private logGraphRequest(label: string, path: string, query?: Record<string, string>): void {
+    if (!this.debugRequests) return
+
+    const url = new URL(`https://graph.microsoft.com/v1.0${path}`)
+    if (query) {
+      for (const [key, value] of Object.entries(query)) {
+        url.searchParams.set(key, value)
+      }
+    }
+
+    console.log(`[Graph][Meetings] ${label}`)
+    console.log(`[Graph][Meetings] REST: ${url.toString()}`)
+    console.log(`[Graph][Meetings] Graph Explorer: GET ${url.pathname}${url.search}`)
+  }
+
+  private isOnlineMeetingNotFoundError(error: unknown): boolean {
+    const err = error as { statusCode?: number; code?: string; message?: string; body?: string }
+    const body = typeof err?.body === 'string' ? err.body : ''
+    return (
+      err?.statusCode === 404 &&
+      (err?.code === 'NotFound' ||
+        err?.message?.includes('3004') === true ||
+        body.includes('3004: Specified meeting is not found'))
+    )
+  }
+
+  private formatGraphErrorForLog(error: unknown): string {
+    const err = error as { statusCode?: number; code?: string; requestId?: string; message?: string }
+    const status = err?.statusCode ?? 'unknown'
+    const code = err?.code ?? 'unknown'
+    const requestId = err?.requestId ?? 'n/a'
+    const message = err?.message ?? 'unknown error'
+    return `status=${status} code=${code} requestId=${requestId} message=${message}`
   }
 
   async getRecentMeetings(limit: number = 10, options?: {
@@ -68,18 +105,28 @@ export class MeetingsClient {
     daysBack?: number
     /** How many days forward to look for upcoming meetings (default: 14). */
     daysForward?: number
+    /** Re-fetch a safety overlap before startAfter to avoid missing late/updated items (default: 0). */
+    overlapHours?: number
   }): Promise<Meeting[]> {
     try {
       const now = new Date()
       const daysBack = options?.daysBack ?? 30
       const daysForward = options?.daysForward ?? 14
+      const overlapHours = Math.max(0, options?.overlapHours ?? 0)
       const startDate = options?.startAfter
-        ? new Date(options.startAfter.getTime())
+        ? new Date(options.startAfter.getTime() - overlapHours * 60 * 60 * 1000)
         : new Date(now.getTime() - daysBack * 24 * 60 * 60 * 1000)
       const endDate = new Date(now.getTime() + daysForward * 24 * 60 * 60 * 1000)
 
       const startDateTime = startDate.toISOString()
       const endDateTime = endDate.toISOString()
+
+      this.logGraphRequest(`${this.userPath}/calendarView`, `${this.userPath}/calendarView`, {
+        startDateTime,
+        endDateTime,
+        '$top': '100',
+        '$orderby': 'start/dateTime DESC',
+      })
 
       const response = await this.client
         .api(`${this.userPath}/calendarView`)
@@ -97,9 +144,15 @@ export class MeetingsClient {
       const enrichedMeetings = await Promise.all(
         meetings.map(async (meeting: Meeting) => {
           let joinUrl: string | null = null
+          let onlineMeetingLookupReason: 'not-found' | 'other-error' | null = null
 
           if (meeting.isOnlineMeeting) {
             try {
+              this.logGraphRequest(
+                `${this.userPath}/events/${meeting.id}`,
+                `${this.userPath}/events/${meeting.id}`,
+                { '$select': 'onlineMeeting' }
+              )
               const eventDetails = await this.client
                 .api(`${this.userPath}/events/${meeting.id}`)
                 .select('onlineMeeting')
@@ -116,6 +169,7 @@ export class MeetingsClient {
             try {
               const escapedJoinUrl = joinUrl.replace(/'/g, "''")
               const filter = `JoinWebUrl eq '${escapedJoinUrl}'`
+              this.logGraphRequest(`${this.userPath}/onlineMeetings`, `${this.userPath}/onlineMeetings`, { '$filter': filter })
               const onlineMeetingResponse = await this.client
                 .api(`${this.userPath}/onlineMeetings`)
                 .filter(filter)
@@ -124,13 +178,31 @@ export class MeetingsClient {
                 onlineMeetingId = onlineMeetingResponse.value[0].id
               }
             } catch (error) {
-              console.error(`Error fetching online meeting for "${meeting.subject}":`, error)
+              if (this.isOnlineMeetingNotFoundError(error)) {
+                onlineMeetingLookupReason = 'not-found'
+                console.warn(
+                  `[Graph][Meetings] onlineMeeting lookup skipped for "${meeting.subject}" (${meeting.id}): not found in /onlineMeetings (often private/self appointment).`
+                )
+              } else {
+                onlineMeetingLookupReason = 'other-error'
+                console.error(
+                  `[Graph][Meetings] onlineMeeting lookup failed for "${meeting.subject}" (${meeting.id}): ${this.formatGraphErrorForLog(error)}`
+                )
+              }
             }
           }
 
           let onlineMeetingDetails: any = null
           if (onlineMeetingId) {
             try {
+              this.logGraphRequest(
+                `${this.userPath}/onlineMeetings/${onlineMeetingId}`,
+                `${this.userPath}/onlineMeetings/${onlineMeetingId}`,
+                {
+                  '$select':
+                    'id,subject,joinWebUrl,participants,startDateTime,endDateTime,allowTranscription,meetingCode,meetingType,meetingOptionsWebUrl,iCalUId',
+                }
+              )
               onlineMeetingDetails = await this.client
                 .api(`${this.userPath}/onlineMeetings/${onlineMeetingId}`)
                 .select(
@@ -175,7 +247,13 @@ export class MeetingsClient {
           }
 
           if (!onlineMeetingId) {
-            console.warn(`Skipping "${meeting.subject}" – could not resolve online meeting ID (no transcript available)`)
+            const reasonSuffix =
+              onlineMeetingLookupReason === 'not-found'
+                ? ' (private/self appointment or no onlineMeeting resource)'
+                : onlineMeetingLookupReason === 'other-error'
+                  ? ' (lookup failed)'
+                  : ''
+            console.warn(`Skipping "${meeting.subject}" – could not resolve online meeting ID (no transcript available)${reasonSuffix}`)
             return null
           }
 
