@@ -107,7 +107,8 @@ async function runForUser(
   try {
     const accessToken = await tokenService.getValidAccessTokenForUser(user.id)
     const meetingsClient = new MeetingsClient(accessToken)
-    const transcriptsClient = new TranscriptsClient(accessToken)
+    // Pass tokenService to TranscriptsClient for automatic token refresh on 403 errors
+    const transcriptsClient = new TranscriptsClient(accessToken, user.id, tokenService)
 
     const tenantRepo = new TenantRepository()
 

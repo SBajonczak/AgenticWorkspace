@@ -115,7 +115,12 @@ describe('Worker scheduler', () => {
 
     expect(UserTokenService).toHaveBeenCalled()
     expect(MeetingsClient).toHaveBeenCalledWith('delegated-token')
-    expect(TranscriptsClient).toHaveBeenCalledWith('delegated-token')
+    // TranscriptsClient should now be called with userId and tokenService
+    expect(TranscriptsClient).toHaveBeenCalledWith(
+      'delegated-token',
+      expect.any(String),
+      expect.any(Object)
+    )
     expect(MeetingProcessor).toHaveBeenCalled()
   })
 
@@ -147,5 +152,33 @@ describe('Worker scheduler', () => {
 
     const processorInstance = (MeetingProcessor as jest.Mock).mock.results[0]?.value
     expect(processorInstance.processMeeting).not.toHaveBeenCalled()
+  })
+
+  it('handles ReauthRequiredError by marking sync state with consent required flag', async () => {
+    const { ReauthRequiredError } = await import('@/graph/userTokenService')
+
+    ;(UserTokenService as jest.Mock).mockImplementation(() => ({
+      getValidAccessTokenForUser: jest.fn().mockRejectedValueOnce(
+        new ReauthRequiredError('No refresh token available')
+      ),
+    }))
+
+    const mockSyncRepo = {
+      markProcessing: jest.fn().mockResolvedValue({}),
+      markRunError: jest.fn().mockResolvedValue({}),
+    }
+
+    ;(UserSyncStateRepository as jest.Mock).mockImplementation(() => mockSyncRepo)
+
+    const { runAgentCycleForUser } = await import('@/worker/scheduler')
+    await runAgentCycleForUser('user-1')
+
+    expect(mockSyncRepo.markRunError).toHaveBeenCalledWith(
+      'user-1',
+      expect.stringContaining('refresh token'),
+      expect.objectContaining({
+        consentRequired: true,
+      })
+    )
   })
 })
