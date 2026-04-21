@@ -164,3 +164,47 @@ export async function requireMeetingParticipant(
 
   return authResult
 }
+
+/**
+ * Requires the authenticated user to belong to the same tenant as the meeting.
+ * This is a looser check than requireMeetingParticipant and enables tenant-wide
+ * collaboration: any tenant member can view any meeting in their organization.
+ */
+export async function requireTenantMember(
+  internalMeetingId: string
+): Promise<
+  | { session: AuthenticatedSession; error: null }
+  | { session: null; error: NextResponse }
+> {
+  const authResult = await requireAuth()
+  if (authResult.error) return authResult
+
+  const userTenantId = authResult.session!.user.tenantId
+  if (!userTenantId) {
+    return {
+      session: null,
+      error: NextResponse.json({ error: 'Forbidden: No tenant association.' }, { status: 403 }),
+    }
+  }
+
+  const meeting = await prisma.meeting.findUnique({
+    where: { id: internalMeetingId },
+    select: { tenantId: true },
+  })
+
+  if (!meeting) {
+    return {
+      session: null,
+      error: NextResponse.json({ error: 'Not found.' }, { status: 404 }),
+    }
+  }
+
+  if (meeting.tenantId !== userTenantId) {
+    return {
+      session: null,
+      error: NextResponse.json({ error: 'Forbidden: Meeting belongs to a different tenant.' }, { status: 403 }),
+    }
+  }
+
+  return authResult
+}

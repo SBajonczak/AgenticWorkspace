@@ -7,6 +7,8 @@ const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100
 
 type MeetingsKind = 'all' | 'completed' | 'upcoming'
+type MeetingsScope = 'user' | 'tenant'
+type IndexingStatus = 'not_indexed' | 'indexed' | 'processing'
 
 function parseKind(value: string | null): MeetingsKind {
   if (value === 'completed' || value === 'upcoming') {
@@ -14,6 +16,15 @@ function parseKind(value: string | null): MeetingsKind {
   }
 
   return 'all'
+}
+
+function parseScope(value: string | null): MeetingsScope {
+  return value === 'tenant' ? 'tenant' : 'user'
+}
+
+function parseIndexingStatus(value: string | null): IndexingStatus | undefined {
+  if (value === 'not_indexed' || value === 'indexed' || value === 'processing') return value
+  return undefined
 }
 
 function parseLimit(value: string | null): number {
@@ -26,15 +37,10 @@ function parseLimit(value: string | null): number {
   return Math.min(parsed, MAX_LIMIT)
 }
 
-function getMeetingStatus(startTime: Date, processedAt: Date | null): MeetingStatus {
-  if (processedAt) {
-    return 'completed'
-  }
-
-  if (startTime.getTime() > Date.now()) {
-    return 'upcoming'
-  }
-
+function getMeetingStatus(startTime: Date, processedAt: Date | null, isIndexing: boolean): MeetingStatus {
+  if (isIndexing) return 'processing'
+  if (processedAt) return 'completed'
+  if (startTime.getTime() > Date.now()) return 'upcoming'
   return 'cancelled'
 }
 
@@ -51,35 +57,56 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
 
     const kind = parseKind(searchParams.get('kind'))
+    const scope = parseScope(searchParams.get('scope'))
     const limit = parseLimit(searchParams.get('limit') ?? '50')
+    const nameSearch = searchParams.get('nameSearch') ?? undefined
+    const hasTranscriptParam = searchParams.get('hasTranscript')
+    const hasTranscript =
+      hasTranscriptParam === 'true' ? true : hasTranscriptParam === 'false' ? false : undefined
+    const indexingStatus = parseIndexingStatus(searchParams.get('indexingStatus'))
 
     const meetingRepo = new MeetingRepository()
 
-    const meetings =
-      kind === 'completed'
-        ? await meetingRepo.findLatestProcessed(limit, tenantId, userEmail)
-        : kind === 'upcoming'
-          ? await meetingRepo.findUpcoming(limit, new Date(), tenantId, userEmail)
-          : await meetingRepo.findLatest(limit, tenantId, userEmail)
+    let meetings: Awaited<ReturnType<typeof meetingRepo.findLatest>>
 
-    const result = meetings.map((meeting) => ({
-      id: meeting.id,
-      meetingId: meeting.meetingId,
-      title: meeting.title,
-      organizer: meeting.organizer,
-      organizerEmail: meeting.organizerEmail,
-      startTime: meeting.startTime.toISOString(),
-      endTime: meeting.endTime.toISOString(),
-      summary: meeting.summary,
-      processedAt: meeting.processedAt?.toISOString() ?? null,
-      status: getMeetingStatus(meeting.startTime, meeting.processedAt),
-      todoCount: meeting.todos.length,
-      syncedCount: meeting.todos.reduce((count, todo) => {
-        const sync = todo.ticketSync as { status?: string } | null | undefined
-        return count + (sync?.status === 'synced' ? 1 : 0)
-      }, 0),
-      todos: meeting.todos.map((todo) => ({ id: todo.id })),
-    }))
+    if (scope === 'tenant') {
+      if (!tenantId) {
+        return NextResponse.json({ error: 'No tenant association found.' }, { status: 403 })
+      }
+      meetings = await meetingRepo.findAllForTenant(tenantId, { nameSearch, hasTranscript, indexingStatus }, limit)
+    } else {
+      meetings =
+        kind === 'completed'
+          ? await meetingRepo.findLatestProcessed(limit, tenantId, userEmail)
+          : kind === 'upcoming'
+            ? await meetingRepo.findUpcoming(limit, new Date(), tenantId, userEmail)
+            : await meetingRepo.findLatest(limit, tenantId, userEmail)
+    }
+
+    const result = meetings.map((meeting) => {
+      const isIndexing = (meeting as any).isIndexing === true
+      return {
+        id: meeting.id,
+        meetingId: meeting.meetingId,
+        title: meeting.title,
+        organizer: meeting.organizer,
+        organizerEmail: meeting.organizerEmail,
+        startTime: meeting.startTime.toISOString(),
+        endTime: meeting.endTime.toISOString(),
+        summary: meeting.summary,
+        processedAt: meeting.processedAt?.toISOString() ?? null,
+        isIndexing,
+        hasTranscript: meeting.transcript != null,
+        indexingStatus: isIndexing ? 'processing' : meeting.processedAt ? 'indexed' : 'not_indexed',
+        status: getMeetingStatus(meeting.startTime, meeting.processedAt, isIndexing),
+        todoCount: meeting.todos.length,
+        syncedCount: meeting.todos.reduce((count, todo) => {
+          const sync = todo.ticketSync as { status?: string } | null | undefined
+          return count + (sync?.status === 'synced' ? 1 : 0)
+        }, 0),
+        todos: meeting.todos.map((todo) => ({ id: todo.id })),
+      }
+    })
 
     return NextResponse.json(result)
   } catch (error) {
@@ -92,3 +119,4 @@ export async function GET(request: NextRequest) {
     )
   }
 }
+

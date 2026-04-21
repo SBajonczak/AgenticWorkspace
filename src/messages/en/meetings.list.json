@@ -6,7 +6,9 @@
       "filters": {
         "all": "All",
         "completed": "Completed",
-        "upcoming": "Upcoming"
+        "upcoming": "Upcoming",
+        "transcriptOnly": "Only with transcript",
+        "nameSearch": "Search by name..."
       },
       "table": {
         "meeting": "Meeting",
@@ -18,8 +20,20 @@
       "status": {
         "completed": "Completed",
         "upcoming": "Upcoming",
-        "cancelled": "Cancelled"
+        "cancelled": "Cancelled",
+        "processing": "Indexing"
       },
+      "indexingStatus": {
+        "label": "Indexing status",
+        "all": "All",
+        "not_indexed": "Not indexed",
+        "indexed": "Indexed",
+        "processing": "Indexing"
+      },
+      "indexButton": "Index now",
+      "indexingInProgress": "Indexing in progress...",
+      "indexQueued": "Indexing started",
+      "indexFailed": "Indexing failed",
       "empty": "No meetings found",
       "actionCount": "action",
       "actionCount_plural": "actions"

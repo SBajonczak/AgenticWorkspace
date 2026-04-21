@@ -62,6 +62,9 @@ model Meeting {
   indexedByUserEmail  String?
   recrawlCount        Int       @default(0)
   lastRecrawlAt       DateTime?
+  // Indexing lock: prevents concurrent indexing of the same meeting
+  isIndexing          Boolean   @default(false)
+  indexingStartedAt   DateTime? // Used for stale-lock detection (> 10 min = stale)
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
@@ -77,6 +80,7 @@ model Meeting {
   @@index([graphLastModifiedAt])
   @@index([tenantId, indexedAt])
   @@index([tenantId, indexedForUserId])
+  @@index([tenantId, isIndexing])
 }
 
 model Todo {

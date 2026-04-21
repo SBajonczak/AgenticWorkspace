@@ -466,8 +466,172 @@ export async function runAgentCycle(): Promise<void> {
   }
 }
 
-export function startWorker(intervalMinutes: number = 30): void {
-  configuredIntervalMinutes = intervalMinutes
+/**
+ * Trigger on-demand LLM indexing for a single meeting.
+ * Uses an atomic DB-level lock so that only one process can index a given meeting
+ * at a time. Returns false if the lock could not be acquired (already indexing).
+ *
+ * The caller is responsible for starting this in the background (no await)
+ * so the HTTP response can be returned immediately with 202 Accepted.
+ */
+export async function runIndexingForMeeting(
+  meetingDbId: string,
+  triggeredByUserId: string,
+  triggeredByUserEmail: string | null
+): Promise<{ success: boolean; reason?: string }> {
+  const meetingRepo = new MeetingRepository()
+
+  // Acquire the lock — bail out if another process holds it and it is fresh.
+  const locked = await meetingRepo.acquireIndexingLock(meetingDbId)
+  if (!locked) {
+    return { success: false, reason: 'already_indexing' }
+  }
+
+  try {
+    // Load meeting and triggering user
+    const meeting = await prisma.meeting.findUnique({
+      where: { id: meetingDbId },
+      select: {
+        id: true,
+        meetingId: true,
+        tenantId: true,
+        processedAt: true,
+        transcript: true,
+        participants: true,
+        organizerEmail: true,
+      },
+    })
+
+    if (!meeting) {
+      return { success: false, reason: 'meeting_not_found' }
+    }
+
+    if (meeting.processedAt) {
+      // Already processed — release lock and report
+      return { success: false, reason: 'already_processed' }
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: triggeredByUserId },
+      select: {
+        id: true,
+        email: true,
+        tenantId: true,
+        aadObjectId: true,
+        name: true,
+        tenant: { select: { azureTenantId: true } },
+      },
+    })
+
+    if (!user) {
+      return { success: false, reason: 'user_not_found' }
+    }
+
+    const syncRepo = new UserSyncStateRepository()
+    const tokenService = new UserTokenService(syncRepo)
+    const accessToken = await tokenService.getValidAccessTokenForUser(triggeredByUserId)
+
+    const transcriptsClient = new TranscriptsClient(accessToken, triggeredByUserId, tokenService)
+    const transcript = await transcriptsClient.getTranscript(meeting.meetingId)
+
+    if (!transcript) {
+      return { success: false, reason: 'transcript_missing' }
+    }
+
+    let ticketProvider = createTicketProviderFromEnv()
+    if (meeting.tenantId) {
+      const tenantRepo = new TenantRepository()
+      const tenantConfig = await tenantRepo.getTicketConfig(meeting.tenantId)
+      if (tenantConfig) {
+        ticketProvider = createTicketProvider(tenantConfig)
+      }
+    }
+
+    const todoRepo = new TodoRepository()
+    const minutesRepo = new MeetingMinutesRepository()
+    const projectStatusRepo = new ProjectStatusRepository()
+    const ticketSyncRepo = new TicketSyncRepository()
+    const llmClient = createLLMClient()
+
+    const processor = new MeetingProcessor(
+      llmClient,
+      meetingRepo,
+      todoRepo,
+      minutesRepo,
+      projectStatusRepo,
+      ticketSyncRepo,
+      ticketProvider
+    )
+
+    // We need the full meeting details for processMeeting
+    const fullMeeting = await prisma.meeting.findUnique({
+      where: { id: meetingDbId },
+      select: {
+        meetingId: true,
+        title: true,
+        organizer: true,
+        organizerEmail: true,
+        startTime: true,
+        endTime: true,
+        participants: true,
+      },
+    })
+
+    if (!fullMeeting) {
+      return { success: false, reason: 'meeting_not_found' }
+    }
+
+    let participants: string[] = []
+    if (fullMeeting.participants) {
+      try {
+        participants = JSON.parse(fullMeeting.participants) as string[]
+      } catch {
+        participants = []
+      }
+    }
+
+    await processor.processMeeting(
+      fullMeeting.meetingId,
+      fullMeeting.title,
+      fullMeeting.organizer,
+      fullMeeting.organizerEmail ?? '',
+      fullMeeting.startTime,
+      fullMeeting.endTime,
+      transcript,
+      participants,
+      meeting.tenantId ?? undefined,
+      {
+        oid: user.aadObjectId,
+        tid: user.tenant?.azureTenantId ?? null,
+        name: user.name ?? user.email,
+      },
+      {
+        indexedForUserId: user.id,
+        indexedForUserEmail: user.email,
+        indexedByUserId: triggeredByUserId,
+        indexedByUserEmail: triggeredByUserEmail,
+      }
+    )
+
+    console.log(
+      `[Worker][OnDemand] Meeting ${meetingDbId} indexed successfully by user ${triggeredByUserId}`
+    )
+    return { success: true }
+  } catch (error) {
+    console.error(`[Worker][OnDemand] Failed to index meeting ${meetingDbId}:`, error)
+    return {
+      success: false,
+      reason: error instanceof Error ? error.message : 'unknown_error',
+    }
+  } finally {
+    // Always release the lock, even on failure
+    await meetingRepo.releaseIndexingLock(meetingDbId).catch((err) => {
+      console.error(`[Worker][OnDemand] Failed to release indexing lock for ${meetingDbId}:`, err)
+    })
+  }
+}
+
+export function startWorker(intervalMinutes: number = 30): void {  configuredIntervalMinutes = intervalMinutes
   const cronExpression = `*/${intervalMinutes} * * * *`
   console.log(`[Worker] Scheduling agent every ${intervalMinutes} minutes`)
 

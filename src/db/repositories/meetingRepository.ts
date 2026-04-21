@@ -264,4 +264,83 @@ export class MeetingRepository {
       },
     })
   }
+
+  /**
+   * List all meetings for a tenant without any user-scope filter.
+   * Supports optional filtering by name, transcript presence, and indexing status.
+   */
+  async findAllForTenant(
+    tenantId: string,
+    filters: {
+      nameSearch?: string
+      hasTranscript?: boolean
+      indexingStatus?: 'not_indexed' | 'indexed' | 'processing'
+    } = {},
+    limit: number = 100
+  ): Promise<MeetingWithTodos[]> {
+    const where: Prisma.MeetingWhereInput = { tenantId }
+
+    if (filters.nameSearch) {
+      where.title = { contains: filters.nameSearch, mode: 'insensitive' }
+    }
+
+    if (filters.hasTranscript === true) {
+      where.transcript = { not: null }
+    } else if (filters.hasTranscript === false) {
+      where.transcript = null
+    }
+
+    if (filters.indexingStatus === 'indexed') {
+      where.processedAt = { not: null }
+    } else if (filters.indexingStatus === 'not_indexed') {
+      where.processedAt = null
+      where.isIndexing = false
+    } else if (filters.indexingStatus === 'processing') {
+      where.isIndexing = true
+    }
+
+    return prisma.meeting.findMany({
+      where,
+      orderBy: { startTime: 'desc' },
+      take: limit,
+      include: { todos: { include: { ticketSync: true } } },
+    })
+  }
+
+  /**
+   * Atomically acquire the indexing lock for a meeting.
+   * Returns true if the lock was acquired, false if another process holds a fresh lock.
+   * A lock is considered stale after INDEXING_LOCK_TIMEOUT_MS and can be overwritten.
+   */
+  async acquireIndexingLock(meetingId: string): Promise<boolean> {
+    const STALE_AFTER_MS = 10 * 60 * 1000 // 10 minutes
+    const staleThreshold = new Date(Date.now() - STALE_AFTER_MS)
+
+    const result = await prisma.meeting.updateMany({
+      where: {
+        id: meetingId,
+        OR: [
+          { isIndexing: false },
+          { indexingStartedAt: { lt: staleThreshold } },
+        ],
+      },
+      data: {
+        isIndexing: true,
+        indexingStartedAt: new Date(),
+      },
+    })
+
+    return result.count > 0
+  }
+
+  /** Release the indexing lock for a meeting. */
+  async releaseIndexingLock(meetingId: string): Promise<void> {
+    await prisma.meeting.update({
+      where: { id: meetingId },
+      data: {
+        isIndexing: false,
+        indexingStartedAt: null,
+      },
+    })
+  }
 }

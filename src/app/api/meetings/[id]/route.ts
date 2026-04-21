@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server'
 import { MeetingRepository } from '@/db/repositories/meetingRepository'
-import { requireMeetingParticipant } from '@/lib/authz'
+import { requireTenantMember } from '@/lib/authz'
 
 export async function GET(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
-    const { error } = await requireMeetingParticipant(params.id)
+    const { error } = await requireTenantMember(params.id)
     if (error) return error
 
     const meetingRepo = new MeetingRepository()

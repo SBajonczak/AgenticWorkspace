@@ -1,4 +1,5 @@
-export type MeetingStatus = 'completed' | 'upcoming' | 'cancelled'
+export type MeetingStatus = 'completed' | 'upcoming' | 'cancelled' | 'processing'
+export type MeetingIndexingStatus = 'not_indexed' | 'indexed' | 'processing'
 
 export interface MeetingListTodo {
   id: string
@@ -14,6 +15,9 @@ export interface MeetingListItem {
   endTime: string
   summary: string | null
   processedAt: string | null
+  isIndexing: boolean
+  hasTranscript: boolean
+  indexingStatus: MeetingIndexingStatus
   status: MeetingStatus
   todos: MeetingListTodo[]
 }

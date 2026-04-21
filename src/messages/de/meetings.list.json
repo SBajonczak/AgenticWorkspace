@@ -6,7 +6,9 @@
       "filters": {
         "all": "Alle",
         "completed": "Abgeschlossen",
-        "upcoming": "Bevorstehend"
+        "upcoming": "Bevorstehend",
+        "transcriptOnly": "Nur mit Transkription",
+        "nameSearch": "Nach Namen suchen..."
       },
       "table": {
         "meeting": "Besprechung",
@@ -18,8 +20,20 @@
       "status": {
         "completed": "Abgeschlossen",
         "upcoming": "Bevorstehend",
-        "cancelled": "Abgesagt"
+        "cancelled": "Abgesagt",
+        "processing": "Wird indiziert"
       },
+      "indexingStatus": {
+        "label": "Indizierungsstatus",
+        "all": "Alle",
+        "not_indexed": "Nicht indiziert",
+        "indexed": "Indiziert",
+        "processing": "Wird indiziert"
+      },
+      "indexButton": "Jetzt indizieren",
+      "indexingInProgress": "Indizierung läuft...",
+      "indexQueued": "Indizierung gestartet",
+      "indexFailed": "Indizierung fehlgeschlagen",
       "empty": "Keine Besprechungen gefunden",
       "actionCount": "Aktion",
       "actionCount_plural": "Aktionen"
