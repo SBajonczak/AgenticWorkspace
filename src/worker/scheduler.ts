@@ -57,6 +57,20 @@ function shouldDebugMeetingSync(): boolean {
   return process.env.DEBUG_GRAPH_MEETINGS !== 'false'
 }
 
+type MeetingRunStatus =
+  | 'already_processed'
+  | 'transcript_missing'
+  | 'processed'
+  | 'processing_failed'
+
+interface MeetingRunSummaryItem {
+  meetingId: string
+  title: string
+  transcriptAvailable: boolean
+  transcribed: boolean
+  status: MeetingRunStatus
+}
+
 async function runForUser(
   user: {
     id: string
@@ -143,11 +157,17 @@ async function runForUser(
       ticketProvider
     )
 
+    const meetingRunSummary: MeetingRunSummaryItem[] = []
+
     for (const meeting of meetings) {
       if (!meeting.id) continue
 
       const organizerEmail = meeting.organizer.emailAddress.address.toLowerCase()
       const participants = normalizeParticipantEmails(user.email, organizerEmail, meeting.participants)
+      const summaryItemBase = {
+        meetingId: meeting.id,
+        title: meeting.subject,
+      }
 
       const existing = await meetingRepo.findByMeetingId(meeting.id)
       const graphModifiedAt = meeting.lastModifiedDateTime ? new Date(meeting.lastModifiedDateTime) : null
@@ -162,37 +182,81 @@ async function runForUser(
           })
         }
         await meetingRepo.updateSyncMeta(existing.id, graphModifiedAt, new Date())
+        meetingRunSummary.push({
+          ...summaryItemBase,
+          transcriptAvailable: Boolean(existing.transcript),
+          transcribed: true,
+          status: 'already_processed',
+        })
         continue
       }
 
       // Brand-new meeting (not yet in DB).
-      const transcript = await transcriptsClient.getTranscript(meeting.id)
-      if (!transcript) {
-        continue
-      }
-
-      await processor.processMeeting(
-        meeting.id,
-        meeting.subject,
-        meeting.organizer.emailAddress.name,
-        organizerEmail,
-        new Date(meeting.start.dateTime),
-        new Date(meeting.end.dateTime),
-        transcript,
-        participants,
-        user.tenantId ?? undefined,
-        {
-          oid: user.aadObjectId,
-          tid: user.azureTenantId,
-          name: user.name ?? user.email,
+      try {
+        const transcript = await transcriptsClient.getTranscript(meeting.id)
+        if (!transcript) {
+          meetingRunSummary.push({
+            ...summaryItemBase,
+            transcriptAvailable: false,
+            transcribed: false,
+            status: 'transcript_missing',
+          })
+          continue
         }
-      )
 
-      // Persist sync metadata for the newly created meeting row.
-      const created = await meetingRepo.findByMeetingId(meeting.id)
-      if (created) {
-        await meetingRepo.updateSyncMeta(created.id, graphModifiedAt, new Date())
+        await processor.processMeeting(
+          meeting.id,
+          meeting.subject,
+          meeting.organizer.emailAddress.name,
+          organizerEmail,
+          new Date(meeting.start.dateTime),
+          new Date(meeting.end.dateTime),
+          transcript,
+          participants,
+          user.tenantId ?? undefined,
+          {
+            oid: user.aadObjectId,
+            tid: user.azureTenantId,
+            name: user.name ?? user.email,
+          }
+        )
+
+        // Persist sync metadata for the newly created meeting row.
+        const created = await meetingRepo.findByMeetingId(meeting.id)
+        if (created) {
+          await meetingRepo.updateSyncMeta(created.id, graphModifiedAt, new Date())
+        }
+
+        meetingRunSummary.push({
+          ...summaryItemBase,
+          transcriptAvailable: true,
+          transcribed: true,
+          status: 'processed',
+        })
+      } catch (meetingError) {
+        console.error(
+          `[Worker][Meetings] Failed processing meeting "${meeting.subject}" (${meeting.id}) for user=${user.id}:`,
+          meetingError
+        )
+        meetingRunSummary.push({
+          ...summaryItemBase,
+          transcriptAvailable: false,
+          transcribed: false,
+          status: 'processing_failed',
+        })
       }
+    }
+
+    if (shouldDebugMeetingSync()) {
+      const summaryPayload = {
+        userId: user.id,
+        userEmail: user.email,
+        fetchedCount: meetings.length,
+        checkpointBefore: lastMeetingSyncAt ? lastMeetingSyncAt.toISOString() : null,
+        checkpointPersisted: cycleStartedAt.toISOString(),
+        meetings: meetingRunSummary,
+      }
+      console.log(`[Worker][Meetings][Summary] ${JSON.stringify(summaryPayload)}`)
     }
 
     // Advance the delta-sync checkpoint to the start of this cycle.
