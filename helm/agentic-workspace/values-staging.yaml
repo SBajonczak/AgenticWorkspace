@@ -2,6 +2,7 @@ namespace: agentic-staging
 
 config:
   nodeEnv: production
+  dryRun: "false"
 
 web:
   ingress:
