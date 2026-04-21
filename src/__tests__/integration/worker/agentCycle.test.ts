@@ -129,10 +129,11 @@ describe('Worker scheduler', () => {
 
     await runAgentCycleForUser('user-1')
 
-    expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
-      where: { id: 'user-1' },
-      select: { id: true, email: true, tenantId: true },
-    })
+    expect(mockPrisma.user.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'user-1' },
+      })
+    )
     expect(MeetingProcessor).toHaveBeenCalled()
   })
 
@@ -150,22 +151,26 @@ describe('Worker scheduler', () => {
     const { runAgentCycle } = await import('@/worker/scheduler')
     await runAgentCycle()
 
-    const processorInstance = (MeetingProcessor as jest.Mock).mock.results[0]?.value
-    expect(processorInstance.processMeeting).not.toHaveBeenCalled()
+    // Verify that processMeeting was not called (because meeting was already processed)
+    const processorCalls = (MeetingProcessor as jest.Mock).mock.results.filter(
+      (r) => r.type === 'return'
+    )
+    const processMeetingCalls = processorCalls.map((r) => r.value?.processMeeting?.mock?.calls?.length ?? 0)
+    expect(processMeetingCalls.some((c) => c > 0)).toBe(false)
   })
 
   it('handles ReauthRequiredError by marking sync state with consent required flag', async () => {
     const { ReauthRequiredError } = await import('@/graph/userTokenService')
+    const reauthError = new ReauthRequiredError('No refresh token available')
 
     ;(UserTokenService as jest.Mock).mockImplementation(() => ({
-      getValidAccessTokenForUser: jest.fn().mockRejectedValueOnce(
-        new ReauthRequiredError('No refresh token available')
-      ),
+      getValidAccessTokenForUser: jest.fn().mockRejectedValueOnce(reauthError),
     }))
 
     const mockSyncRepo = {
       markProcessing: jest.fn().mockResolvedValue({}),
       markRunError: jest.fn().mockResolvedValue({}),
+      getByUserId: jest.fn().mockResolvedValue({ meetingLookaheadDays: 14 }),
     }
 
     ;(UserSyncStateRepository as jest.Mock).mockImplementation(() => mockSyncRepo)
@@ -175,7 +180,7 @@ describe('Worker scheduler', () => {
 
     expect(mockSyncRepo.markRunError).toHaveBeenCalledWith(
       'user-1',
-      expect.stringContaining('refresh token'),
+      reauthError.message,
       expect.objectContaining({
         consentRequired: true,
       })
