@@ -16,7 +16,7 @@ export class TranscriptsClient {
   //@ts-expect-error this will be initialized in the constructor, but TypeScript doesn't recognize that
   private client: Client
   private accessToken: string
-  // When set, use /users/{userId}/ instead of /me/ (required for app permissions)
+  // Delegated calls must use /me. App-only calls can target /users/{id}.
   private userPath: string
   private userId?: string
   private tokenService?: UserTokenService
@@ -26,7 +26,7 @@ export class TranscriptsClient {
     this.userId = userId
     this.tokenService = tokenService
     this.initializeClient(accessToken)
-    this.userPath = userId ? `/users/${userId}` : '/me'
+    this.userPath = tokenService ? '/me' : userId ? `/users/${userId}` : '/me'
   }
 
   /**

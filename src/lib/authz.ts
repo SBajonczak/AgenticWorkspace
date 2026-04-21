@@ -2,6 +2,49 @@ import { prisma } from '@/db/prisma'
 import { auth } from './auth'
 import { NextResponse } from 'next/server'
 
+type AuthenticatedSession = {
+  user: {
+    id: string
+    email: string
+    name?: string | null
+    tenantId?: string
+    aadObjectId?: string
+    azureTid?: string
+    appRoles?: string[]
+  }
+  msGraphConsentRequired?: boolean
+}
+
+async function hydrateTenantIdFromAzureTenant(session: AuthenticatedSession): Promise<AuthenticatedSession> {
+  if (session.user.tenantId || !session.user.azureTid) {
+    return session
+  }
+
+  const tenant = await prisma.tenant.findUnique({
+    where: { azureTenantId: session.user.azureTid },
+    select: { id: true },
+  })
+
+  if (!tenant?.id) {
+    return session
+  }
+
+  session.user.tenantId = tenant.id
+
+  if (session.user.id) {
+    try {
+      await prisma.user.updateMany({
+        where: { id: session.user.id, tenantId: null },
+        data: { tenantId: tenant.id },
+      })
+    } catch (persistError) {
+      console.warn('[authz] Failed to backfill user tenantId from azureTid', persistError)
+    }
+  }
+
+  return session
+}
+
 /**
  * Checks whether the currently authenticated user is a participant
  * (attendee or organizer) of the given meeting.
@@ -52,17 +95,7 @@ export function isProjectAdmin(session: { user?: { appRoles?: string[] } } | nul
  */
 export async function requireAuth(): Promise<
   | {
-      session: {
-        user: {
-          id: string
-          email: string
-          name?: string | null
-          tenantId?: string
-          aadObjectId?: string
-          azureTid?: string
-          appRoles?: string[]
-        }
-      }
+      session: AuthenticatedSession
       error: null
     }
   | { session: null; error: NextResponse }
@@ -76,19 +109,10 @@ export async function requireAuth(): Promise<
     }
   }
 
+  const hydratedSession = await hydrateTenantIdFromAzureTenant(session as AuthenticatedSession)
+
   return {
-    session: session as {
-      user: {
-        id: string
-        email: string
-        name?: string | null
-        tenantId?: string
-        aadObjectId?: string
-        azureTid?: string
-        appRoles?: string[]
-      }
-      msGraphConsentRequired?: boolean
-    },
+    session: hydratedSession,
     error: null,
   }
 }
@@ -99,17 +123,7 @@ export async function requireAuth(): Promise<
  */
 export async function requireProjectAdmin(): Promise<
   | {
-      session: {
-        user: {
-          id: string
-          email: string
-          name?: string | null
-          tenantId?: string
-          aadObjectId?: string
-          azureTid?: string
-          appRoles?: string[]
-        }
-      }
+      session: AuthenticatedSession
       error: null
     }
   | { session: null; error: NextResponse }
