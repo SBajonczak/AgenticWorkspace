@@ -97,6 +97,36 @@ export async function requireAuth(): Promise<
  * Server-side guard that checks both authentication and meeting participation.
  * Returns a 401 if not authenticated, 403 if not a participant.
  */
+export async function requireProjectAdmin(): Promise<
+  | {
+      session: {
+        user: {
+          id: string
+          email: string
+          name?: string | null
+          tenantId?: string
+          aadObjectId?: string
+          azureTid?: string
+          appRoles?: string[]
+        }
+      }
+      error: null
+    }
+  | { session: null; error: NextResponse }
+> {
+  const authResult = await requireAuth()
+  if (authResult.error) return authResult
+
+  if (!isProjectAdmin(authResult.session)) {
+    return {
+      session: null,
+      error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }),
+    }
+  }
+
+  return authResult
+}
+
 export async function requireMeetingParticipant(
   internalMeetingId: string
 ): Promise<

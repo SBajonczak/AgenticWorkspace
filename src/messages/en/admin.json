@@ -28,6 +28,79 @@
       },
       "noProjects": "No projects found",
       "error": "Failed to load projects"
+    },
+    "worker": {
+      "title": "Worker Management",
+      "subtitle": "Reset the checkpoint, backfill missing meetings, and review imported meetings",
+      "tabs": {
+        "checkpoint": "Checkpoint",
+        "meetings": "Imported Meetings"
+      },
+      "checkpoint": {
+        "title": "Tenant Checkpoint",
+        "description": "Defines from which point in time the worker fetches meetings from the Microsoft calendar on the next run. Rewinding enables backfilling missed meetings.",
+        "current": "Current Checkpoint",
+        "none": "No checkpoint – worker uses the default window",
+        "updatedAt": "Last updated",
+        "updatedBy": "Updated by",
+        "reason": "Reason",
+        "maxBackfillHint": "Maximum rewind: {days} days",
+        "fieldDate": "New checkpoint date (ISO 8601)",
+        "fieldDatePlaceholder": "e.g. 2026-04-01T00:00:00Z",
+        "fieldReason": "Reason (optional)",
+        "fieldReasonPlaceholder": "e.g. Import failed on Apr 20",
+        "buttonSet": "Set Checkpoint",
+        "buttonClear": "Clear Checkpoint",
+        "clearConfirm": "Clear checkpoint? The worker will use the default sync window.",
+        "successSet": "Checkpoint set successfully.",
+        "successClear": "Checkpoint cleared.",
+        "error": "Failed to update checkpoint.",
+        "validationFuture": "Date must not be in the future.",
+        "validationTooOld": "Date cannot be more than {days} days in the past.",
+        "validationInvalid": "Invalid date."
+      },
+      "backfill": {
+        "title": "Trigger Backfill",
+        "description": "Fetches missing meetings for all users within the specified window. Meetings already imported (same meetingId) are skipped.",
+        "fieldFrom": "From",
+        "fieldFromPlaceholder": "e.g. 2026-04-01T00:00:00Z",
+        "fieldTo": "To (empty = now)",
+        "fieldToPlaceholder": "e.g. 2026-04-14T23:59:59Z",
+        "buttonRun": "Run Backfill",
+        "buttonDryRun": "Dry Run",
+        "success": "Backfill triggered for {count} user(s).",
+        "dryRunSuccess": "Dry run complete – no data was changed.",
+        "error": "Failed to start backfill.",
+        "validationFrom": "From date is required.",
+        "validationRange": "From date must be earlier than to date.",
+        "validationTooOld": "From date cannot be more than {days} days in the past."
+      },
+      "meetings": {
+        "title": "Imported Meetings",
+        "description": "Overview of all meetings indexed by the worker with audit information.",
+        "filterUser": "Filter by user",
+        "filterFrom": "From",
+        "filterTo": "To",
+        "buttonFilter": "Apply",
+        "buttonReset": "Reset",
+        "columns": {
+          "title": "Title",
+          "startTime": "Start",
+          "indexedForUser": "Indexed For",
+          "indexedByUser": "Indexed By",
+          "indexedAt": "Indexed At",
+          "processedAt": "Processed At",
+          "recrawlCount": "Recrawl Count",
+          "actions": "Actions"
+        },
+        "recrawl": "Reprocess",
+        "recrawlConfirm": "Reprocess meeting '{title}'? Existing todos, project statuses and minutes will be replaced.",
+        "recrawlSuccess": "Meeting reprocessed successfully.",
+        "recrawlError": "Failed to reprocess meeting.",
+        "noMeetings": "No imported meetings found.",
+        "error": "Failed to load meetings.",
+        "loading": "Loading meetings…"
+      }
     }
   }
 }

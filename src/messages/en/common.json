@@ -8,7 +8,8 @@
       "schedule": "Schedule",
       "goals": "Goals",
       "settings": "Settings",
-      "admin": "Admin"
+      "admin": "Admin",
+      "adminWorker": "Worker"
     },
     "brand": {
       "name": "Agentic Workplace"

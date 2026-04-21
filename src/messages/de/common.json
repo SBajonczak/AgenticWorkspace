@@ -8,7 +8,8 @@
       "schedule": "Zeitplan",
       "goals": "Ziele",
       "settings": "Einstellungen",
-      "admin": "Admin"
+      "admin": "Admin",
+      "adminWorker": "Worker"
     },
     "brand": {
       "name": "Agentic Workplace"

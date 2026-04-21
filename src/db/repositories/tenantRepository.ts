@@ -2,6 +2,11 @@ import { prisma } from '../prisma'
 import { Tenant, Prisma } from '@prisma/client'
 import { TicketProviderConfig } from '@/tickets/types'
 
+interface CheckpointActor {
+  userId: string
+  email: string
+}
+
 export class TenantRepository {
   async findByAzureTenantId(azureTenantId: string): Promise<Tenant | null> {
     return prisma.tenant.findUnique({ where: { azureTenantId } })
@@ -51,6 +56,38 @@ export class TenantRepository {
     } catch {
       return null
     }
+  }
+
+  async getWorkerCheckpoint(tenantId: string): Promise<Pick<Tenant, 'id' | 'meetingSyncCheckpointAt' | 'checkpointUpdatedAt' | 'checkpointUpdatedByUserId' | 'checkpointUpdatedByEmail' | 'checkpointUpdateReason'> | null> {
+    return prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: {
+        id: true,
+        meetingSyncCheckpointAt: true,
+        checkpointUpdatedAt: true,
+        checkpointUpdatedByUserId: true,
+        checkpointUpdatedByEmail: true,
+        checkpointUpdateReason: true,
+      },
+    })
+  }
+
+  async setWorkerCheckpoint(
+    tenantId: string,
+    checkpoint: Date | null,
+    actor: CheckpointActor,
+    reason?: string | null
+  ): Promise<Tenant> {
+    return prisma.tenant.update({
+      where: { id: tenantId },
+      data: {
+        meetingSyncCheckpointAt: checkpoint,
+        checkpointUpdatedAt: new Date(),
+        checkpointUpdatedByUserId: actor.userId,
+        checkpointUpdatedByEmail: actor.email,
+        checkpointUpdateReason: reason ?? null,
+      },
+    })
   }
 
   async update(id: string, data: Prisma.TenantUpdateInput): Promise<Tenant> {

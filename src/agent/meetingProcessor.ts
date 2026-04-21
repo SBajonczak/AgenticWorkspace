@@ -125,7 +125,14 @@ export class MeetingProcessor {
     transcript: string,
     participants: string[] = [],
     tenantId?: string,
-    ownerIdentity?: { oid?: string | null; tid?: string | null; name?: string | null }
+    ownerIdentity?: { oid?: string | null; tid?: string | null; name?: string | null },
+    indexingMeta?: {
+      indexedForUserId?: string | null
+      indexedForUserEmail?: string | null
+      indexedByUserId?: string | null
+      indexedByUserEmail?: string | null
+      isRecrawl?: boolean
+    }
   ): Promise<ProcessingResult> {
     // Upsert meeting record
     const existingMeeting = await this.meetingRepo.findByMeetingId(meetingId)
@@ -141,11 +148,27 @@ export class MeetingProcessor {
         endTime,
         transcript,
         participants: JSON.stringify(participants),
+        indexedAt: new Date(),
+        indexedForUserId: indexingMeta?.indexedForUserId ?? null,
+        indexedForUserEmail: indexingMeta?.indexedForUserEmail ?? null,
+        indexedByUserId: indexingMeta?.indexedByUserId ?? null,
+        indexedByUserEmail: indexingMeta?.indexedByUserEmail ?? null,
         ...(tenantId ? { tenant: { connect: { id: tenantId } } } : {}),
       })
     } else {
       meeting = await this.meetingRepo.update(existingMeeting.id, {
         participants: JSON.stringify(participants),
+        indexedAt: new Date(),
+        ...(indexingMeta?.indexedForUserId ? { indexedForUserId: indexingMeta.indexedForUserId } : {}),
+        ...(indexingMeta?.indexedForUserEmail ? { indexedForUserEmail: indexingMeta.indexedForUserEmail } : {}),
+        ...(indexingMeta?.indexedByUserId ? { indexedByUserId: indexingMeta.indexedByUserId } : {}),
+        ...(indexingMeta?.indexedByUserEmail ? { indexedByUserEmail: indexingMeta.indexedByUserEmail } : {}),
+        ...(indexingMeta?.isRecrawl
+          ? {
+              recrawlCount: { increment: 1 },
+              lastRecrawlAt: new Date(),
+            }
+          : {}),
       })
     }
 
@@ -235,6 +258,7 @@ export class MeetingProcessor {
     console.log(`[Processor] Created ${todosCreated} todos`)
 
     // Persist meeting minutes per language
+    await this.minutesRepo.deleteByMeetingId(meeting.id)
     let minutesCreated = 0
     for (const [language, content] of Object.entries(agentResponse.meetingMinutes)) {
       await this.minutesRepo.upsert(meeting.id, language, content)
@@ -280,7 +304,15 @@ export class MeetingProcessor {
     }
   }
 
-  async reprocessMeeting(meetingId: string): Promise<ProcessingResult> {
+  async reprocessMeeting(
+    meetingId: string,
+    indexingMeta?: {
+      indexedForUserId?: string | null
+      indexedForUserEmail?: string | null
+      indexedByUserId?: string | null
+      indexedByUserEmail?: string | null
+    }
+  ): Promise<ProcessingResult> {
     const meeting = await this.meetingRepo.findByMeetingId(meetingId)
     if (!meeting) throw new Error(`Meeting ${meetingId} not found`)
     if (!meeting.transcript) throw new Error(`Meeting ${meetingId} has no transcript`)
@@ -297,7 +329,14 @@ export class MeetingProcessor {
       meeting.transcript,
       participants,
       meeting.tenantId ?? undefined,
-      undefined
+      undefined,
+      {
+        indexedForUserId: indexingMeta?.indexedForUserId ?? meeting.indexedForUserId,
+        indexedForUserEmail: indexingMeta?.indexedForUserEmail ?? meeting.indexedForUserEmail,
+        indexedByUserId: indexingMeta?.indexedByUserId ?? null,
+        indexedByUserEmail: indexingMeta?.indexedByUserEmail ?? null,
+        isRecrawl: true,
+      }
     )
   }
 }

@@ -167,6 +167,74 @@ export class MeetingRepository {
     })
   }
 
+  async findByIdAndTenant(id: string, tenantId?: string): Promise<MeetingWithDetails | null> {
+    return prisma.meeting.findFirst({
+      where: {
+        id,
+        ...(tenantId ? { tenantId } : {}),
+      },
+      include: {
+        todos: { include: { ticketSync: true, project: true } },
+        minutes: true,
+        projectStatuses: true,
+      },
+    })
+  }
+
+  async listIndexedMeetingsForAdmin(options: {
+    tenantId?: string
+    userId?: string
+    from?: Date
+    to?: Date
+    limit?: number
+  }): Promise<Array<{
+    id: string
+    meetingId: string
+    title: string
+    startTime: Date
+    endTime: Date
+    indexedAt: Date | null
+    indexedForUserId: string | null
+    indexedForUserEmail: string | null
+    indexedByUserId: string | null
+    indexedByUserEmail: string | null
+    processedAt: Date | null
+    recrawlCount: number
+    lastRecrawlAt: Date | null
+  }>> {
+    return prisma.meeting.findMany({
+      where: {
+        ...(options.tenantId ? { tenantId: options.tenantId } : {}),
+        ...(options.userId ? { indexedForUserId: options.userId } : {}),
+        ...(options.from || options.to
+          ? {
+              indexedAt: {
+                ...(options.from ? { gte: options.from } : {}),
+                ...(options.to ? { lte: options.to } : {}),
+              },
+            }
+          : {}),
+      },
+      orderBy: [{ indexedAt: 'desc' }, { startTime: 'desc' }],
+      take: options.limit ?? 200,
+      select: {
+        id: true,
+        meetingId: true,
+        title: true,
+        startTime: true,
+        endTime: true,
+        indexedAt: true,
+        indexedForUserId: true,
+        indexedForUserEmail: true,
+        indexedByUserId: true,
+        indexedByUserEmail: true,
+        processedAt: true,
+        recrawlCount: true,
+        lastRecrawlAt: true,
+      },
+    })
+  }
+
   async update(id: string, data: Prisma.MeetingUpdateInput): Promise<Meeting> {
     return prisma.meeting.update({ where: { id }, data })
   }

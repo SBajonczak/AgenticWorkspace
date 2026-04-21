@@ -65,18 +65,29 @@ export default function AppHeader({ activeLink }: AppHeaderProps) {
               </Link>
             ))}
             {isProjectAdmin && (
-              <Link
-                href="/admin/projects"
-                className={cn(
-                  'px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-1',
-                  activeLink === 'admin'
-                    ? 'text-foreground bg-accent font-semibold'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-                )}
-              >
-                <ShieldCheck className="h-3.5 w-3.5" />
-                {(tCommon as any)('navigation.admin')}
-              </Link>
+              <>
+                <Link
+                  href="/admin/projects"
+                  className={cn(
+                    'px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-1',
+                    activeLink === 'admin'
+                      ? 'text-foreground bg-accent font-semibold'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                  )}
+                >
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  {(tCommon as any)('navigation.admin')}
+                </Link>
+                <Link
+                  href="/admin/worker"
+                  className={cn(
+                    'px-3 py-2 rounded-md text-sm font-medium transition-colors',
+                    'text-muted-foreground hover:text-foreground hover:bg-accent'
+                  )}
+                >
+                  {(tCommon as any)('navigation.adminWorker')}
+                </Link>
+              </>
             )}
             <div className="ml-2 flex items-center gap-1">
               <LanguageSwitcher />

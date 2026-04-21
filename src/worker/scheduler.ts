@@ -71,6 +71,17 @@ interface MeetingRunSummaryItem {
   status: MeetingRunStatus
 }
 
+interface CycleActor {
+  userId: string
+  email: string
+}
+
+interface RunForUserOptions {
+  checkpointOverrideFrom?: Date
+  windowEndAt?: Date
+  actor?: CycleActor
+}
+
 async function runForUser(
   user: {
     id: string
@@ -80,7 +91,8 @@ async function runForUser(
     azureTenantId: string | null
     name: string | null
   },
-  intervalMinutes: number
+  intervalMinutes: number,
+  options?: RunForUserOptions
 ): Promise<void> {
   const syncRepo = new UserSyncStateRepository()
   const tokenService = new UserTokenService(syncRepo)
@@ -97,9 +109,16 @@ async function runForUser(
     const meetingsClient = new MeetingsClient(accessToken)
     const transcriptsClient = new TranscriptsClient(accessToken)
 
+    const tenantRepo = new TenantRepository()
+
     // Load the previous sync checkpoint so we can do a delta (incremental) query.
     const syncState = await syncRepo.getByUserId(user.id)
-    const lastMeetingSyncAt: Date | null = (syncState as any)?.lastMeetingSyncAt ?? null
+    const syncCheckpoint: Date | null = (syncState as any)?.lastMeetingSyncAt ?? null
+    const tenantCheckpoint = user.tenantId
+      ? (await tenantRepo.getWorkerCheckpoint(user.tenantId))?.meetingSyncCheckpointAt ?? null
+      : null
+    const lastMeetingSyncAt: Date | null =
+      options?.checkpointOverrideFrom ?? tenantCheckpoint ?? syncCheckpoint
 
     const daysForward = clampLookaheadDays((syncState as any)?.meetingLookaheadDays)
 
@@ -121,6 +140,17 @@ async function runForUser(
         )
       }
       await syncRepo.markRunSuccess(user.id, nextRunAt, cycleStartedAt)
+      if (user.tenantId) {
+        await tenantRepo.setWorkerCheckpoint(
+          user.tenantId,
+          cycleStartedAt,
+          {
+            userId: options?.actor?.userId ?? user.id,
+            email: options?.actor?.email ?? user.email ?? 'unknown',
+          },
+          options?.checkpointOverrideFrom ? 'backfill-run' : 'worker-cycle'
+        )
+      }
       return
     }
 
@@ -130,7 +160,6 @@ async function runForUser(
       )
     }
 
-    const tenantRepo = new TenantRepository()
     let ticketProvider = createTicketProviderFromEnv()
 
     if (user.tenantId) {
@@ -161,6 +190,13 @@ async function runForUser(
 
     for (const meeting of meetings) {
       if (!meeting.id) continue
+
+      if (options?.windowEndAt) {
+        const meetingStart = new Date(meeting.start.dateTime)
+        if (meetingStart.getTime() > options.windowEndAt.getTime()) {
+          continue
+        }
+      }
 
       const organizerEmail = meeting.organizer.emailAddress.address.toLowerCase()
       const participants = normalizeParticipantEmails(user.email, organizerEmail, meeting.participants)
@@ -218,6 +254,12 @@ async function runForUser(
             oid: user.aadObjectId,
             tid: user.azureTenantId,
             name: user.name ?? user.email,
+          },
+          {
+            indexedForUserId: user.id,
+            indexedForUserEmail: user.email,
+            indexedByUserId: options?.actor?.userId ?? user.id,
+            indexedByUserEmail: options?.actor?.email ?? user.email,
           }
         )
 
@@ -261,6 +303,17 @@ async function runForUser(
 
     // Advance the delta-sync checkpoint to the start of this cycle.
     await syncRepo.markRunSuccess(user.id, nextRunAt, cycleStartedAt)
+    if (user.tenantId) {
+      await tenantRepo.setWorkerCheckpoint(
+        user.tenantId,
+        cycleStartedAt,
+        {
+          userId: options?.actor?.userId ?? user.id,
+          email: options?.actor?.email ?? user.email ?? 'unknown',
+        },
+        options?.checkpointOverrideFrom ? 'backfill-run' : 'worker-cycle'
+      )
+    }
   } catch (error) {
     if (error instanceof ReauthRequiredError) {
       await syncRepo.markRunError(user.id, error.message, { consentRequired: true, nextRunAt })
@@ -307,6 +360,55 @@ export async function runAgentCycleForUser(userId: string): Promise<void> {
     },
     configuredIntervalMinutes
   )
+}
+
+export async function runAgentCycleForTenant(
+  tenantId: string,
+  options?: {
+    checkpointOverrideFrom?: Date
+    windowEndAt?: Date
+    actor?: CycleActor
+  }
+): Promise<number> {
+  const users = await prisma.user.findMany({
+    where: {
+      tenantId,
+      accounts: {
+        some: {
+          provider: 'microsoft-entra-id',
+        },
+      },
+    },
+    select: {
+      id: true,
+      email: true,
+      tenantId: true,
+      aadObjectId: true,
+      name: true,
+      tenant: {
+        select: {
+          azureTenantId: true,
+        },
+      },
+    },
+  })
+
+  for (const user of users) {
+    await runForUser(
+      {
+        id: user.id,
+        email: user.email,
+        tenantId: user.tenantId,
+        aadObjectId: user.aadObjectId,
+        azureTenantId: user.tenant?.azureTenantId ?? null,
+        name: user.name,
+      },
+      configuredIntervalMinutes,
+      options
+    )
+  }
+
+  return users.length
 }
 
 export async function runAgentCycle(): Promise<void> {

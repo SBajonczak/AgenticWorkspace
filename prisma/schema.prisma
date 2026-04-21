@@ -16,19 +16,27 @@ datasource db {
 // Auto-provisioned on first login using the 'tid' claim from Entra ID.
 // ---------------------------------------------------------------------------
 model Tenant {
-  id            String    @id @default(uuid())
-  azureTenantId String    @unique  // Azure AD tenant ID (natural key)
-  name          String    @default("My Organization")
+  id                        String    @id @default(uuid())
+  azureTenantId             String    @unique  // Azure AD tenant ID (natural key)
+  name                      String    @default("My Organization")
   // TicketProviderType: 'jira' | 'github' | 'azuredevops' | 'none'
-  ticketProvider String   @default("none")
+  ticketProvider            String    @default("none")
   // JSON-serialized TicketProviderConfig – encrypt in production
-  ticketConfig  String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  ticketConfig              String?
+  // Optional global checkpoint used by all users of this tenant.
+  meetingSyncCheckpointAt   DateTime?
+  checkpointUpdatedAt       DateTime?
+  checkpointUpdatedByUserId String?
+  checkpointUpdatedByEmail  String?
+  checkpointUpdateReason    String?
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
 
-  meetings      Meeting[]
-  users         User[]
-  projects      Project[]
+  meetings                  Meeting[]
+  users                     User[]
+  projects                  Project[]
+
+  @@index([meetingSyncCheckpointAt])
 }
 
 model Meeting {
@@ -47,6 +55,13 @@ model Meeting {
   // Delta-sync tracking: avoid re-fetching / re-processing unchanged meetings
   graphLastModifiedAt DateTime? // Microsoft Graph lastModifiedDateTime for this event
   lastSyncedAt        DateTime? // When this meeting was last fetched from Graph
+  indexedAt           DateTime?
+  indexedForUserId    String?
+  indexedForUserEmail String?
+  indexedByUserId     String?
+  indexedByUserEmail  String?
+  recrawlCount        Int       @default(0)
+  lastRecrawlAt       DateTime?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
@@ -60,6 +75,8 @@ model Meeting {
 
   @@index([tenantId])
   @@index([graphLastModifiedAt])
+  @@index([tenantId, indexedAt])
+  @@index([tenantId, indexedForUserId])
 }
 
 model Todo {

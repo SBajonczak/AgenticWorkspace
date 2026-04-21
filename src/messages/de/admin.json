@@ -28,6 +28,79 @@
       },
       "noProjects": "Keine Projekte gefunden",
       "error": "Projekte konnten nicht geladen werden"
+    },
+    "worker": {
+      "title": "Worker-Verwaltung",
+      "subtitle": "Checkpoint zurücksetzen, fehlende Termine nachziehen und importierte Termine prüfen",
+      "tabs": {
+        "checkpoint": "Checkpoint",
+        "meetings": "Importierte Termine"
+      },
+      "checkpoint": {
+        "title": "Tenant-Checkpoint",
+        "description": "Legt fest, ab welchem Zeitpunkt der Worker beim nächsten Lauf Termine aus dem Microsoft-Kalender holt. Zurücksetzen ermöglicht das Nachziehen fehlender Termine.",
+        "current": "Aktueller Checkpoint",
+        "none": "Kein Checkpoint – Worker nutzt Standard-Fenster",
+        "updatedAt": "Zuletzt aktualisiert",
+        "updatedBy": "Aktualisiert von",
+        "reason": "Grund",
+        "maxBackfillHint": "Maximale Rücksprungweite: {days} Tage",
+        "fieldDate": "Neues Checkpoint-Datum (ISO 8601)",
+        "fieldDatePlaceholder": "z. B. 2026-04-01T00:00:00Z",
+        "fieldReason": "Begründung (optional)",
+        "fieldReasonPlaceholder": "z. B. Terminimport fehlgeschlagen am 20.04.",
+        "buttonSet": "Checkpoint setzen",
+        "buttonClear": "Checkpoint löschen",
+        "clearConfirm": "Checkpoint wirklich löschen? Der Worker nutzt dann das Standard-Fenster.",
+        "successSet": "Checkpoint erfolgreich gesetzt.",
+        "successClear": "Checkpoint erfolgreich gelöscht.",
+        "error": "Fehler beim Aktualisieren des Checkpoints.",
+        "validationFuture": "Das Datum darf nicht in der Zukunft liegen.",
+        "validationTooOld": "Das Datum darf maximal {days} Tage in der Vergangenheit liegen.",
+        "validationInvalid": "Ungültiges Datum."
+      },
+      "backfill": {
+        "title": "Backfill auslösen",
+        "description": "Holt fehlende Termine für alle Benutzer im angegebenen Zeitfenster nach. Bereits importierte Termine (gleiche meetingId) werden nicht doppelt angelegt.",
+        "fieldFrom": "Von",
+        "fieldFromPlaceholder": "z. B. 2026-04-01T00:00:00Z",
+        "fieldTo": "Bis (leer = jetzt)",
+        "fieldToPlaceholder": "z. B. 2026-04-14T23:59:59Z",
+        "buttonRun": "Backfill starten",
+        "buttonDryRun": "Dry-Run prüfen",
+        "success": "Backfill für {count} Benutzer erfolgreich ausgelöst.",
+        "dryRunSuccess": "Dry-Run erfolgreich – keine Daten verändert.",
+        "error": "Fehler beim Starten des Backfills.",
+        "validationFrom": "Von-Datum ist erforderlich.",
+        "validationRange": "Von-Datum muss vor dem Bis-Datum liegen.",
+        "validationTooOld": "Das Von-Datum darf maximal {days} Tage in der Vergangenheit liegen."
+      },
+      "meetings": {
+        "title": "Importierte Termine",
+        "description": "Übersicht aller vom Worker indizierten Termine mit Audit-Informationen.",
+        "filterUser": "Benutzer filtern",
+        "filterFrom": "Von",
+        "filterTo": "Bis",
+        "buttonFilter": "Filtern",
+        "buttonReset": "Zurücksetzen",
+        "columns": {
+          "title": "Titel",
+          "startTime": "Beginn",
+          "indexedForUser": "Indexiert für",
+          "indexedByUser": "Indexiert von",
+          "indexedAt": "Indexiert am",
+          "processedAt": "Verarbeitet am",
+          "recrawlCount": "Recrawl-Anzahl",
+          "actions": "Aktionen"
+        },
+        "recrawl": "Erneut verarbeiten",
+        "recrawlConfirm": "Termin '{title}' erneut verarbeiten? Bestehende Todos, Projekt-Status und Protokolle werden ersetzt.",
+        "recrawlSuccess": "Termin erfolgreich erneut verarbeitet.",
+        "recrawlError": "Fehler beim erneuten Verarbeiten.",
+        "noMeetings": "Keine importierten Termine gefunden.",
+        "error": "Termine konnten nicht geladen werden.",
+        "loading": "Lade Termine …"
+      }
     }
   }
 }
