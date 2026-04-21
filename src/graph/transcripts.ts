@@ -13,6 +13,7 @@ export interface TranscriptContent {
  * Handles token refresh on 403 errors (access denied due to expired/invalid token).
  */
 export class TranscriptsClient {
+  //@ts-expect-error this will be initialized in the constructor, but TypeScript doesn't recognize that
   private client: Client
   private accessToken: string
   // When set, use /users/{userId}/ instead of /me/ (required for app permissions)
