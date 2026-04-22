@@ -54,6 +54,8 @@ const makeMockLLMClient = () => ({
 
 const makeMockMeetingRepo = (existing: typeof mockMeeting | null = null) => ({
   findByMeetingId: jest.fn().mockResolvedValue(existing),
+  findByMeetingIdAndStartTime: jest.fn().mockResolvedValue(existing),
+  findById: jest.fn().mockResolvedValue(existing),
   create: jest.fn().mockResolvedValue(mockMeeting),
   update: jest.fn().mockImplementation((id, data) => Promise.resolve({ ...mockMeeting, ...data })),
 })
@@ -67,6 +69,7 @@ const makeMockTodoRepo = () => ({
 })
 
 const makeMockMinutesRepo = () => ({
+  deleteByMeetingId: jest.fn().mockResolvedValue(undefined),
   upsert: jest.fn().mockResolvedValue({}),
 })
 

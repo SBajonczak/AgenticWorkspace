@@ -68,8 +68,18 @@ export class MeetingRepository {
   }
 
   async findByMeetingId(meetingId: string): Promise<MeetingWithTodos | null> {
-    return prisma.meeting.findUnique({
+    // Returns the most recent occurrence when multiple rows share the same meetingId
+    // (recurring meeting series). Use findByMeetingIdAndStartTime for exact-match lookups.
+    return prisma.meeting.findFirst({
       where: { meetingId },
+      orderBy: { startTime: 'desc' },
+      include: { todos: { include: { ticketSync: true } } },
+    })
+  }
+
+  async findByMeetingIdAndStartTime(meetingId: string, startTime: Date): Promise<MeetingWithTodos | null> {
+    return prisma.meeting.findUnique({
+      where: { meetingId_startTime: { meetingId, startTime } },
       include: { todos: { include: { ticketSync: true } } },
     })
   }

@@ -192,9 +192,9 @@ async function runForUser(
     for (const meeting of meetings) {
       if (!meeting.id) continue
 
+      const meetingStartTime = new Date(meeting.start.dateTime)
       if (options?.windowEndAt) {
-        const meetingStart = new Date(meeting.start.dateTime)
-        if (meetingStart.getTime() > options.windowEndAt.getTime()) {
+        if (meetingStartTime.getTime() > options.windowEndAt.getTime()) {
           continue
         }
       }
@@ -206,7 +206,7 @@ async function runForUser(
         title: meeting.subject,
       }
 
-      const existing = await meetingRepo.findByMeetingId(meeting.id)
+      const existing = await meetingRepo.findByMeetingIdAndStartTime(meeting.id, meetingStartTime)
       const graphModifiedAt = meeting.lastModifiedDateTime ? new Date(meeting.lastModifiedDateTime) : null
 
       if (existing?.processedAt) {
@@ -265,7 +265,7 @@ async function runForUser(
         )
 
         // Persist sync metadata for the newly created meeting row.
-        const created = await meetingRepo.findByMeetingId(meeting.id)
+        const created = await meetingRepo.findByMeetingIdAndStartTime(meeting.id, meetingStartTime)
         if (created) {
           await meetingRepo.updateSyncMeta(created.id, graphModifiedAt, new Date())
         }
