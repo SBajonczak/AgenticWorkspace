@@ -134,8 +134,9 @@ export class MeetingProcessor {
       isRecrawl?: boolean
     }
   ): Promise<ProcessingResult> {
-    // Upsert meeting record
-    const existingMeeting = await this.meetingRepo.findByMeetingId(meetingId)
+    // Upsert meeting record – use (meetingId, startTime) composite key so that
+    // each occurrence of a recurring meeting series gets its own independent row.
+    const existingMeeting = await this.meetingRepo.findByMeetingIdAndStartTime(meetingId, startTime)
     let meeting: Meeting
 
     if (!existingMeeting) {
@@ -305,7 +306,7 @@ export class MeetingProcessor {
   }
 
   async reprocessMeeting(
-    meetingId: string,
+    meetingDbId: string,
     indexingMeta?: {
       indexedForUserId?: string | null
       indexedForUserEmail?: string | null
@@ -313,9 +314,9 @@ export class MeetingProcessor {
       indexedByUserEmail?: string | null
     }
   ): Promise<ProcessingResult> {
-    const meeting = await this.meetingRepo.findByMeetingId(meetingId)
-    if (!meeting) throw new Error(`Meeting ${meetingId} not found`)
-    if (!meeting.transcript) throw new Error(`Meeting ${meetingId} has no transcript`)
+    const meeting = await this.meetingRepo.findById(meetingDbId)
+    if (!meeting) throw new Error(`Meeting ${meetingDbId} not found`)
+    if (!meeting.transcript) throw new Error(`Meeting ${meetingDbId} has no transcript`)
 
     const participants = meeting.participants ? JSON.parse(meeting.participants) : []
 
