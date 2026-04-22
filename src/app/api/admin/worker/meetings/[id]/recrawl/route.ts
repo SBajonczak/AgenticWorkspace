@@ -59,7 +59,7 @@ export async function POST(
     ticketProvider
   )
 
-  const result = await processor.reprocessMeeting(meeting.meetingId, {
+  const result = await processor.reprocessMeeting(meeting.id, {
     indexedByUserId: session.user.id,
     indexedByUserEmail: session.user.email,
   })

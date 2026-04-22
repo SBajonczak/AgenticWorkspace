@@ -41,7 +41,7 @@ model Tenant {
 
 model Meeting {
   id                  String    @id @default(uuid())
-  meetingId           String    @unique // Microsoft Teams meeting ID
+  meetingId           String    // Microsoft Teams meeting ID (shared across all occurrences of a recurring series)
   title               String
   organizer           String
   organizerEmail      String?
@@ -81,6 +81,9 @@ model Meeting {
   @@index([tenantId, indexedAt])
   @@index([tenantId, indexedForUserId])
   @@index([tenantId, isIndexing])
+  // Each occurrence of a recurring meeting series gets its own row,
+  // differentiated by startTime (recurring meetings share the same meetingId).
+  @@unique([meetingId, startTime])
 }
 
 model Todo {

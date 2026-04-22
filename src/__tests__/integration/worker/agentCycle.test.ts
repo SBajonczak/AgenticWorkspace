@@ -75,6 +75,7 @@ describe('Worker scheduler', () => {
 
     ;(MeetingRepository as jest.Mock).mockImplementation(() => ({
       findByMeetingId: jest.fn().mockResolvedValue(null),
+      findByMeetingIdAndStartTime: jest.fn().mockResolvedValue(null),
       update: jest.fn().mockResolvedValue({}),
       updateSyncMeta: jest.fn().mockResolvedValue({}),
     }))
@@ -89,6 +90,8 @@ describe('Worker scheduler', () => {
 
     ;(TenantRepository as jest.Mock).mockImplementation(() => ({
       getTicketConfig: jest.fn().mockResolvedValue(null),
+      getWorkerCheckpoint: jest.fn().mockResolvedValue(null),
+      setWorkerCheckpoint: jest.fn().mockResolvedValue({}),
     }))
 
     ;(createTicketProviderFromEnv as jest.Mock).mockReturnValue({
@@ -140,6 +143,11 @@ describe('Worker scheduler', () => {
   it('does not reprocess already processed meetings', async () => {
     ;(MeetingRepository as jest.Mock).mockImplementation(() => ({
       findByMeetingId: jest.fn().mockResolvedValue({
+        id: 'existing-1',
+        processedAt: new Date('2026-03-01T10:30:00Z'),
+        participants: JSON.stringify(['alice@example.com']),
+      }),
+      findByMeetingIdAndStartTime: jest.fn().mockResolvedValue({
         id: 'existing-1',
         processedAt: new Date('2026-03-01T10:30:00Z'),
         participants: JSON.stringify(['alice@example.com']),
