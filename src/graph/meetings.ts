@@ -54,7 +54,7 @@ export class MeetingsClient {
 
   constructor(accessToken: string, userId?: string) {
     this.client = Client.init({
-      authProvider: (done: (error: Error | null, token?: string | null) => void) => {
+      authProvider: (done: (error: Error | null, token: string | null) => void) => {
         done(null, accessToken)
       },
     })

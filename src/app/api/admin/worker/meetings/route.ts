@@ -192,7 +192,7 @@ export async function GET(request: Request) {
     })
   )
 
-  const combinedByKey = new Map<string, (typeof graphRows)[number]>()
+  const combinedByKey = new Map<string, (typeof graphRows)[number] | (typeof importedRows)[number]>()
   for (const row of importedRows) {
     combinedByKey.set(`${row.meetingId}|${row.startTime}`, row)
   }

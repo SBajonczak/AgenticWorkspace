@@ -8,6 +8,9 @@ import { TicketSyncRepository } from '../db/repositories/ticketSyncRepository'
 import { ITicketProvider } from '../tickets/types'
 import { NoneTicketProvider } from '../tickets/providers/none'
 import { Meeting } from '@prisma/client'
+import { MeetingPipelineOrchestrator } from '../agents/orchestrator'
+import { createMcpServer, createDefaultMcpServerDeps } from '../mcp/server'
+import { extractCounts, isSuccess } from '../agents/types'
 
 export interface ProcessingResult {
   meeting: Meeting
@@ -102,6 +105,8 @@ export class MeetingProcessor {
     return bestScore >= 20 ? bestProjectId : null
   }
 
+  private orchestrator?: MeetingPipelineOrchestrator
+
   constructor(
     private llmClient: LLMClient,
     private meetingRepo: MeetingRepository,
@@ -113,6 +118,18 @@ export class MeetingProcessor {
     projectRepo?: ProjectRepository
   ) {
     this.projectRepo = projectRepo ?? new ProjectRepository()
+
+    if (process.env.USE_MULTI_AGENT_PIPELINE === 'true') {
+      const openai = (this.llmClient as any).client as import('openai').default
+      const model = (this.llmClient as any).model as string
+      const mcpDeps = createDefaultMcpServerDeps(this.ticketProvider)
+      const mcpServer = createMcpServer(mcpDeps)
+      this.orchestrator = new MeetingPipelineOrchestrator(mcpServer, {
+        openai,
+        model,
+        ticketProvider: this.ticketProvider,
+      })
+    }
   }
 
   async processMeeting(
@@ -173,7 +190,52 @@ export class MeetingProcessor {
       })
     }
 
-    // LLM analysis
+    // ─── Multi-Agent Pipeline (feature-flagged) ──────────────────────────────
+    if (this.orchestrator) {
+      console.log(`[Processor] Using multi-agent pipeline for "${title}"`)
+      const pipelineResult = await this.orchestrator.run({
+        meetingDbId: meeting.id,
+        meetingId,
+        title,
+        organizer,
+        organizerEmail,
+        startTime,
+        endTime,
+        transcript,
+        participants,
+        tenantId,
+        outputLanguages: (this.llmClient as any).outputLanguages as string[],
+        ownerIdentity,
+      })
+
+      const counts = extractCounts(pipelineResult)
+      const summaryValue = isSuccess(pipelineResult.summarization)
+        ? pipelineResult.summarization.value
+        : null
+
+      // Build a minimal AgentResponse for callers that inspect the return value
+      const agentResponse: AgentResponse = {
+        meetingSummary: {
+          summary: summaryValue?.summary ?? '',
+          decisions: summaryValue?.decisions ?? [],
+        },
+        projectStatuses: [],
+        todos: [],
+        meetingMinutes: summaryValue?.minutesPerLanguage ?? {},
+      }
+
+      return {
+        meeting,
+        agentResponse,
+        todosCreated: counts.todosCreated,
+        minutesCreated: counts.minutesCreated,
+        projectStatusesCreated: counts.projectStatusesCreated,
+        ticketsSynced: counts.ticketsSynced,
+        ticketsFailed: counts.ticketsFailed,
+      }
+    }
+
+    // ─── Legacy single-LLM pipeline ──────────────────────────────────────────
     console.log(`[Processor] Analysing meeting: ${title}`)
     console.log(`[Processor] Transcript length: ${transcript.length} chars | Participants: ${participants.length}`)
     console.log(`[Processor] Meeting: ${startTime.toISOString()} → ${endTime.toISOString()} | Organizer: ${organizer}`)
