@@ -57,6 +57,14 @@ function shouldDebugMeetingSync(): boolean {
   return process.env.DEBUG_GRAPH_MEETINGS !== 'false'
 }
 
+function logWorkerMeetingEvent(event: string, payload: Record<string, unknown>): void {
+  console.log(`[Worker][Meetings][${event}] ${JSON.stringify(payload)}`)
+}
+
+function createRunId(userId: string): string {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${userId.slice(0, 8)}`
+}
+
 type MeetingRunStatus =
   | 'already_processed'
   | 'transcript_missing'
@@ -94,6 +102,7 @@ async function runForUser(
   intervalMinutes: number,
   options?: RunForUserOptions
 ): Promise<void> {
+  const runId = createRunId(user.id)
   const syncRepo = new UserSyncStateRepository()
   const tokenService = new UserTokenService(syncRepo)
   const nextRunAt = getNextRunAt(intervalMinutes)
@@ -123,11 +132,16 @@ async function runForUser(
 
     const daysForward = clampLookaheadDays((syncState as any)?.meetingLookaheadDays)
 
-    if (shouldDebugMeetingSync()) {
-      console.log(
-        `[Worker][Meetings] user=${user.id} checkpoint.before=${lastMeetingSyncAt ? lastMeetingSyncAt.toISOString() : 'null'} checkpoint.next=${cycleStartedAt.toISOString()} overlapHours=48 daysForward=${daysForward}`
-      )
-    }
+    logWorkerMeetingEvent('run.start', {
+      runId,
+      userId: user.id,
+      userEmail: user.email,
+      tenantId: user.tenantId,
+      checkpointBefore: lastMeetingSyncAt ? lastMeetingSyncAt.toISOString() : null,
+      checkpointNext: cycleStartedAt.toISOString(),
+      overlapHours: 48,
+      daysForward,
+    })
 
     const meetings = await meetingsClient.getLatestMeeting({
       ...(lastMeetingSyncAt ? { startAfter: lastMeetingSyncAt } : {}),
@@ -135,11 +149,11 @@ async function runForUser(
       overlapHours: 48,
     })
     if (!meetings || meetings.length === 0) {
-      if (shouldDebugMeetingSync()) {
-        console.log(
-          `[Worker][Meetings] user=${user.id} fetched=0 checkpoint.persisted=${cycleStartedAt.toISOString()}`
-        )
-      }
+      logWorkerMeetingEvent('run.no_meetings', {
+        runId,
+        userId: user.id,
+        checkpointPersisted: cycleStartedAt.toISOString(),
+      })
       await syncRepo.markRunSuccess(user.id, nextRunAt, cycleStartedAt)
       if (user.tenantId) {
         await tenantRepo.setWorkerCheckpoint(
@@ -155,11 +169,12 @@ async function runForUser(
       return
     }
 
-    if (shouldDebugMeetingSync()) {
-      console.log(
-        `[Worker][Meetings] user=${user.id} fetched=${meetings.length} checkpoint.persisted=${cycleStartedAt.toISOString()}`
-      )
-    }
+    logWorkerMeetingEvent('run.fetched', {
+      runId,
+      userId: user.id,
+      fetchedCount: meetings.length,
+      checkpointPersisted: cycleStartedAt.toISOString(),
+    })
 
     let ticketProvider = createTicketProviderFromEnv()
 
@@ -188,6 +203,55 @@ async function runForUser(
     )
 
     const meetingRunSummary: MeetingRunSummaryItem[] = []
+
+    const upsertTranscriptPendingMeeting = async (input: {
+      existingId?: string
+      meetingId: string
+      title: string
+      organizer: string
+      organizerEmail: string
+      startTime: Date
+      endTime: Date
+      participants: string[]
+      graphModifiedAt: Date | null
+    }): Promise<void> => {
+      const participantPayload = JSON.stringify(input.participants)
+
+      if (input.existingId) {
+        await meetingRepo.update(input.existingId, {
+          title: input.title,
+          organizer: input.organizer,
+          organizerEmail: input.organizerEmail,
+          endTime: input.endTime,
+          participants: participantPayload,
+          indexedAt: new Date(),
+          indexedForUserId: user.id,
+          indexedForUserEmail: user.email,
+          indexedByUserId: options?.actor?.userId ?? user.id,
+          indexedByUserEmail: options?.actor?.email ?? user.email,
+        })
+        await meetingRepo.updateSyncMeta(input.existingId, input.graphModifiedAt, new Date())
+        return
+      }
+
+      const created = await meetingRepo.create({
+        meetingId: input.meetingId,
+        title: input.title,
+        organizer: input.organizer,
+        organizerEmail: input.organizerEmail,
+        startTime: input.startTime,
+        endTime: input.endTime,
+        transcript: null,
+        participants: participantPayload,
+        indexedAt: new Date(),
+        indexedForUserId: user.id,
+        indexedForUserEmail: user.email,
+        indexedByUserId: options?.actor?.userId ?? user.id,
+        indexedByUserEmail: options?.actor?.email ?? user.email,
+        ...(user.tenantId ? { tenant: { connect: { id: user.tenantId } } } : {}),
+      })
+      await meetingRepo.updateSyncMeta(created.id, input.graphModifiedAt, new Date())
+    }
 
     for (const meeting of meetings) {
       if (!meeting.id) continue
@@ -219,6 +283,15 @@ async function runForUser(
           })
         }
         await meetingRepo.updateSyncMeta(existing.id, graphModifiedAt, new Date())
+        if (shouldDebugMeetingSync()) {
+          logWorkerMeetingEvent('meeting.skip_already_processed', {
+            runId,
+            userId: user.id,
+            meetingId: meeting.id,
+            meetingDbId: existing.id,
+            title: meeting.subject,
+          })
+        }
         meetingRunSummary.push({
           ...summaryItemBase,
           transcriptAvailable: Boolean(existing.transcript),
@@ -232,6 +305,24 @@ async function runForUser(
       try {
         const transcript = await transcriptsClient.getTranscript(meeting.id)
         if (!transcript) {
+          await upsertTranscriptPendingMeeting({
+            existingId: existing?.id,
+            meetingId: meeting.id,
+            title: meeting.subject,
+            organizer: meeting.organizer.emailAddress.name,
+            organizerEmail,
+            startTime: meetingStartTime,
+            endTime: new Date(meeting.end.dateTime),
+            participants,
+            graphModifiedAt,
+          })
+          logWorkerMeetingEvent('meeting.transcript_missing', {
+            runId,
+            userId: user.id,
+            meetingId: meeting.id,
+            meetingDbId: existing?.id ?? null,
+            title: meeting.subject,
+          })
           meetingRunSummary.push({
             ...summaryItemBase,
             transcriptAvailable: false,
@@ -268,6 +359,16 @@ async function runForUser(
         const created = await meetingRepo.findByMeetingIdAndStartTime(meeting.id, meetingStartTime)
         if (created) {
           await meetingRepo.updateSyncMeta(created.id, graphModifiedAt, new Date())
+          if (shouldDebugMeetingSync()) {
+            logWorkerMeetingEvent('meeting.processed', {
+              runId,
+              userId: user.id,
+              meetingId: meeting.id,
+              meetingDbId: created.id,
+              title: meeting.subject,
+              transcriptLength: transcript.length,
+            })
+          }
         }
 
         meetingRunSummary.push({
@@ -277,10 +378,13 @@ async function runForUser(
           status: 'processed',
         })
       } catch (meetingError) {
-        console.error(
-          `[Worker][Meetings] Failed processing meeting "${meeting.subject}" (${meeting.id}) for user=${user.id}:`,
-          meetingError
-        )
+        logWorkerMeetingEvent('meeting.processing_failed', {
+          runId,
+          userId: user.id,
+          meetingId: meeting.id,
+          title: meeting.subject,
+          error: meetingError instanceof Error ? meetingError.message : String(meetingError),
+        })
         meetingRunSummary.push({
           ...summaryItemBase,
           transcriptAvailable: false,
@@ -292,6 +396,7 @@ async function runForUser(
 
     if (shouldDebugMeetingSync()) {
       const summaryPayload = {
+        runId,
         userId: user.id,
         userEmail: user.email,
         fetchedCount: meetings.length,
@@ -316,6 +421,11 @@ async function runForUser(
       )
     }
   } catch (error) {
+    logWorkerMeetingEvent('run.error', {
+      runId,
+      userId: user.id,
+      error: error instanceof Error ? error.message : String(error),
+    })
     if (error instanceof ReauthRequiredError) {
       await syncRepo.markRunError(user.id, error.message, { consentRequired: true, nextRunAt })
       return

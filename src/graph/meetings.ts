@@ -54,7 +54,7 @@ export class MeetingsClient {
 
   constructor(accessToken: string, userId?: string) {
     this.client = Client.init({
-      authProvider: (done) => {
+      authProvider: (done: (error: Error | null, token?: string | null) => void) => {
         done(null, accessToken)
       },
     })
@@ -109,6 +109,7 @@ export class MeetingsClient {
     overlapHours?: number
   }): Promise<Meeting[]> {
     try {
+      const requestedLimit = Math.max(1, limit)
       const now = new Date()
       const daysBack = options?.daysBack ?? 30
       const daysForward = options?.daysForward ?? 14
@@ -128,21 +129,38 @@ export class MeetingsClient {
         '$orderby': 'start/dateTime DESC',
       })
 
-      const response = await this.client
-        .api(`${this.userPath}/calendarView`)
-        .query({
-          startDateTime: startDateTime,
-          endDateTime: endDateTime,
-        })
-        .select('subject,id,organizer,start,end,isOnlineMeeting,onlineMeetingUrl,attendees,responseStatus,lastModifiedDateTime')
-        .top(100)
-        .orderby('start/dateTime DESC')
-        .get()
+      const meetings: Meeting[] = []
+      let nextPagePath: string | null = `${this.userPath}/calendarView`
+      let isFirstPage = true
 
-      const meetings = response.value || []
+      while (nextPagePath && meetings.length < requestedLimit) {
+        const pageResponse: any = isFirstPage
+          ? await this.client
+              .api(nextPagePath)
+              .query({
+                startDateTime,
+                endDateTime,
+              })
+              .select('subject,id,organizer,start,end,isOnlineMeeting,onlineMeetingUrl,attendees,responseStatus,lastModifiedDateTime')
+              .top(100)
+              .orderby('start/dateTime DESC')
+              .get()
+          : await this.client
+              .api(nextPagePath)
+              .get()
+
+        const pageMeetings = (pageResponse.value || []) as Meeting[]
+        meetings.push(...pageMeetings)
+
+        const pageNextLink: string | undefined = (pageResponse as { '@odata.nextLink'?: string })['@odata.nextLink']
+        nextPagePath = pageNextLink ?? null
+        isFirstPage = false
+      }
+
+      const slicedMeetings = meetings.slice(0, requestedLimit)
 
       const enrichedMeetings = await Promise.all(
-        meetings.map(async (meeting: Meeting) => {
+        slicedMeetings.map(async (meeting: Meeting) => {
           let joinUrl: string | null = null
           let onlineMeetingLookupReason: 'not-found' | 'other-error' | null = null
 
@@ -317,7 +335,7 @@ export class MeetingsClient {
   }
 
   async getLatestMeeting(options?: Parameters<MeetingsClient['getRecentMeetings']>[1]): Promise<Meeting[] | null> {
-    const meetings = await this.getRecentMeetings(20, options)
+    const meetings = await this.getRecentMeetings(200, options)
     return meetings.length > 0 ? meetings : null
   }
 }

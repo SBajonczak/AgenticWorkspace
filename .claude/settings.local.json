@@ -13,7 +13,8 @@
       "Bash(npm run:*)",
       "Bash(npx next:*)",
       "Bash(npm install:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(find:*)"
     ]
   }
 }

@@ -211,6 +211,15 @@ export class MeetingRepository {
     processedAt: Date | null
     recrawlCount: number
     lastRecrawlAt: Date | null
+    transcript: string | null
+    summary: string | null
+    decisions: string | null
+    graphLastModifiedAt: Date | null
+    isIndexing: boolean
+    indexingStartedAt: Date | null
+    organizer: string
+    organizerEmail: string | null
+    participants: string | null
   }>> {
     return prisma.meeting.findMany({
       where: {
@@ -241,6 +250,15 @@ export class MeetingRepository {
         processedAt: true,
         recrawlCount: true,
         lastRecrawlAt: true,
+        transcript: true,
+        summary: true,
+        decisions: true,
+        graphLastModifiedAt: true,
+        isIndexing: true,
+        indexingStartedAt: true,
+        organizer: true,
+        organizerEmail: true,
+        participants: true,
       },
     })
   }

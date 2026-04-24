@@ -28,9 +28,13 @@ interface CheckpointState {
 interface IndexedMeeting {
   id: string
   meetingId: string
+  source: 'imported' | 'graph' | 'imported+graph'
   title: string
   startTime: string
   endTime: string
+  organizer: string
+  organizerEmail: string | null
+  participants: string | null
   indexedAt: string | null
   indexedForUserId: string | null
   indexedForUserEmail: string | null
@@ -39,6 +43,11 @@ interface IndexedMeeting {
   processedAt: string | null
   recrawlCount: number
   lastRecrawlAt: string | null
+  hasTranscript: boolean
+  hasAnalysis: boolean
+  isIndexing: boolean
+  indexingStartedAt: string | null
+  graphLastModifiedAt: string | null
 }
 
 type TabKey = 'checkpoint' | 'meetings'
@@ -65,6 +74,16 @@ function StatusBadge({ ok }: { ok: boolean }) {
       {ok ? 'Verarbeitet' : 'Ausstehend'}
     </span>
   )
+}
+
+function SourceBadge({ source }: { source: IndexedMeeting['source'] }) {
+  if (source === 'imported+graph') {
+    return <Badge variant="secondary">Graph + Import</Badge>
+  }
+  if (source === 'graph') {
+    return <Badge variant="outline">Graph</Badge>
+  }
+  return <Badge variant="secondary">Import</Badge>
 }
 
 // ---------------------------------------------------------------------------
@@ -311,6 +330,9 @@ function MeetingsTab({ t }: { t: ReturnType<typeof useTranslations> }) {
       if (filterUser.trim()) params.set('userId', filterUser.trim())
       if (filterFrom.trim()) params.set('from', filterFrom.trim())
       if (filterTo.trim()) params.set('to', filterTo.trim())
+      params.set('includeGraph', '1')
+      params.set('graphLimit', '80')
+      params.set('withTranscriptProbe', '1')
       const res = await fetch(`/api/admin/worker/meetings?${params.toString()}`)
       if (!res.ok) {
         setError(t('worker.meetings.error'))
@@ -330,22 +352,61 @@ function MeetingsTab({ t }: { t: ReturnType<typeof useTranslations> }) {
   }, [fetchMeetings])
 
   const handleRecrawl = async (meeting: IndexedMeeting) => {
-    const confirmed = window.confirm(t('worker.meetings.recrawlConfirm').replace('{title}', meeting.title))
+    const isForce = meeting.hasAnalysis
+    const confirmationText = isForce
+      ? t('worker.meetings.forceAnalyzeConfirm').replace('{title}', meeting.title)
+      : t('worker.meetings.analyzeConfirm').replace('{title}', meeting.title)
+    const confirmed = window.confirm(confirmationText)
     if (!confirmed) return
 
     setRecrawling(meeting.id)
     setRecrawlMsg(null)
     try {
-      const res = await fetch(`/api/admin/worker/meetings/${meeting.id}/recrawl`, { method: 'POST' })
+      let participants: string[] = []
+      if (meeting.participants) {
+        try {
+          participants = JSON.parse(meeting.participants) as string[]
+        } catch {
+          participants = []
+        }
+      }
+
+      const res = await fetch('/api/admin/worker/meetings/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: meeting.indexedForUserId,
+          meetingId: meeting.meetingId,
+          title: meeting.title,
+          startTime: meeting.startTime,
+          endTime: meeting.endTime,
+          organizer: meeting.organizer,
+          organizerEmail: meeting.organizerEmail,
+          participants,
+          force: isForce,
+        }),
+      })
       if (res.ok) {
-        setRecrawlMsg({ type: 'success', id: meeting.id, text: t('worker.meetings.recrawlSuccess') })
+        setRecrawlMsg({
+          type: 'success',
+          id: meeting.id,
+          text: isForce ? t('worker.meetings.forceAnalyzeSuccess') : t('worker.meetings.analyzeSuccess'),
+        })
         fetchMeetings()
       } else {
         const data = await res.json().catch(() => ({}))
-        setRecrawlMsg({ type: 'error', id: meeting.id, text: data.error ?? t('worker.meetings.recrawlError') })
+        setRecrawlMsg({
+          type: 'error',
+          id: meeting.id,
+          text: data.error ?? (isForce ? t('worker.meetings.forceAnalyzeError') : t('worker.meetings.analyzeError')),
+        })
       }
     } catch {
-      setRecrawlMsg({ type: 'error', id: meeting.id, text: t('worker.meetings.recrawlError') })
+      setRecrawlMsg({
+        type: 'error',
+        id: meeting.id,
+        text: meeting.hasAnalysis ? t('worker.meetings.forceAnalyzeError') : t('worker.meetings.analyzeError'),
+      })
     } finally {
       setRecrawling(null)
     }
@@ -412,12 +473,15 @@ function MeetingsTab({ t }: { t: ReturnType<typeof useTranslations> }) {
               <thead className="bg-muted/50 border-b border-border">
                 <tr>
                   <th className="text-left px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">{t('worker.meetings.columns.title')}</th>
+                  <th className="text-left px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">{t('worker.meetings.columns.source')}</th>
                   <th className="text-left px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">{t('worker.meetings.columns.startTime')}</th>
                   <th className="text-left px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">{t('worker.meetings.columns.indexedForUser')}</th>
                   <th className="text-left px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">{t('worker.meetings.columns.indexedByUser')}</th>
                   <th className="text-left px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">{t('worker.meetings.columns.indexedAt')}</th>
                   <th className="text-left px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">{t('worker.meetings.columns.processedAt')}</th>
                   <th className="text-left px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">{t('worker.meetings.columns.recrawlCount')}</th>
+                  <th className="text-left px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">{t('worker.meetings.columns.transcript')}</th>
+                  <th className="text-left px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">{t('worker.meetings.columns.analysis')}</th>
                   <th className="px-4 py-2.5" />
                 </tr>
               </thead>
@@ -425,6 +489,7 @@ function MeetingsTab({ t }: { t: ReturnType<typeof useTranslations> }) {
                 {meetings.map((m) => (
                   <tr key={m.id} className="hover:bg-accent/30 transition-colors">
                     <td className="px-4 py-3 font-medium max-w-[240px] truncate" title={m.title}>{m.title}</td>
+                    <td className="px-4 py-3 whitespace-nowrap"><SourceBadge source={m.source} /></td>
                     <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">{formatDateTime(m.startTime)}</td>
                     <td className="px-4 py-3 text-muted-foreground truncate max-w-[160px]" title={m.indexedForUserEmail ?? m.indexedForUserId ?? '—'}>{m.indexedForUserEmail ?? m.indexedForUserId ?? '—'}</td>
                     <td className="px-4 py-3 text-muted-foreground truncate max-w-[160px]" title={m.indexedByUserEmail ?? m.indexedByUserId ?? '—'}>{m.indexedByUserEmail ?? m.indexedByUserId ?? '—'}</td>
@@ -437,17 +502,36 @@ function MeetingsTab({ t }: { t: ReturnType<typeof useTranslations> }) {
                         <span title={`Letzter Recrawl: ${formatDateTime(m.lastRecrawlAt)}`}>{m.recrawlCount}</span>
                       ) : '—'}
                     </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
+                      {m.hasTranscript ? 'Ja' : 'Nein'}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
+                      {m.hasAnalysis ? 'Vorhanden' : 'Fehlt'}
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-col gap-1 items-end">
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => handleRecrawl(m)}
-                          disabled={recrawling === m.id || !m.processedAt}
-                          title={!m.processedAt ? 'Nicht verarbeitet' : undefined}
+                          disabled={
+                            recrawling === m.id ||
+                            !m.indexedForUserId ||
+                            !m.hasTranscript ||
+                            m.isIndexing
+                          }
+                          title={
+                            !m.indexedForUserId
+                              ? t('worker.meetings.analyzeMissingUser')
+                              : !m.hasTranscript
+                                ? t('worker.meetings.analyzeMissingTranscript')
+                                : m.isIndexing
+                                  ? t('worker.meetings.analyzeInProgress')
+                                  : undefined
+                          }
                         >
                           {recrawling === m.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-                          <span className="ml-1">{t('worker.meetings.recrawl')}</span>
+                          <span className="ml-1">{m.hasAnalysis ? t('worker.meetings.forceAnalyze') : t('worker.meetings.analyze')}</span>
                         </Button>
                         {recrawlMsg?.id === m.id && (
                           <span className={cn('text-xs', recrawlMsg.type === 'success' ? 'text-green-500' : 'text-destructive')}>
