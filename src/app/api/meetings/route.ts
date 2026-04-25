@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '../../../lib/auth'
 import { MeetingRepository } from '@/db/repositories/meetingRepository'
 import { MeetingStatus } from '@/types/meetings'
+import { prisma } from '@/db/prisma'
 
 const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100
@@ -50,8 +51,21 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const tenantId = (session.user as any).tenantId as string | undefined
+  let tenantId = (session.user as any).tenantId as string | undefined
   const userEmail = session.user.email?.toLowerCase()
+
+  // Fallback: if tenantId is not in the session JWT (e.g. stale session from before tenant
+  // association was written into the token), look it up directly from the database.
+  if (!tenantId && session.user.id) {
+    const dbUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { tenantId: true },
+    })
+    tenantId = dbUser?.tenantId ?? undefined
+    if (tenantId) {
+      console.warn('[meetings] tenantId missing from session JWT, resolved from DB for user', session.user.id)
+    }
+  }
 
   try {
     const searchParams = request.nextUrl.searchParams

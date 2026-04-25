@@ -393,6 +393,11 @@ export const authConfig = {
 
       // IMPORTANT: jwt callback runs in middleware (Edge runtime), so no Prisma calls here.
       // tenantId is persisted during signIn callback on Node runtime.
+      // If the user object (from DB adapter, available on sign-in) has a tenantId, copy it into
+      // the token so it survives across sessions without requiring a fresh sign-in.
+      if (user && typeof (user as Record<string, unknown>).tenantId === 'string') {
+        token.tenantId = (user as Record<string, unknown>).tenantId as string
+      }
       if (typeof token.tenantId !== 'string') {
         delete (token as Record<string, unknown>).tenantId
       }
