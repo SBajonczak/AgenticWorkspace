@@ -76,14 +76,14 @@ export class MeetingRepository {
     return prisma.meeting.findFirst({
       where: { meetingId },
       orderBy: { startTime: 'desc' },
-      include: { todos: { include: { ticketSync: true } } },
+      include: { todos: { include: { assigneeUser: true, ticketSync: true } } },
     })
   }
 
   async findByMeetingIdAndStartTime(meetingId: string, startTime: Date): Promise<MeetingWithTodos | null> {
     return prisma.meeting.findUnique({
       where: { meetingId_startTime: { meetingId, startTime } },
-      include: { todos: { include: { ticketSync: true } } },
+      include: { todos: { include: { assigneeUser: true, ticketSync: true } } },
     })
   }
 
@@ -126,7 +126,7 @@ export class MeetingRepository {
       orderBy: { startTime: 'asc' },
       take: limit,
       include: {
-        todos: { include: { ticketSync: true } },
+        todos: { include: { assigneeUser: true, ticketSync: true } },
       },
     })
   }
@@ -358,7 +358,7 @@ export class MeetingRepository {
       where,
       orderBy: { startTime: 'desc' },
       take: limit,
-      include: { todos: { include: { ticketSync: true } } },
+      include: { todos: { include: { assigneeUser: true, ticketSync: true } } },
     })
   }
 

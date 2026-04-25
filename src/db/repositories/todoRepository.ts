@@ -53,7 +53,7 @@ export class TodoRepository {
     return result.count
   }
 
-  async update(id: string, data: Prisma.TodoUpdateInput): Promise<Todo> {
+  async update(id: string, data: Prisma.TodoUncheckedUpdateInput): Promise<Todo> {
     return prisma.todo.update({ where: { id }, data })
   }
 
