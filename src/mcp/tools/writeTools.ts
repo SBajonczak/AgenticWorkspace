@@ -5,6 +5,50 @@ import { TodoRepository } from '@/db/repositories/todoRepository'
 import { MeetingMinutesRepository } from '@/db/repositories/meetingMinutesRepository'
 import { ProjectStatusRepository } from '@/db/repositories/projectStatusRepository'
 import { ProjectRepository } from '@/db/repositories/projectRepository'
+import { prisma } from '@/db/prisma'
+
+function extractEmailCandidate(value: string | null | undefined): string | null {
+  if (!value) return null
+  const match = value.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)
+  return match?.[0]?.toLowerCase() ?? null
+}
+
+async function resolveAssigneeUserId(options: {
+  assigneeHint: string | null
+  participants: string[]
+  tenantId?: string | null
+}): Promise<string | null> {
+  const hint = options.assigneeHint?.trim()
+  if (!hint) return null
+
+  const normalizedHint = hint.toLowerCase()
+  const participantEmails = options.participants
+    .map((participant) => participant.trim().toLowerCase())
+    .filter((participant) => participant.includes('@'))
+  const participantMatch = participantEmails.find((email) => email === normalizedHint)
+  const emailCandidate = extractEmailCandidate(normalizedHint) ?? participantMatch ?? null
+
+  if (emailCandidate) {
+    const byEmail = await prisma.user.findFirst({
+      where: {
+        email: emailCandidate,
+        ...(options.tenantId ? { tenantId: options.tenantId } : {}),
+      },
+      select: { id: true },
+    })
+    if (byEmail) return byEmail.id
+  }
+
+  const byName = await prisma.user.findFirst({
+    where: {
+      name: { equals: hint, mode: 'insensitive' },
+      ...(options.tenantId ? { tenantId: options.tenantId } : {}),
+    },
+    select: { id: true },
+  })
+
+  return byName?.id ?? null
+}
 
 export function registerWriteTools(
   server: McpServer,
@@ -70,17 +114,35 @@ export function registerWriteTools(
       ),
     },
     async ({ meetingDbId, todos }) => {
+      const meeting = await deps.meetingRepo.findById(meetingDbId)
+      let participants: string[] = []
+      if (meeting?.participants) {
+        try {
+          const parsed = JSON.parse(meeting.participants)
+          participants = Array.isArray(parsed) ? parsed : []
+        } catch {
+          participants = []
+        }
+      }
+
       await deps.todoRepo.deleteByMeetingId(meetingDbId)
-      const data = todos.map((t) => ({
-        meetingId: meetingDbId,
-        projectId: null as string | null,
-        title: t.title,
-        description: t.description,
-        assigneeHint: t.assigneeHint,
-        confidence: t.confidence,
-        priority: t.priority,
-        dueDate: t.dueDate ? new Date(t.dueDate) : null,
-      }))
+      const data = await Promise.all(
+        todos.map(async (t) => ({
+          meetingId: meetingDbId,
+          projectId: null as string | null,
+          assigneeUserId: await resolveAssigneeUserId({
+            assigneeHint: t.assigneeHint,
+            participants,
+            tenantId: meeting?.tenantId,
+          }),
+          title: t.title,
+          description: t.description,
+          assigneeHint: t.assigneeHint,
+          confidence: t.confidence,
+          priority: t.priority,
+          dueDate: t.dueDate ? new Date(t.dueDate) : null,
+        }))
+      )
       await deps.todoRepo.createMany(data)
       // Fetch back to get IDs
       const saved = await deps.todoRepo.findByMeetingId(meetingDbId)

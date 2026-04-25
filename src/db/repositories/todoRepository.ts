@@ -15,6 +15,7 @@ export class TodoRepository {
     return prisma.todo.findUnique({
       where: { id },
       include: {
+        assigneeUser: true,
         ticketSync: true,
         meeting: true,
       },
@@ -24,7 +25,7 @@ export class TodoRepository {
   async findByMeetingId(meetingId: string): Promise<Todo[]> {
     return prisma.todo.findMany({
       where: { meetingId },
-      include: { ticketSync: true },
+      include: { assigneeUser: true, ticketSync: true },
       orderBy: { confidence: 'desc' },
     }) as any
   }
@@ -32,7 +33,7 @@ export class TodoRepository {
   async findByProjectId(projectId: string): Promise<Todo[]> {
     return prisma.todo.findMany({
       where: { projectId },
-      include: { ticketSync: true, meeting: true },
+      include: { assigneeUser: true, ticketSync: true, meeting: true },
       orderBy: [{ status: 'asc' }, { confidence: 'desc' }],
     }) as any
   }

@@ -23,7 +23,7 @@ import { prisma } from '@/db/prisma'
 import { requireAuth, requireProjectAdmin } from '@/lib/authz'
 
 describe('authz tenant hydration', () => {
-  const mockAuth = auth as jest.MockedFunction<typeof auth>
+  const mockAuth = auth as unknown as jest.Mock
   const mockPrisma = prisma as any
 
   beforeEach(() => {
@@ -37,7 +37,7 @@ describe('authz tenant hydration', () => {
         email: 'user@example.com',
         azureTid: 'azure-tenant-1',
       },
-    } as any)
+    })
     mockPrisma.tenant.findUnique.mockResolvedValue({ id: 'tenant-1' })
     mockPrisma.user.updateMany.mockResolvedValue({ count: 1 })
 
@@ -64,7 +64,7 @@ describe('authz tenant hydration', () => {
         azureTid: 'azure-tenant-1',
         appRoles: ['projectadmin'],
       },
-    } as any)
+    })
     mockPrisma.tenant.findUnique.mockResolvedValue({ id: 'tenant-1' })
     mockPrisma.user.updateMany.mockResolvedValue({ count: 1 })
 

@@ -52,6 +52,13 @@
       "yesterday": "Yesterday, {meetingCount} {meetingCount, plural, one {meeting was} other {meetings were}} processed and {actionCount} {actionCount, plural, one {action item was} other {action items were}} identified.",
       "today": "Today, you have {upcomingCount} {upcomingCount, plural, one {upcoming meeting} other {upcoming meetings}}."
     },
+    "summarySection": {
+      "title": "Summary Section",
+      "description": "In the last {windowDays} days, {meetingCount} {meetingCount, plural, one {meeting was conducted} other {meetings were conducted}}. You were assigned {assignedTaskCount} {assignedTaskCount, plural, one {task} other {tasks}}.",
+      "empty": "No processed meetings were found for the selected time window.",
+      "noMeetingSummary": "No short summary is available for this meeting yet.",
+      "assignedTasks": "Assigned to you: {count} {count, plural, one {task} other {tasks}}"
+    },
     "home": {
       "hero": {
         "subtitle": "Your AI-powered workplace agent that transforms meetings into actionable outcomes",

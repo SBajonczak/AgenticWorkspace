@@ -3,6 +3,15 @@ import { MeetingProcessor } from '@/agent/meetingProcessor'
 import { NoneTicketProvider } from '@/tickets/providers/none'
 import { AgentResponse } from '@/ai/llmClient'
 import { ProjectRepository } from '@/db/repositories/projectRepository'
+import { prisma } from '@/db/prisma'
+
+jest.mock('@/db/prisma', () => ({
+  prisma: {
+    user: {
+      findFirst: jest.fn().mockResolvedValue(null),
+    },
+  },
+}))
 
 // ---------- Mocks ----------
 
@@ -104,6 +113,13 @@ const makeMockProjectRepo = () => ({
 // ---------- Tests ----------
 
 describe('MeetingProcessor', () => {
+  const mockPrisma = prisma as any
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockPrisma.user.findFirst.mockResolvedValue(null)
+  })
+
   const makeProcessor = (
     ticketProvider = new NoneTicketProvider(),
     projectRepo = makeMockProjectRepo()
@@ -381,6 +397,43 @@ describe('MeetingProcessor', () => {
       )
       expect(todoRepo.createMany).toHaveBeenCalledWith([
         expect.objectContaining({ projectId: 'project-atlas' }),
+      ])
+    })
+
+    it('stores assigneeUserId when assigneeHint matches a user email', async () => {
+      const todoRepo = makeMockTodoRepo()
+      const projectRepo = makeMockProjectRepo()
+      mockPrisma.user.findFirst.mockResolvedValueOnce({ id: 'user-2' })
+
+      const processor = new MeetingProcessor(
+        makeMockLLMClient() as any,
+        makeMockMeetingRepo() as any,
+        todoRepo as any,
+        makeMockMinutesRepo() as any,
+        makeMockProjectStatusRepo() as any,
+        makeMockTicketSyncRepo() as any,
+        new NoneTicketProvider(),
+        projectRepo as any
+      )
+
+      await processor.processMeeting(
+        'ms-teams-id',
+        'Q3 Planning',
+        'Alice',
+        'alice@example.com',
+        new Date(),
+        new Date(),
+        'transcript text',
+        ['bob@example.com'],
+        'tenant-1'
+      )
+
+      expect(mockPrisma.user.findFirst).toHaveBeenCalled()
+      expect(todoRepo.createMany).toHaveBeenCalledWith([
+        expect.objectContaining({
+          assigneeUserId: 'user-2',
+          assigneeHint: 'bob@example.com',
+        }),
       ])
     })
   })

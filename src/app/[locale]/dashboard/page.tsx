@@ -17,10 +17,9 @@ import {
 import {
   mockGoals,
   mockMarketSignals,
-  mockWeather,
-  mockDailyStats
+  mockWeather
 } from '@/mocks'
-import { MeetingListItem, MeetingsApiResponse } from '@/types/meetings'
+import { DashboardSummaryResponse, MeetingListItem, MeetingsApiResponse } from '@/types/meetings'
 import { DashboardUserProfile } from '@/types/user'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
@@ -35,6 +34,15 @@ const DEFAULT_USER_PROFILE: DashboardUserProfile = {
   location: null,
   initials: '??',
   avatarUrl: null,
+}
+
+const DEFAULT_DASHBOARD_SUMMARY: DashboardSummaryResponse = {
+  windowDays: 7,
+  from: new Date(0).toISOString(),
+  to: new Date(0).toISOString(),
+  meetingsConductedCount: 0,
+  assignedTaskCount: 0,
+  meetings: [],
 }
 
 interface DashboardProject {
@@ -76,6 +84,7 @@ export default function DashboardPage() {
   const [activeProjects, setActiveProjects] = useState<DashboardProject[]>([])
   const [recentMeetingsUpdatedAt, setRecentMeetingsUpdatedAt] = useState<string | null>(null)
   const [currentUser, setCurrentUser] = useState<DashboardUserProfile>(DEFAULT_USER_PROFILE)
+  const [dashboardSummary, setDashboardSummary] = useState<DashboardSummaryResponse>(DEFAULT_DASHBOARD_SUMMARY)
 
   useEffect(() => {
     let active = true
@@ -130,6 +139,17 @@ export default function DashboardPage() {
       }
     }
 
+    const loadDashboardSummary = async () => {
+      try {
+        const response = await fetch('/api/dashboard/summary', { cache: 'no-store' })
+        if (!response.ok) throw new Error('Failed to load dashboard summary')
+        const data = (await response.json()) as DashboardSummaryResponse
+        if (active) setDashboardSummary(data)
+      } catch {
+        if (active) setDashboardSummary(DEFAULT_DASHBOARD_SUMMARY)
+      }
+    }
+
     const loadProjects = async () => {
       try {
         const response = await fetch('/api/projects', { cache: 'no-store' })
@@ -151,6 +171,7 @@ export default function DashboardPage() {
     loadMeetingWidgets()
     loadCurrentUser()
     loadProjects()
+    loadDashboardSummary()
 
     const intervalId = setInterval(loadMeetingWidgets, DASHBOARD_MEETINGS_REFRESH_MS)
 
@@ -158,12 +179,14 @@ export default function DashboardPage() {
       void loadMeetingWidgets()
       void loadCurrentUser()
       void loadProjects()
+      void loadDashboardSummary()
     }
     const handleVisibilityChange = () => {
       if (!document.hidden) {
         void loadMeetingWidgets()
         void loadCurrentUser()
         void loadProjects()
+        void loadDashboardSummary()
       }
     }
 
@@ -196,7 +219,7 @@ export default function DashboardPage() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8 space-y-6"
         >
-          <GreetingSummary user={currentUser} stats={mockDailyStats} />
+          <GreetingSummary user={currentUser} summary={dashboardSummary} />
           <div className="flex flex-wrap items-center gap-6 pt-4 border-t border-border/50">
             <PersonalContextBar user={currentUser} />
             <Separator orientation="vertical" className="hidden sm:block h-6" />

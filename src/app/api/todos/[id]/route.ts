@@ -6,6 +6,7 @@ import { ProjectRepository } from '@/db/repositories/projectRepository'
 
 const PatchTodoSchema = z.object({
   projectId: z.string().min(1).nullable().optional(),
+  assigneeUserId: z.string().min(1).nullable().optional(),
   status: z.enum(['pending', 'in_progress', 'done']).optional(),
 })
 
@@ -57,7 +58,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   const tenantId = getTenantId(session)
   const identity = getIdentity(session)
-  const { projectId, status } = parsed.data
+  const { projectId, assigneeUserId, status } = parsed.data
 
   if (projectId !== undefined && projectId !== null) {
     const project = await projectRepo.findById(projectId)
@@ -91,6 +92,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     await todoRepo.assignProject(todo.id, projectId)
   }
 
+  if (assigneeUserId !== undefined) {
+    await todoRepo.update(todo.id, { assigneeUserId })
+  }
+
   if (status !== undefined) {
     await todoRepo.update(todo.id, { status })
   }
@@ -101,6 +106,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     todo: {
       id: updated!.id,
       projectId: updated!.projectId,
+      assigneeUserId: (updated as any).assigneeUserId ?? null,
       status: updated!.status,
     },
   })

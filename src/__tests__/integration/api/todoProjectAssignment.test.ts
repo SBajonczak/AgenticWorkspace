@@ -33,6 +33,7 @@ describe('PATCH /api/todos/[id]', () => {
   const mockTodoRepo = {
     findById: jest.fn(),
     assignProject: jest.fn(),
+    update: jest.fn(),
   }
 
   const mockProjectRepo = {
@@ -163,5 +164,32 @@ describe('PATCH /api/todos/[id]', () => {
 
     const response = await PATCH(makeRequest({ projectId: 'project-1' }), { params: { id: 'todo-1' } })
     expect(response.status).toBe(400)
+  })
+
+  it('updates structured assignee when assigneeUserId is provided', async () => {
+    mockTodoRepo.findById
+      .mockResolvedValueOnce({
+        id: 'todo-1',
+        meetingId: 'meeting-internal-1',
+        projectId: null,
+        status: 'pending',
+        assigneeUserId: null,
+      })
+      .mockResolvedValueOnce({
+        id: 'todo-1',
+        meetingId: 'meeting-internal-1',
+        projectId: null,
+        status: 'pending',
+        assigneeUserId: 'user-2',
+      })
+
+    mockTodoRepo.update.mockResolvedValue({ id: 'todo-1', assigneeUserId: 'user-2' })
+
+    const response = await PATCH(makeRequest({ assigneeUserId: 'user-2' }), { params: { id: 'todo-1' } })
+    const data = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(mockTodoRepo.update).toHaveBeenCalledWith('todo-1', { assigneeUserId: 'user-2' })
+    expect(data.todo.assigneeUserId).toBe('user-2')
   })
 })

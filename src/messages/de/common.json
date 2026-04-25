@@ -52,6 +52,13 @@
       "yesterday": "Gestern {meetingCount, plural, one {wurde # Besprechung} other {wurden # Besprechungen}} verarbeitet und {actionCount} {actionCount, plural, one {Aufgabe wurde} other {Aufgaben wurden}} identifiziert.",
       "today": "Heute haben Sie {upcomingCount} {upcomingCount, plural, one {anstehende Besprechung} other {anstehende Besprechungen}}."
     },
+    "summarySection": {
+      "title": "Zusammenfassungsbereich",
+      "description": "In den letzten {windowDays} Tagen wurden {meetingCount} {meetingCount, plural, one {Besprechung durchgeführt} other {Besprechungen durchgeführt}}. Ihnen wurden {assignedTaskCount} {assignedTaskCount, plural, one {Aufgabe zugewiesen} other {Aufgaben zugewiesen}}.",
+      "empty": "Für den ausgewählten Zeitraum wurden noch keine verarbeiteten Besprechungen gefunden.",
+      "noMeetingSummary": "Für diese Besprechung ist noch keine Kurz-Zusammenfassung verfügbar.",
+      "assignedTasks": "Ihnen zugewiesen: {count} {count, plural, one {Aufgabe} other {Aufgaben}}"
+    },
     "home": {
       "hero": {
         "subtitle": "Ihr KI-gestützter Arbeitsplatz-Agent, der Besprechungen in umsetzbare Ergebnisse verwandelt",

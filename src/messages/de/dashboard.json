@@ -52,6 +52,19 @@
         "saveError": "Die Einstellung konnte nicht gespeichert werden.",
         "invalidValue": "Bitte wählen Sie einen Wert zwischen 1 und 31 Tagen."
       },
+      "summaryWindow": {
+        "title": "Zusammenfassungszeitraum",
+        "description": "Steuern Sie, wie viele vergangene Tage im Zusammenfassungsbereich berücksichtigt werden.",
+        "label": "Rückblick-Tage",
+        "minLabel": "1 Tag",
+        "maxLabel": "90 Tage",
+        "currentValue": "Aktueller Wert: letzte {days} Tage",
+        "save": "Speichern",
+        "saving": "Speichert…",
+        "saved": "Erfolgreich gespeichert.",
+        "saveError": "Der Zusammenfassungszeitraum konnte nicht gespeichert werden.",
+        "invalidValue": "Bitte wählen Sie einen Wert zwischen 1 und 90 Tagen."
+      },
       "projects": {
         "title": "Projekte & Wissensquellen",
         "description": "Verwalten Sie Ihre Projekte, vergeben Sie Aliase aus Meeting-Transkripten und verknüpfen Sie externe Wissensquellen (Confluence, Jira, GitHub, SharePoint) mit jedem Projekt.",

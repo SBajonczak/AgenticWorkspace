@@ -52,6 +52,19 @@
         "saveError": "Could not save meeting preparation setting.",
         "invalidValue": "Please choose a value between 1 and 31 days."
       },
+      "summaryWindow": {
+        "title": "Summary Window",
+        "description": "Control how many previous days are included in the summary section.",
+        "label": "Lookback days",
+        "minLabel": "1 day",
+        "maxLabel": "90 days",
+        "currentValue": "Current value: last {days} days",
+        "save": "Save",
+        "saving": "Saving…",
+        "saved": "Saved successfully.",
+        "saveError": "Could not save summary window setting.",
+        "invalidValue": "Please choose a value between 1 and 90 days."
+      },
       "projects": {
         "title": "Projects & Knowledge Sources",
         "description": "Manage your projects, assign aliases used in meeting transcripts, and link external knowledge sources (Confluence, Jira, GitHub, SharePoint) to each project.",

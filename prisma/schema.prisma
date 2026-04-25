@@ -90,6 +90,7 @@ model Todo {
   id            String    @id @default(uuid())
   meetingId     String
   projectId     String?
+  assigneeUserId String?
   title         String
   description   String
   assigneeHint  String?
@@ -102,10 +103,12 @@ model Todo {
 
   meeting       Meeting   @relation(fields: [meetingId], references: [id], onDelete: Cascade)
   project       Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  assigneeUser  User?     @relation(fields: [assigneeUserId], references: [id], onDelete: SetNull)
   ticketSync    TicketSync?
 
   @@index([meetingId])
   @@index([projectId])
+  @@index([assigneeUserId])
 }
 
 // Generalised ticket sync: replaces JiraSync, supports all providers
@@ -258,6 +261,7 @@ model User {
   tenantId      String?
   tenant        Tenant?   @relation(fields: [tenantId], references: [id])
   projectMemberships ProjectMember[]
+  assignedTodos Todo[]
   syncState     UserSyncState?
 
   accounts      Account[]
@@ -275,6 +279,7 @@ model UserSyncState {
   hasRefreshToken Boolean  @default(false)
   consentRequired Boolean  @default(false)
   meetingLookaheadDays Int @default(14)
+  summaryWindowDays  Int   @default(7)
   lastRunAt         DateTime?
   lastSuccessAt     DateTime?
   nextRunAt         DateTime?

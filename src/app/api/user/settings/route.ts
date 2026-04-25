@@ -7,9 +7,13 @@ import { UserSyncStateRepository } from '@/db/repositories/userSyncStateReposito
 const LOOKAHEAD_DEFAULT_DAYS = 14
 const LOOKAHEAD_MIN_DAYS = 1
 const LOOKAHEAD_MAX_DAYS = 31
+const SUMMARY_WINDOW_DEFAULT_DAYS = 7
+const SUMMARY_WINDOW_MIN_DAYS = 1
+const SUMMARY_WINDOW_MAX_DAYS = 90
 
 const UpdateUserSettingsSchema = z.object({
   meetingLookaheadDays: z.number().int().min(LOOKAHEAD_MIN_DAYS).max(LOOKAHEAD_MAX_DAYS),
+  summaryWindowDays: z.number().int().min(SUMMARY_WINDOW_MIN_DAYS).max(SUMMARY_WINDOW_MAX_DAYS),
 })
 
 function resolveUserId(session: Session | null): string | null {
@@ -22,11 +26,23 @@ function readMeetingLookaheadDays(value: unknown): unknown {
   return (value as { meetingLookaheadDays?: unknown }).meetingLookaheadDays
 }
 
+function readSummaryWindowDays(value: unknown): unknown {
+  if (typeof value !== 'object' || value === null) return undefined
+  return (value as { summaryWindowDays?: unknown }).summaryWindowDays
+}
+
 function clampLookaheadDays(value: unknown): number {
   const parsed = typeof value === 'number' ? value : Number(value)
   if (!Number.isFinite(parsed)) return LOOKAHEAD_DEFAULT_DAYS
   const normalized = Math.trunc(parsed)
   return Math.max(LOOKAHEAD_MIN_DAYS, Math.min(LOOKAHEAD_MAX_DAYS, normalized))
+}
+
+function clampSummaryWindowDays(value: unknown): number {
+  const parsed = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(parsed)) return SUMMARY_WINDOW_DEFAULT_DAYS
+  const normalized = Math.trunc(parsed)
+  return Math.max(SUMMARY_WINDOW_MIN_DAYS, Math.min(SUMMARY_WINDOW_MAX_DAYS, normalized))
 }
 
 export async function GET() {
@@ -40,8 +56,9 @@ export async function GET() {
   const syncRepo = new UserSyncStateRepository()
   const syncState = await syncRepo.getByUserId(userId)
   const meetingLookaheadDays = clampLookaheadDays(readMeetingLookaheadDays(syncState))
+  const summaryWindowDays = clampSummaryWindowDays(readSummaryWindowDays(syncState))
 
-  return NextResponse.json({ meetingLookaheadDays })
+  return NextResponse.json({ meetingLookaheadDays, summaryWindowDays })
 }
 
 export async function PUT(req: NextRequest) {
@@ -65,10 +82,12 @@ export async function PUT(req: NextRequest) {
   }
 
   const meetingLookaheadDays = clampLookaheadDays(parsed.data.meetingLookaheadDays)
+  const summaryWindowDays = clampSummaryWindowDays(parsed.data.summaryWindowDays)
   const syncRepo = new UserSyncStateRepository()
-  const updated = await syncRepo.upsert(userId, { meetingLookaheadDays })
+  const updated = await syncRepo.upsert(userId, { meetingLookaheadDays, summaryWindowDays })
 
   return NextResponse.json({
     meetingLookaheadDays: clampLookaheadDays(readMeetingLookaheadDays(updated)),
+    summaryWindowDays: clampSummaryWindowDays(readSummaryWindowDays(updated)),
   })
 }

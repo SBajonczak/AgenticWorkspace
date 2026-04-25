@@ -128,3 +128,20 @@ export interface MeetingPreparationResponse {
     }[]
   }[]
 }
+
+export interface DashboardSummaryMeeting {
+  id: string
+  title: string
+  startTime: string
+  summary: string | null
+  assignedTaskCount: number
+}
+
+export interface DashboardSummaryResponse {
+  windowDays: number
+  from: string
+  to: string
+  meetingsConductedCount: number
+  assignedTaskCount: number
+  meetings: DashboardSummaryMeeting[]
+}

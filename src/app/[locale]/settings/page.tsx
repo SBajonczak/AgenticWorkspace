@@ -29,6 +29,7 @@ interface TenantSettingsResponse {
 
 interface UserSettingsResponse {
   meetingLookaheadDays: number
+  summaryWindowDays: number
 }
 
 // ---------------------------------------------------------------------------
@@ -123,6 +124,10 @@ export default function SettingsPage() {
   const [lookaheadSaving, setLookaheadSaving] = useState(false)
   const [lookaheadSaved, setLookaheadSaved] = useState(false)
   const [lookaheadError, setLookaheadError] = useState<string | null>(null)
+  const [summaryWindowDraft, setSummaryWindowDraft] = useState<number>(7)
+  const [summaryWindowSaving, setSummaryWindowSaving] = useState(false)
+  const [summaryWindowSaved, setSummaryWindowSaved] = useState(false)
+  const [summaryWindowError, setSummaryWindowError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [updatedAt, setUpdatedAt] = useState<string | null>(null)
@@ -146,6 +151,7 @@ export default function SettingsPage() {
             const userSettingsPayload = (await userSettingsRes.json()) as UserSettingsResponse
             setUserSettings(userSettingsPayload)
             setLookaheadDraft(userSettingsPayload.meetingLookaheadDays)
+            setSummaryWindowDraft(userSettingsPayload.summaryWindowDays)
           }
           setError(null)
           setUpdatedAt(new Date().toISOString())
@@ -180,7 +186,10 @@ export default function SettingsPage() {
       const res = await fetch('/api/user/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ meetingLookaheadDays: lookaheadDraft }),
+        body: JSON.stringify({
+          meetingLookaheadDays: lookaheadDraft,
+          summaryWindowDays: summaryWindowDraft,
+        }),
       })
 
       if (!res.ok) {
@@ -192,11 +201,45 @@ export default function SettingsPage() {
       const payload = (await res.json()) as UserSettingsResponse
       setUserSettings(payload)
       setLookaheadDraft(payload.meetingLookaheadDays)
+      setSummaryWindowDraft(payload.summaryWindowDays)
       setLookaheadSaved(true)
     } catch {
       setLookaheadError(tSettings('preparation.saveError'))
     } finally {
       setLookaheadSaving(false)
+    }
+  }
+
+  const handleSaveSummaryWindow = async () => {
+    setSummaryWindowSaving(true)
+    setSummaryWindowSaved(false)
+    setSummaryWindowError(null)
+
+    try {
+      const res = await fetch('/api/user/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          meetingLookaheadDays: lookaheadDraft,
+          summaryWindowDays: summaryWindowDraft,
+        }),
+      })
+
+      if (!res.ok) {
+        const payload = await res.json().catch(() => null)
+        setSummaryWindowError(payload?.error ? tSettings('summaryWindow.invalidValue') : tSettings('summaryWindow.saveError'))
+        return
+      }
+
+      const payload = (await res.json()) as UserSettingsResponse
+      setUserSettings(payload)
+      setLookaheadDraft(payload.meetingLookaheadDays)
+      setSummaryWindowDraft(payload.summaryWindowDays)
+      setSummaryWindowSaved(true)
+    } catch {
+      setSummaryWindowError(tSettings('summaryWindow.saveError'))
+    } finally {
+      setSummaryWindowSaving(false)
     }
   }
 
@@ -301,6 +344,46 @@ export default function SettingsPage() {
                   className="bg-purple-600 hover:bg-purple-700 text-white"
                 >
                   {lookaheadSaving ? tSettings('preparation.saving') : tSettings('preparation.save')}
+                </Button>
+              </div>
+
+              <div className="mt-8 space-y-3 border-t border-gray-700/50 pt-6">
+                <h3 className="text-base font-semibold text-white">{tSettings('summaryWindow.title')}</h3>
+                <p className="text-sm text-gray-400">{tSettings('summaryWindow.description')}</p>
+
+                <label htmlFor="summary-window" className="block text-xs font-medium text-gray-400">
+                  {tSettings('summaryWindow.label')}
+                </label>
+                <input
+                  id="summary-window"
+                  type="range"
+                  min={1}
+                  max={90}
+                  step={1}
+                  value={summaryWindowDraft}
+                  onChange={(event) => setSummaryWindowDraft(Number(event.target.value))}
+                  className="w-full"
+                />
+
+                <div className="flex items-center justify-between text-xs text-gray-500">
+                  <span>{tSettings('summaryWindow.minLabel')}</span>
+                  <span>{tSettings('summaryWindow.maxLabel')}</span>
+                </div>
+
+                <p className="text-sm text-gray-200">
+                  {tSettings('summaryWindow.currentValue', { days: summaryWindowDraft })}
+                </p>
+
+                {summaryWindowError && <p className="text-xs text-red-400">{summaryWindowError}</p>}
+                {summaryWindowSaved && <p className="text-xs text-green-400">{tSettings('summaryWindow.saved')}</p>}
+
+                <Button
+                  size="sm"
+                  onClick={handleSaveSummaryWindow}
+                  disabled={summaryWindowSaving || summaryWindowDraft === userSettings.summaryWindowDays}
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  {summaryWindowSaving ? tSettings('summaryWindow.saving') : tSettings('summaryWindow.save')}
                 </Button>
               </div>
             </motion.div>

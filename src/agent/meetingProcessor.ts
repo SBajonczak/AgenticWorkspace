@@ -11,6 +11,7 @@ import { Meeting } from '@prisma/client'
 import { MeetingPipelineOrchestrator } from '../agents/orchestrator'
 import { createMcpServer, createDefaultMcpServerDeps } from '../mcp/server'
 import { extractCounts, isSuccess } from '../agents/types'
+import { prisma } from '../db/prisma'
 
 export interface ProcessingResult {
   meeting: Meeting
@@ -24,6 +25,51 @@ export interface ProcessingResult {
 
 export class MeetingProcessor {
   private projectRepo: ProjectRepository
+
+  private extractEmailCandidate(value: string | null | undefined): string | null {
+    if (!value) return null
+    const match = value.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)
+    return match?.[0]?.toLowerCase() ?? null
+  }
+
+  private async resolveAssigneeUserId(
+    assigneeHint: string | null | undefined,
+    participants: string[],
+    tenantId?: string
+  ): Promise<string | null> {
+    const hint = assigneeHint?.trim()
+    if (!hint) return null
+
+    const normalizedHint = hint.toLowerCase()
+    const participantEmails = participants
+      .map((participant) => participant.trim().toLowerCase())
+      .filter((participant) => participant.includes('@'))
+
+    const directEmail = this.extractEmailCandidate(normalizedHint)
+    const participantMatch = participantEmails.find((email) => email === normalizedHint)
+    const emailCandidate = directEmail ?? participantMatch ?? null
+
+    if (emailCandidate) {
+      const byEmail = await prisma.user.findFirst({
+        where: {
+          email: emailCandidate,
+          ...(tenantId ? { tenantId } : {}),
+        },
+        select: { id: true },
+      })
+      if (byEmail) return byEmail.id
+    }
+
+    const byName = await prisma.user.findFirst({
+      where: {
+        name: { equals: hint, mode: 'insensitive' },
+        ...(tenantId ? { tenantId } : {}),
+      },
+      select: { id: true },
+    })
+
+    return byName?.id ?? null
+  }
 
   private normalizeProjectName(value: string): string {
     return value
@@ -307,16 +353,19 @@ export class MeetingProcessor {
 
     // Persist todos
     await this.todoRepo.deleteByMeetingId(meeting.id)
-    const todosData = agentResponse.todos.map((todo) => ({
-      meetingId: meeting.id,
-      projectId: this.matchTodoToProject(todo, resolvedProjects),
-      title: todo.title,
-      description: todo.description,
-      assigneeHint: todo.assigneeHint,
-      confidence: todo.confidence,
-      priority: todo.priority,
-      dueDate: todo.dueDate ? new Date(todo.dueDate) : null,
-    }))
+    const todosData = await Promise.all(
+      agentResponse.todos.map(async (todo) => ({
+        meetingId: meeting.id,
+        projectId: this.matchTodoToProject(todo, resolvedProjects),
+        assigneeUserId: await this.resolveAssigneeUserId(todo.assigneeHint, participants, tenantId),
+        title: todo.title,
+        description: todo.description,
+        assigneeHint: todo.assigneeHint,
+        confidence: todo.confidence,
+        priority: todo.priority,
+        dueDate: todo.dueDate ? new Date(todo.dueDate) : null,
+      }))
+    )
     const todosCreated = await this.todoRepo.createMany(todosData)
     console.log(`[Processor] Created ${todosCreated} todos`)
 

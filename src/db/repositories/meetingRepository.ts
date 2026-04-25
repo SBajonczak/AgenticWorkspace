@@ -5,6 +5,7 @@ type MeetingWithTodos = Prisma.MeetingGetPayload<{
   include: {
     todos: {
       include: {
+        assigneeUser: true
         ticketSync: true
       }
     }
@@ -15,6 +16,7 @@ type MeetingWithDetails = Prisma.MeetingGetPayload<{
   include: {
     todos: {
       include: {
+        assigneeUser: true
         ticketSync: true
         project: true
       }
@@ -28,6 +30,7 @@ type MeetingWithPreparationData = Prisma.MeetingGetPayload<{
   include: {
     todos: {
       include: {
+        assigneeUser: true
         ticketSync: true
       }
     }
@@ -60,7 +63,7 @@ export class MeetingRepository {
     return prisma.meeting.findUnique({
       where: { id },
       include: {
-        todos: { include: { ticketSync: true, project: true } },
+        todos: { include: { assigneeUser: true, ticketSync: true, project: true } },
         minutes: true,
         projectStatuses: true,
       },
@@ -91,7 +94,7 @@ export class MeetingRepository {
       orderBy: { startTime: 'desc' },
       take: limit,
       include: {
-        todos: { include: { ticketSync: true } },
+        todos: { include: { assigneeUser: true, ticketSync: true } },
       },
     })
   }
@@ -107,7 +110,7 @@ export class MeetingRepository {
       orderBy: { processedAt: 'desc' },
       take: limit,
       include: {
-        todos: { include: { ticketSync: true } },
+        todos: { include: { assigneeUser: true, ticketSync: true } },
       },
     })
   }
@@ -170,7 +173,7 @@ export class MeetingRepository {
       orderBy: { startTime: 'desc' },
       take: options.limit ?? 5,
       include: {
-        todos: { include: { ticketSync: true } },
+        todos: { include: { assigneeUser: true, ticketSync: true } },
         projectStatuses: true,
         minutes: true,
       },
@@ -184,9 +187,33 @@ export class MeetingRepository {
         ...(tenantId ? { tenantId } : {}),
       },
       include: {
-        todos: { include: { ticketSync: true, project: true } },
+        todos: { include: { assigneeUser: true, ticketSync: true, project: true } },
         minutes: true,
         projectStatuses: true,
+      },
+    })
+  }
+
+  async findProcessedInWindow(options: {
+    from: Date
+    to: Date
+    tenantId?: string
+    userEmail?: string
+    limit?: number
+  }): Promise<MeetingWithTodos[]> {
+    return prisma.meeting.findMany({
+      where: {
+        ...this.buildUserScope(options.userEmail, options.tenantId),
+        processedAt: { not: null },
+        startTime: {
+          gte: options.from,
+          lte: options.to,
+        },
+      },
+      orderBy: { startTime: 'desc' },
+      take: options.limit ?? 200,
+      include: {
+        todos: { include: { assigneeUser: true, ticketSync: true } },
       },
     })
   }
@@ -286,7 +313,7 @@ export class MeetingRepository {
       },
       orderBy: { processedAt: 'desc' },
       include: {
-        todos: { include: { ticketSync: true, project: true } },
+        todos: { include: { assigneeUser: true, ticketSync: true, project: true } },
         minutes: true,
         projectStatuses: true,
       },
