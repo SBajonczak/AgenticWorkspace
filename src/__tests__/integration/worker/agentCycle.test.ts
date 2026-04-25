@@ -194,4 +194,35 @@ describe('Worker scheduler', () => {
       })
     )
   })
+
+  it('skips meetings that have not ended yet before transcript fetch', async () => {
+    ;(MeetingsClient as jest.Mock).mockImplementation(() => ({
+      getLatestMeeting: jest.fn().mockResolvedValue([
+        {
+          id: 'ms-meeting-future-1',
+          subject: 'Future Planning',
+          organizer: { emailAddress: { name: 'Alice', address: 'alice@example.com' } },
+          start: { dateTime: '2099-03-01T09:00:00Z', timeZone: 'UTC' },
+          end: { dateTime: '2099-03-01T10:00:00Z', timeZone: 'UTC' },
+          participants: ['alice@example.com', 'bob@example.com'],
+        },
+      ]),
+    }))
+
+    const transcriptGetMock = jest.fn().mockResolvedValue('Transcript text')
+    ;(TranscriptsClient as jest.Mock).mockImplementation(() => ({
+      getTranscript: transcriptGetMock,
+    }))
+
+    const processMeetingMock = jest.fn().mockResolvedValue({ todosCreated: 1, ticketsSynced: 0 })
+    ;(MeetingProcessor as jest.Mock).mockImplementation(() => ({
+      processMeeting: processMeetingMock,
+    }))
+
+    const { runAgentCycle } = await import('@/worker/scheduler')
+    await runAgentCycle()
+
+    expect(transcriptGetMock).not.toHaveBeenCalled()
+    expect(processMeetingMock).not.toHaveBeenCalled()
+  })
 })

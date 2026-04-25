@@ -88,6 +88,13 @@ export class AgentRunner {
             console.warn(`Skipping "${meeting.subject}" – missing online meeting ID`)
             continue
           }
+
+          const meetingEndTime = new Date(meeting.end.dateTime)
+          if (meetingEndTime.getTime() > Date.now()) {
+            console.log(`Skipping "${meeting.subject}" – meeting has not ended yet (${meetingEndTime.toISOString()})`)
+            continue
+          }
+
           console.log(`Found meeting: ${meeting.subject}`)
 
           // Get transcript

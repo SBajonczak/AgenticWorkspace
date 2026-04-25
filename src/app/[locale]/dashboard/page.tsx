@@ -204,30 +204,6 @@ export default function DashboardPage() {
           </div>
         </motion.div>
 
-        {/* Agent Trigger */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="mb-8"
-        >
-          <Card className="bg-card/60 backdrop-blur border-border/50">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between gap-2">
-                <h2 className="text-sm font-semibold text-muted-foreground">
-                  Meeting-Transkripte verarbeiten
-                </h2>
-                <Link href="/settings" className="text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors">
-                  Status & Logs
-                </Link>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <RunAgentButton />
-            </CardContent>
-          </Card>
-        </motion.div>
-
         {/* Widget Grid */}
         <div className="grid md:grid-cols-2 gap-6">
           <RecentIntelligenceWidget meetings={recentMeetings} lastUpdatedAt={recentMeetingsUpdatedAt} />

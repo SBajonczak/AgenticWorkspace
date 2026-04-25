@@ -257,6 +257,23 @@ async function runForUser(
       if (!meeting.id) continue
 
       const meetingStartTime = new Date(meeting.start.dateTime)
+      const meetingEndTime = new Date(meeting.end.dateTime)
+      // Recurring Teams meetings can share one onlineMeetingId across occurrences.
+      // Skip meetings that have not ended yet so we never attach an older transcript
+      // from a previous occurrence to a future/in-progress instance.
+      if (meetingEndTime.getTime() > Date.now()) {
+        if (shouldDebugMeetingSync()) {
+          logWorkerMeetingEvent('meeting.skip_not_finished', {
+            runId,
+            userId: user.id,
+            meetingId: meeting.id,
+            title: meeting.subject,
+            startTime: meetingStartTime.toISOString(),
+            endTime: meetingEndTime.toISOString(),
+          })
+        }
+        continue
+      }
       if (options?.windowEndAt) {
         if (meetingStartTime.getTime() > options.windowEndAt.getTime()) {
           continue
@@ -312,7 +329,7 @@ async function runForUser(
             organizer: meeting.organizer.emailAddress.name,
             organizerEmail,
             startTime: meetingStartTime,
-            endTime: new Date(meeting.end.dateTime),
+            endTime: meetingEndTime,
             participants,
             graphModifiedAt,
           })
@@ -338,7 +355,7 @@ async function runForUser(
           meeting.organizer.emailAddress.name,
           organizerEmail,
           new Date(meeting.start.dateTime),
-          new Date(meeting.end.dateTime),
+          meetingEndTime,
           transcript,
           participants,
           user.tenantId ?? undefined,
