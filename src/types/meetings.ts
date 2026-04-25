@@ -145,3 +145,26 @@ export interface DashboardSummaryResponse {
   assignedTaskCount: number
   meetings: DashboardSummaryMeeting[]
 }
+
+export interface MeetingOptimizationSuggestion {
+  id: string
+  targetStartTime: string
+  targetEndTime: string
+  score: number
+  reason: string
+  respectsFocusTime: boolean
+  withinWorkHours: boolean
+}
+
+export interface MeetingOptimizationResponse {
+  meetingId: string
+  generatedAt: string
+  suggestions: MeetingOptimizationSuggestion[]
+}
+
+export interface MeetingRescheduleResponse {
+  success: boolean
+  meetingId: string
+  updatedStartTime: string
+  updatedEndTime: string
+}

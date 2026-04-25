@@ -28,6 +28,26 @@
     "preparation": {
       "loading": "Vorbereitung wird geladen..."
     },
+    "calendar": {
+      "today": "Heute",
+      "noEvents": "Keine Termine",
+      "viewModes": {
+        "day": "Tag",
+        "week": "Woche",
+        "month": "Monat"
+      }
+    },
+    "optimization": {
+      "title": "KI-Vorschläge",
+      "getSuggestions": "Vorschläge laden",
+      "loading": "Analysiert",
+      "score": "Score",
+      "apply": "Anwenden",
+      "applying": "Wird angewendet...",
+      "generatedAt": "Erstellt um {time}",
+      "loadError": "Vorschläge konnten nicht geladen werden.",
+      "applyError": "Termin konnte nicht verschoben werden. Bitte Kalender-Berechtigungen prüfen."
+    },
     "errors": {
       "loadEvents": "Bevorstehende Besprechungen konnten nicht geladen werden."
     },

@@ -42,6 +42,10 @@ describe('GET /api/user/settings', () => {
 
     expect(payload.meetingLookaheadDays).toBe(14)
     expect(payload.summaryWindowDays).toBe(7)
+    expect(payload.timezone).toBe('Europe/Berlin')
+    expect(payload.workDayStart).toBe('09:00')
+    expect(payload.workDayEnd).toBe('17:00')
+    expect(payload.focusTimeSlots).toEqual([])
   })
 })
 
@@ -52,26 +56,89 @@ describe('PUT /api/user/settings', () => {
   })
 
   it('persists both lookahead and summary window', async () => {
+    const upsertSchedulePreferences = jest.fn().mockResolvedValue({
+      meetingLookaheadDays: 21,
+      summaryWindowDays: 14,
+      timezone: 'Europe/Berlin',
+      workDayStart: '08:30',
+      workDayEnd: '17:30',
+      focusTimeSlots: [
+        { id: 'slot-1', dayOfWeek: 1, startTime: '09:00', endTime: '11:00' },
+      ],
+    })
+
     MockRepo.mockImplementation(
       () =>
         ({
-          upsert: jest.fn().mockResolvedValue({
-            meetingLookaheadDays: 21,
-            summaryWindowDays: 14,
-          }),
+          upsertSchedulePreferences,
         }) as any
     )
 
-    const res = await PUT(makeRequest({ meetingLookaheadDays: 21, summaryWindowDays: 14 }))
+    const res = await PUT(
+      makeRequest({
+        meetingLookaheadDays: 21,
+        summaryWindowDays: 14,
+        timezone: 'Europe/Berlin',
+        workDayStart: '08:30',
+        workDayEnd: '17:30',
+        focusTimeSlots: [{ dayOfWeek: 1, startTime: '09:00', endTime: '11:00' }],
+      })
+    )
     expect(res.status).toBe(200)
 
     const payload = await res.json()
     expect(payload.meetingLookaheadDays).toBe(21)
     expect(payload.summaryWindowDays).toBe(14)
+    expect(payload.timezone).toBe('Europe/Berlin')
+    expect(payload.workDayStart).toBe('08:30')
+    expect(payload.workDayEnd).toBe('17:30')
+    expect(payload.focusTimeSlots).toEqual([
+      { id: 'slot-1', dayOfWeek: 1, startTime: '09:00', endTime: '11:00' },
+    ])
+
+    expect(upsertSchedulePreferences).toHaveBeenCalledWith('user-1', {
+      meetingLookaheadDays: 21,
+      summaryWindowDays: 14,
+      timezone: 'Europe/Berlin',
+      workDayStart: '08:30',
+      workDayEnd: '17:30',
+      focusTimeSlots: [{ dayOfWeek: 1, startTime: '09:00', endTime: '11:00' }],
+    })
   })
 
   it('rejects invalid summary window', async () => {
     const res = await PUT(makeRequest({ meetingLookaheadDays: 14, summaryWindowDays: 0 }))
+    expect(res.status).toBe(422)
+  })
+
+  it('rejects overlapping focus slots on the same day', async () => {
+    const res = await PUT(
+      makeRequest({
+        meetingLookaheadDays: 14,
+        summaryWindowDays: 7,
+        workDayStart: '09:00',
+        workDayEnd: '17:00',
+        focusTimeSlots: [
+          { dayOfWeek: 1, startTime: '10:00', endTime: '11:00' },
+          { dayOfWeek: 1, startTime: '10:30', endTime: '11:30' },
+        ],
+      })
+    )
+
+    expect(res.status).toBe(422)
+  })
+
+  it('rejects focus slot outside working hours', async () => {
+    const res = await PUT(
+      makeRequest({
+        meetingLookaheadDays: 14,
+        summaryWindowDays: 7,
+        workDayStart: '09:00',
+        workDayEnd: '17:00',
+        focusTimeSlots: [{ dayOfWeek: 2, startTime: '08:00', endTime: '09:30' }],
+      })
+    )
+
     expect(res.status).toBe(422)
   })
 })

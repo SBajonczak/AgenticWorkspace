@@ -65,6 +65,34 @@
         "saveError": "Could not save summary window setting.",
         "invalidValue": "Please choose a value between 1 and 90 days."
       },
+      "schedulePreferences": {
+        "title": "Calendar Optimization Rules",
+        "description": "Define timezone, working hours, and focus slots used by the AI when proposing schedule changes.",
+        "timezoneLabel": "Timezone",
+        "workDayStartLabel": "Workday start",
+        "workDayEndLabel": "Workday end",
+        "focusSlotsLabel": "Focus slots",
+        "dayLabel": "Day",
+        "slotStartLabel": "Start",
+        "slotEndLabel": "End",
+        "addSlot": "Add focus slot",
+        "removeSlot": "Remove",
+        "noSlots": "No focus slots configured yet.",
+        "save": "Save preferences",
+        "saving": "Saving…",
+        "saved": "Saved successfully.",
+        "saveError": "Could not save schedule preferences.",
+        "invalidValue": "Please check working hours and focus slot ranges.",
+        "days": {
+          "0": "Sunday",
+          "1": "Monday",
+          "2": "Tuesday",
+          "3": "Wednesday",
+          "4": "Thursday",
+          "5": "Friday",
+          "6": "Saturday"
+        }
+      },
       "projects": {
         "title": "Projects & Knowledge Sources",
         "description": "Manage your projects, assign aliases used in meeting transcripts, and link external knowledge sources (Confluence, Jira, GitHub, SharePoint) to each project.",

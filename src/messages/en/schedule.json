@@ -28,6 +28,26 @@
     "preparation": {
       "loading": "Loading preparation..."
     },
+    "calendar": {
+      "today": "Today",
+      "noEvents": "No events",
+      "viewModes": {
+        "day": "Day",
+        "week": "Week",
+        "month": "Month"
+      }
+    },
+    "optimization": {
+      "title": "AI suggestions",
+      "getSuggestions": "Get suggestions",
+      "loading": "Analyzing",
+      "score": "Score",
+      "apply": "Apply",
+      "applying": "Applying...",
+      "generatedAt": "Generated at {time}",
+      "loadError": "Suggestions could not be loaded.",
+      "applyError": "Meeting could not be rescheduled. Check calendar permissions."
+    },
     "errors": {
       "loadEvents": "Upcoming meetings could not be loaded."
     },

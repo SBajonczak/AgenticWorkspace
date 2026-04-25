@@ -30,6 +30,17 @@ interface TenantSettingsResponse {
 interface UserSettingsResponse {
   meetingLookaheadDays: number
   summaryWindowDays: number
+  timezone: string
+  workDayStart: string
+  workDayEnd: string
+  focusTimeSlots: FocusTimeSlot[]
+}
+
+interface FocusTimeSlot {
+  id?: string
+  dayOfWeek: number
+  startTime: string
+  endTime: string
 }
 
 // ---------------------------------------------------------------------------
@@ -128,6 +139,13 @@ export default function SettingsPage() {
   const [summaryWindowSaving, setSummaryWindowSaving] = useState(false)
   const [summaryWindowSaved, setSummaryWindowSaved] = useState(false)
   const [summaryWindowError, setSummaryWindowError] = useState<string | null>(null)
+  const [timezoneDraft, setTimezoneDraft] = useState('Europe/Berlin')
+  const [workDayStartDraft, setWorkDayStartDraft] = useState('09:00')
+  const [workDayEndDraft, setWorkDayEndDraft] = useState('17:00')
+  const [focusSlotsDraft, setFocusSlotsDraft] = useState<FocusTimeSlot[]>([])
+  const [scheduleSaving, setScheduleSaving] = useState(false)
+  const [scheduleSaved, setScheduleSaved] = useState(false)
+  const [scheduleError, setScheduleError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [updatedAt, setUpdatedAt] = useState<string | null>(null)
@@ -152,6 +170,10 @@ export default function SettingsPage() {
             setUserSettings(userSettingsPayload)
             setLookaheadDraft(userSettingsPayload.meetingLookaheadDays)
             setSummaryWindowDraft(userSettingsPayload.summaryWindowDays)
+            setTimezoneDraft(userSettingsPayload.timezone)
+            setWorkDayStartDraft(userSettingsPayload.workDayStart)
+            setWorkDayEndDraft(userSettingsPayload.workDayEnd)
+            setFocusSlotsDraft(userSettingsPayload.focusTimeSlots)
           }
           setError(null)
           setUpdatedAt(new Date().toISOString())
@@ -177,31 +199,75 @@ export default function SettingsPage() {
     ? tSettings('updatedAt', { time: new Date(updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) })
     : null
 
+  const weekdayOptions = [
+    { value: 0, label: tSettings('schedulePreferences.days.0') },
+    { value: 1, label: tSettings('schedulePreferences.days.1') },
+    { value: 2, label: tSettings('schedulePreferences.days.2') },
+    { value: 3, label: tSettings('schedulePreferences.days.3') },
+    { value: 4, label: tSettings('schedulePreferences.days.4') },
+    { value: 5, label: tSettings('schedulePreferences.days.5') },
+    { value: 6, label: tSettings('schedulePreferences.days.6') },
+  ]
+
+  const persistUserSettings = async (): Promise<UserSettingsResponse | null> => {
+    const res = await fetch('/api/user/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        meetingLookaheadDays: lookaheadDraft,
+        summaryWindowDays: summaryWindowDraft,
+        timezone: timezoneDraft,
+        workDayStart: workDayStartDraft,
+        workDayEnd: workDayEndDraft,
+        focusTimeSlots: focusSlotsDraft,
+      }),
+    })
+
+    if (!res.ok) {
+      return null
+    }
+
+    const payload = (await res.json()) as UserSettingsResponse
+    setUserSettings(payload)
+    setLookaheadDraft(payload.meetingLookaheadDays)
+    setSummaryWindowDraft(payload.summaryWindowDays)
+    setTimezoneDraft(payload.timezone)
+    setWorkDayStartDraft(payload.workDayStart)
+    setWorkDayEndDraft(payload.workDayEnd)
+    setFocusSlotsDraft(payload.focusTimeSlots)
+    return payload
+  }
+
+  const addFocusSlot = () => {
+    setFocusSlotsDraft((prev) => [
+      ...prev,
+      {
+        dayOfWeek: 1,
+        startTime: workDayStartDraft,
+        endTime: workDayEndDraft,
+      },
+    ])
+  }
+
+  const updateFocusSlot = (index: number, patch: Partial<FocusTimeSlot>) => {
+    setFocusSlotsDraft((prev) => prev.map((slot, slotIndex) => (slotIndex === index ? { ...slot, ...patch } : slot)))
+  }
+
+  const removeFocusSlot = (index: number) => {
+    setFocusSlotsDraft((prev) => prev.filter((_, slotIndex) => slotIndex !== index))
+  }
+
   const handleSaveLookahead = async () => {
     setLookaheadSaving(true)
     setLookaheadSaved(false)
     setLookaheadError(null)
 
     try {
-      const res = await fetch('/api/user/settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          meetingLookaheadDays: lookaheadDraft,
-          summaryWindowDays: summaryWindowDraft,
-        }),
-      })
-
-      if (!res.ok) {
-        const payload = await res.json().catch(() => null)
-        setLookaheadError(payload?.error ? tSettings('preparation.invalidValue') : tSettings('preparation.saveError'))
+      const payload = await persistUserSettings()
+      if (!payload) {
+        setLookaheadError(tSettings('preparation.invalidValue'))
         return
       }
-
-      const payload = (await res.json()) as UserSettingsResponse
-      setUserSettings(payload)
-      setLookaheadDraft(payload.meetingLookaheadDays)
-      setSummaryWindowDraft(payload.summaryWindowDays)
       setLookaheadSaved(true)
     } catch {
       setLookaheadError(tSettings('preparation.saveError'))
@@ -216,30 +282,35 @@ export default function SettingsPage() {
     setSummaryWindowError(null)
 
     try {
-      const res = await fetch('/api/user/settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          meetingLookaheadDays: lookaheadDraft,
-          summaryWindowDays: summaryWindowDraft,
-        }),
-      })
-
-      if (!res.ok) {
-        const payload = await res.json().catch(() => null)
-        setSummaryWindowError(payload?.error ? tSettings('summaryWindow.invalidValue') : tSettings('summaryWindow.saveError'))
+      const payload = await persistUserSettings()
+      if (!payload) {
+        setSummaryWindowError(tSettings('summaryWindow.invalidValue'))
         return
       }
-
-      const payload = (await res.json()) as UserSettingsResponse
-      setUserSettings(payload)
-      setLookaheadDraft(payload.meetingLookaheadDays)
-      setSummaryWindowDraft(payload.summaryWindowDays)
       setSummaryWindowSaved(true)
     } catch {
       setSummaryWindowError(tSettings('summaryWindow.saveError'))
     } finally {
       setSummaryWindowSaving(false)
+    }
+  }
+
+  const handleSaveSchedulePreferences = async () => {
+    setScheduleSaving(true)
+    setScheduleSaved(false)
+    setScheduleError(null)
+
+    try {
+      const payload = await persistUserSettings()
+      if (!payload) {
+        setScheduleError(tSettings('schedulePreferences.invalidValue'))
+        return
+      }
+      setScheduleSaved(true)
+    } catch {
+      setScheduleError(tSettings('schedulePreferences.saveError'))
+    } finally {
+      setScheduleSaving(false)
     }
   }
 
@@ -384,6 +455,113 @@ export default function SettingsPage() {
                   className="bg-purple-600 hover:bg-purple-700 text-white"
                 >
                   {summaryWindowSaving ? tSettings('summaryWindow.saving') : tSettings('summaryWindow.save')}
+                </Button>
+              </div>
+
+              <div className="mt-8 space-y-4 border-t border-gray-700/50 pt-6">
+                <h3 className="text-base font-semibold text-white">{tSettings('schedulePreferences.title')}</h3>
+                <p className="text-sm text-gray-400">{tSettings('schedulePreferences.description')}</p>
+
+                <div>
+                  <label htmlFor="timezone" className="block text-xs font-medium text-gray-400 mb-1">
+                    {tSettings('schedulePreferences.timezoneLabel')}
+                  </label>
+                  <input
+                    id="timezone"
+                    type="text"
+                    value={timezoneDraft}
+                    onChange={(event) => setTimezoneDraft(event.target.value)}
+                    className="w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="work-day-start" className="block text-xs font-medium text-gray-400 mb-1">
+                      {tSettings('schedulePreferences.workDayStartLabel')}
+                    </label>
+                    <input
+                      id="work-day-start"
+                      type="time"
+                      value={workDayStartDraft}
+                      onChange={(event) => setWorkDayStartDraft(event.target.value)}
+                      className="w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="work-day-end" className="block text-xs font-medium text-gray-400 mb-1">
+                      {tSettings('schedulePreferences.workDayEndLabel')}
+                    </label>
+                    <input
+                      id="work-day-end"
+                      type="time"
+                      value={workDayEndDraft}
+                      onChange={(event) => setWorkDayEndDraft(event.target.value)}
+                      className="w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-gray-400">{tSettings('schedulePreferences.focusSlotsLabel')}</p>
+
+                  {focusSlotsDraft.length === 0 && (
+                    <p className="text-xs text-gray-500">{tSettings('schedulePreferences.noSlots')}</p>
+                  )}
+
+                  {focusSlotsDraft.map((slot, index) => (
+                    <div key={`${slot.id ?? 'new'}-${index}`} className="grid grid-cols-1 gap-2 rounded-md border border-gray-700/60 bg-gray-900/40 p-3 sm:grid-cols-[1fr_auto_auto_auto] sm:items-end">
+                      <div>
+                        <label className="block text-[11px] text-gray-500 mb-1">{tSettings('schedulePreferences.dayLabel')}</label>
+                        <select
+                          value={slot.dayOfWeek}
+                          onChange={(event) => updateFocusSlot(index, { dayOfWeek: Number(event.target.value) })}
+                          className="w-full rounded-md border border-gray-700 bg-gray-900 px-2 py-2 text-xs text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        >
+                          {weekdayOptions.map((option) => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[11px] text-gray-500 mb-1">{tSettings('schedulePreferences.slotStartLabel')}</label>
+                        <input
+                          type="time"
+                          value={slot.startTime}
+                          onChange={(event) => updateFocusSlot(index, { startTime: event.target.value })}
+                          className="rounded-md border border-gray-700 bg-gray-900 px-2 py-2 text-xs text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] text-gray-500 mb-1">{tSettings('schedulePreferences.slotEndLabel')}</label>
+                        <input
+                          type="time"
+                          value={slot.endTime}
+                          onChange={(event) => updateFocusSlot(index, { endTime: event.target.value })}
+                          className="rounded-md border border-gray-700 bg-gray-900 px-2 py-2 text-xs text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        />
+                      </div>
+                      <Button type="button" variant="secondary" size="sm" onClick={() => removeFocusSlot(index)}>
+                        {tSettings('schedulePreferences.removeSlot')}
+                      </Button>
+                    </div>
+                  ))}
+
+                  <Button type="button" variant="secondary" size="sm" onClick={addFocusSlot}>
+                    {tSettings('schedulePreferences.addSlot')}
+                  </Button>
+                </div>
+
+                {scheduleError && <p className="text-xs text-red-400">{scheduleError}</p>}
+                {scheduleSaved && <p className="text-xs text-green-400">{tSettings('schedulePreferences.saved')}</p>}
+
+                <Button
+                  size="sm"
+                  onClick={handleSaveSchedulePreferences}
+                  disabled={scheduleSaving}
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  {scheduleSaving ? tSettings('schedulePreferences.saving') : tSettings('schedulePreferences.save')}
                 </Button>
               </div>
             </motion.div>

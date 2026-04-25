@@ -65,6 +65,34 @@
         "saveError": "Der Zusammenfassungszeitraum konnte nicht gespeichert werden.",
         "invalidValue": "Bitte wählen Sie einen Wert zwischen 1 und 90 Tagen."
       },
+      "schedulePreferences": {
+        "title": "Regeln für Kalenderoptimierung",
+        "description": "Definieren Sie Zeitzone, Arbeitszeiten und Fokusblöcke, die die KI bei Umplanungs-Vorschlägen berücksichtigt.",
+        "timezoneLabel": "Zeitzone",
+        "workDayStartLabel": "Arbeitsbeginn",
+        "workDayEndLabel": "Arbeitsende",
+        "focusSlotsLabel": "Fokusblöcke",
+        "dayLabel": "Tag",
+        "slotStartLabel": "Start",
+        "slotEndLabel": "Ende",
+        "addSlot": "Fokusblock hinzufügen",
+        "removeSlot": "Entfernen",
+        "noSlots": "Noch keine Fokusblöcke konfiguriert.",
+        "save": "Einstellungen speichern",
+        "saving": "Speichert…",
+        "saved": "Erfolgreich gespeichert.",
+        "saveError": "Kalender-Einstellungen konnten nicht gespeichert werden.",
+        "invalidValue": "Bitte prüfen Sie Arbeitszeiten und Fokusblöcke.",
+        "days": {
+          "0": "Sonntag",
+          "1": "Montag",
+          "2": "Dienstag",
+          "3": "Mittwoch",
+          "4": "Donnerstag",
+          "5": "Freitag",
+          "6": "Samstag"
+        }
+      },
       "projects": {
         "title": "Projekte & Wissensquellen",
         "description": "Verwalten Sie Ihre Projekte, vergeben Sie Aliase aus Meeting-Transkripten und verknüpfen Sie externe Wissensquellen (Confluence, Jira, GitHub, SharePoint) mit jedem Projekt.",

@@ -1,12 +1,34 @@
 import { prisma } from '../prisma'
 
+interface FocusTimeSlotInput {
+  dayOfWeek: number
+  startTime: string
+  endTime: string
+}
+
+interface SchedulePreferenceInput {
+  meetingLookaheadDays: number
+  summaryWindowDays: number
+  timezone: string
+  workDayStart: string
+  workDayEnd: string
+  focusTimeSlots: FocusTimeSlotInput[]
+}
+
 export class UserSyncStateRepository {
   private get client(): any {
     return prisma as any
   }
 
   async getByUserId(userId: string): Promise<any | null> {
-    return this.client.userSyncState.findUnique({ where: { userId } })
+    return this.client.userSyncState.findUnique({
+      where: { userId },
+      include: {
+        focusTimeSlots: {
+          orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
+        },
+      },
+    })
   }
 
   async upsert(userId: string, data: Record<string, unknown>): Promise<any> {
@@ -92,6 +114,39 @@ export class UserSyncStateRepository {
       update: {
         hasRefreshToken,
         consentRequired,
+      },
+    })
+  }
+
+  async upsertSchedulePreferences(userId: string, data: SchedulePreferenceInput): Promise<any> {
+    return this.client.userSyncState.upsert({
+      where: { userId },
+      create: {
+        userId,
+        meetingLookaheadDays: data.meetingLookaheadDays,
+        summaryWindowDays: data.summaryWindowDays,
+        timezone: data.timezone,
+        workDayStart: data.workDayStart,
+        workDayEnd: data.workDayEnd,
+        focusTimeSlots: {
+          create: data.focusTimeSlots,
+        },
+      },
+      update: {
+        meetingLookaheadDays: data.meetingLookaheadDays,
+        summaryWindowDays: data.summaryWindowDays,
+        timezone: data.timezone,
+        workDayStart: data.workDayStart,
+        workDayEnd: data.workDayEnd,
+        focusTimeSlots: {
+          deleteMany: {},
+          create: data.focusTimeSlots,
+        },
+      },
+      include: {
+        focusTimeSlots: {
+          orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
+        },
       },
     })
   }

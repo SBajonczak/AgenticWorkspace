@@ -338,4 +338,67 @@ export class MeetingsClient {
     const meetings = await this.getRecentMeetings(200, options)
     return meetings.length > 0 ? meetings : null
   }
+
+  async findEventIdForMeetingWindow(input: {
+    title: string
+    startTime: Date
+    endTime: Date
+  }): Promise<string | null> {
+    const lookBehindMs = 30 * 60 * 1000
+    const lookAheadMs = 30 * 60 * 1000
+    const startDateTime = new Date(input.startTime.getTime() - lookBehindMs).toISOString()
+    const endDateTime = new Date(input.endTime.getTime() + lookAheadMs).toISOString()
+
+    const response: any = await this.client
+      .api(`${this.userPath}/calendarView`)
+      .query({ startDateTime, endDateTime })
+      .select('id,subject,start,end')
+      .top(50)
+      .get()
+
+    const normalize = (value: string): string => value.trim().toLowerCase()
+    const targetTitle = normalize(input.title)
+    const targetStart = input.startTime.getTime()
+
+    const candidates = (response.value ?? []) as Array<{
+      id?: string
+      subject?: string
+      start?: { dateTime?: string }
+      end?: { dateTime?: string }
+    }>
+
+    const best = candidates
+      .filter((event) => typeof event.id === 'string' && typeof event.start?.dateTime === 'string')
+      .map((event) => {
+        const eventTitle = normalize(event.subject ?? '')
+        const eventStart = new Date(event.start!.dateTime!).getTime()
+        const score = Math.abs(eventStart - targetStart) + (eventTitle === targetTitle ? 0 : 60000)
+        return {
+          id: event.id as string,
+          score,
+        }
+      })
+      .sort((a, b) => a.score - b.score)[0]
+
+    return best?.id ?? null
+  }
+
+  async rescheduleEventById(input: {
+    eventId: string
+    startTime: Date
+    endTime: Date
+  }): Promise<void> {
+    await this.client
+      .api(`${this.userPath}/events/${input.eventId}`)
+      .patch({
+        start: {
+          dateTime: input.startTime.toISOString(),
+          timeZone: 'UTC',
+        },
+        end: {
+          dateTime: input.endTime.toISOString(),
+          timeZone: 'UTC',
+        },
+      })
+  }
 }
