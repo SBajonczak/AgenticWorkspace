@@ -63,6 +63,9 @@ describe('registerWriteTools', () => {
 
     const handler = toolHandlers.get('save_todos')
     expect(handler).toBeDefined()
+    if (!handler) {
+      throw new Error('save_todos handler was not registered')
+    }
 
     const result = await handler({
       meetingDbId: 'meeting-1',
