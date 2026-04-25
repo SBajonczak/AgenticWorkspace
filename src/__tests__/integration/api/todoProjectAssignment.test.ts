@@ -5,17 +5,19 @@ import { NextRequest, NextResponse } from 'next/server'
 jest.mock('@/lib/authz', () => ({
   requireAuth: jest.fn(),
   requireMeetingParticipant: jest.fn(),
+  isProjectAdmin: jest.fn(),
 }))
 jest.mock('@/db/repositories/todoRepository')
 jest.mock('@/db/repositories/projectRepository')
 
-import { requireAuth, requireMeetingParticipant } from '@/lib/authz'
+import { requireAuth, requireMeetingParticipant, isProjectAdmin } from '@/lib/authz'
 import { TodoRepository } from '@/db/repositories/todoRepository'
 import { ProjectRepository } from '@/db/repositories/projectRepository'
 import { PATCH } from '@/app/api/todos/[id]/route'
 
 const mockRequireAuth = requireAuth as jest.MockedFunction<typeof requireAuth>
 const mockRequireMeetingParticipant = requireMeetingParticipant as jest.MockedFunction<typeof requireMeetingParticipant>
+const mockIsProjectAdmin = isProjectAdmin as jest.MockedFunction<typeof isProjectAdmin>
 const MockTodoRepo = TodoRepository as jest.MockedClass<typeof TodoRepository>
 const MockProjectRepo = ProjectRepository as jest.MockedClass<typeof ProjectRepository>
 
@@ -70,6 +72,8 @@ describe('PATCH /api/todos/[id]', () => {
       error: null,
     })
 
+    mockIsProjectAdmin.mockReturnValue(false)
+
     mockTodoRepo.findById.mockResolvedValue({ id: 'todo-1', meetingId: 'meeting-internal-1' })
     mockTodoRepo.assignProject.mockResolvedValue({ id: 'todo-1', projectId: 'project-1' })
     mockProjectRepo.canUserAccessProject.mockResolvedValue(true)
@@ -86,6 +90,10 @@ describe('PATCH /api/todos/[id]', () => {
   })
 
   it('updates project assignment for valid project', async () => {
+    mockTodoRepo.findById
+      .mockResolvedValueOnce({ id: 'todo-1', meetingId: 'meeting-internal-1', projectId: null, status: 'pending' })
+      .mockResolvedValueOnce({ id: 'todo-1', meetingId: 'meeting-internal-1', projectId: 'project-1', status: 'pending' })
+
     mockProjectRepo.findById.mockResolvedValue({
       id: 'project-1',
       tenantId: 'tenant-1',
@@ -104,6 +112,10 @@ describe('PATCH /api/todos/[id]', () => {
   })
 
   it('supports unassigning project with null', async () => {
+    mockTodoRepo.findById
+      .mockResolvedValueOnce({ id: 'todo-1', meetingId: 'meeting-internal-1', projectId: 'project-1', status: 'pending' })
+      .mockResolvedValueOnce({ id: 'todo-1', meetingId: 'meeting-internal-1', projectId: null, status: 'pending' })
+
     mockTodoRepo.assignProject.mockResolvedValue({ id: 'todo-1', projectId: null })
 
     const response = await PATCH(makeRequest({ projectId: null }), { params: { id: 'todo-1' } })

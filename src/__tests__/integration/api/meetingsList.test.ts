@@ -2,14 +2,23 @@
 
 jest.mock('@/lib/auth', () => ({ auth: jest.fn() }))
 jest.mock('@/db/repositories/meetingRepository')
+jest.mock('@/db/prisma', () => ({
+  prisma: {
+    user: {
+      findUnique: jest.fn(),
+    },
+  },
+}))
 
 import { auth } from '@/lib/auth'
 import { MeetingRepository } from '@/db/repositories/meetingRepository'
+import { prisma } from '@/db/prisma'
 import { GET } from '@/app/api/meetings/route'
 import { NextRequest } from 'next/server'
 
 const mockAuth = auth as jest.MockedFunction<typeof auth>
 const MockMeetingRepo = MeetingRepository as jest.MockedClass<typeof MeetingRepository>
+const mockPrisma = prisma as any
 
 const mockMeetings = [
   {
@@ -50,6 +59,7 @@ describe('GET /api/meetings', () => {
     (mockAuth as any).mockResolvedValue({
       user: { id: 'user-1', email: 'alice@example.com', tenantId: 'tenant-1' },
     });
+    mockPrisma.user.findUnique.mockResolvedValue(null)
     MockMeetingRepo.mockImplementation(() => ({ findLatest: mockFindLatest } as any))
   })
 
@@ -87,5 +97,18 @@ describe('GET /api/meetings', () => {
     ;(mockAuth as any).mockResolvedValue({ user: { id: 'u2', email: 'x@x.com' } })
     await GET(request)
     expect(mockFindLatest).toHaveBeenCalledWith(50, undefined, 'x@x.com')
+  })
+
+  it('resolves tenantId from db fallback when missing in session token', async () => {
+    ;(mockAuth as any).mockResolvedValue({ user: { id: 'u2', email: 'x@x.com' } })
+    mockPrisma.user.findUnique.mockResolvedValue({ tenantId: 'tenant-from-db' })
+
+    await GET(request)
+
+    expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
+      where: { id: 'u2' },
+      select: { tenantId: true },
+    })
+    expect(mockFindLatest).toHaveBeenCalledWith(50, 'tenant-from-db', 'x@x.com')
   })
 })
