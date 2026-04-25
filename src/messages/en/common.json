@@ -54,10 +54,27 @@
     },
     "summarySection": {
       "title": "Summary Section",
+      "briefingTitle": "Your Briefing",
+      "overviewLabel": "Quick Overview",
+      "openBriefing": "Open",
+      "closeBriefing": "Close",
       "description": "In the last {windowDays} days, {meetingCount} {meetingCount, plural, one {meeting was conducted} other {meetings were conducted}}. You were assigned {assignedTaskCount} {assignedTaskCount, plural, one {task} other {tasks}}.",
+      "meetingsBadge": "{count} {count, plural, one {meeting} other {meetings}}",
+      "tasksBadge": "{count} {count, plural, one {task} other {tasks}}",
+      "briefingMeetingsLine": "{topics}{remaining, plural, =0 {} one { and # more meeting} other { and # more meetings}} were processed.",
+      "briefingThemesLine": "Main topics were: {highlights}",
+      "briefingTasksLine": "You have {assignedTaskCount} {assignedTaskCount, plural, one {task} other {tasks}} assigned.",
+      "goToBriefing": "Open Briefing",
+      "goToBriefingEmpty": "Open Briefing",
+      "briefingPageEyebrow": "Daily Briefing",
+      "briefingPageTitle": "Meeting Briefing",
+      "backToDashboard": "Back to Dashboard",
+      "expandHint": "Show details",
+      "briefingHint": "Tip: this page helps people quickly get context again after vacation or on the next day.",
       "empty": "No processed meetings were found for the selected time window.",
       "noMeetingSummary": "No short summary is available for this meeting yet.",
-      "assignedTasks": "Assigned to you: {count} {count, plural, one {task} other {tasks}}"
+      "assignedTasks": "Assigned to you: {count} {count, plural, one {task} other {tasks}}",
+      "more": "More"
     },
     "home": {
       "hero": {

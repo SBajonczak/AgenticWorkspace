@@ -54,10 +54,27 @@
     },
     "summarySection": {
       "title": "Zusammenfassungsbereich",
+      "briefingTitle": "Dein Briefing",
+      "overviewLabel": "Kurzueberblick",
+      "openBriefing": "Öffnen",
+      "closeBriefing": "Schließen",
       "description": "In den letzten {windowDays} Tagen wurden {meetingCount} {meetingCount, plural, one {Besprechung durchgeführt} other {Besprechungen durchgeführt}}. Ihnen wurden {assignedTaskCount} {assignedTaskCount, plural, one {Aufgabe zugewiesen} other {Aufgaben zugewiesen}}.",
+      "meetingsBadge": "{count} {count, plural, one {Meeting} other {Meetings}}",
+      "tasksBadge": "{count} {count, plural, one {Aufgabe} other {Aufgaben}}",
+      "briefingMeetingsLine": "{topics}{remaining, plural, =0 {} one { und # weiteres Meeting} other { und # weitere Meetings}} wurden verarbeitet.",
+      "briefingThemesLine": "Inhaltlich ging es vor allem um: {highlights}",
+      "briefingTasksLine": "Für Sie wurden {assignedTaskCount} {assignedTaskCount, plural, one {Aufgabe} other {Aufgaben}} markiert.",
+      "goToBriefing": "Zum Briefing",
+      "goToBriefingEmpty": "Briefing öffnen",
+      "briefingPageEyebrow": "Tagesbriefing",
+      "briefingPageTitle": "Meeting Briefing",
+      "backToDashboard": "Zurück zum Dashboard",
+      "expandHint": "Details anzeigen",
+      "briefingHint": "Tipp: Diese Seite ist als schneller Wiedereinstieg gedacht, wenn Sie nach Urlaub oder am Folgetag wieder einsteigen.",
       "empty": "Für den ausgewählten Zeitraum wurden noch keine verarbeiteten Besprechungen gefunden.",
       "noMeetingSummary": "Für diese Besprechung ist noch keine Kurz-Zusammenfassung verfügbar.",
-      "assignedTasks": "Ihnen zugewiesen: {count} {count, plural, one {Aufgabe} other {Aufgaben}}"
+      "assignedTasks": "Ihnen zugewiesen: {count} {count, plural, one {Aufgabe} other {Aufgaben}}",
+      "more": "Mehr"
     },
     "home": {
       "hero": {
