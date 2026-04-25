@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/authz'
-import { auth } from '@/lib/auth'
 import { ProjectRepository } from '@/db/repositories/projectRepository'
 import { prisma } from '@/db/prisma'
 
@@ -43,12 +42,11 @@ export async function GET(
   _request: Request,
   { params }: { params: { id: string } }
 ) {
-  const { error } = await requireAuth()
+  const { session, error } = await requireAuth()
   if (error) return error
 
-  const fullSession = await auth()
-  const tenantId = getTenantId(fullSession)
-  const identity = getIdentity(fullSession)
+  const tenantId = session.user.tenantId
+  const identity = getIdentity(session)
 
   // Tenant-isolate project lookup
   const project = await repo.findById(params.id)

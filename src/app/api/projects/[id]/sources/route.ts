@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAuth } from '@/lib/authz'
-import { auth } from '@/lib/auth'
 import { ProjectRepository } from '@/db/repositories/projectRepository'
 import { ProjectSourceLinkRepository, KnowledgeSourceType } from '@/db/repositories/projectSourceLinkRepository'
 
@@ -20,11 +19,10 @@ async function resolveProject(id: string, tenantId: string) {
 
 /** GET /api/projects/[id]/sources */
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  const { error } = await requireAuth()
+  const { session, error } = await requireAuth()
   if (error) return error
 
-  const fullSession = await auth()
-  const tenantId = getTenantId(fullSession) as string | undefined
+  const tenantId = session.user.tenantId
   if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 400 })
 
   const project = await resolveProject(params.id, tenantId)
@@ -43,11 +41,10 @@ const CreateSourceSchema = z.object({
 
 /** POST /api/projects/[id]/sources */
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const { error } = await requireAuth()
+  const { session, error } = await requireAuth()
   if (error) return error
 
-  const fullSession = await auth()
-  const tenantId = getTenantId(fullSession) as string | undefined
+  const tenantId = session.user.tenantId
   if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 400 })
 
   const project = await resolveProject(params.id, tenantId)

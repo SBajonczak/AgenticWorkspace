@@ -13,7 +13,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAuth } from '@/lib/authz'
-import { auth } from '@/lib/auth'
 import { ProjectRepository } from '@/db/repositories/projectRepository'
 
 const projectRepo = new ProjectRepository()
@@ -29,11 +28,10 @@ const ValidateSchema = z.object({
 })
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const { error } = await requireAuth()
+  const { session, error } = await requireAuth()
   if (error) return error
 
-  const fullSession = await auth()
-  const tenantId = getTenantId(fullSession) as string | undefined
+  const tenantId = session.user.tenantId
   if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 400 })
 
   // Verify project belongs to tenant

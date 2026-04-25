@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAuth } from '@/lib/authz'
-import { auth } from '@/lib/auth'
 import { ProjectRepository } from '@/db/repositories/projectRepository'
 import { ProjectSourceLinkRepository } from '@/db/repositories/projectSourceLinkRepository'
 
@@ -31,11 +30,10 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: { id: string; sourceId: string } }
 ) {
-  const { error } = await requireAuth()
+  const { session, error } = await requireAuth()
   if (error) return error
 
-  const fullSession = await auth()
-  const tenantId = getTenantId(fullSession) as string | undefined
+  const tenantId = session.user.tenantId
   if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 400 })
 
   const source = await resolveSource(params.id, params.sourceId, tenantId)
@@ -63,11 +61,10 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: { id: string; sourceId: string } }
 ) {
-  const { error } = await requireAuth()
+  const { session, error } = await requireAuth()
   if (error) return error
 
-  const fullSession = await auth()
-  const tenantId = getTenantId(fullSession) as string | undefined
+  const tenantId = session.user.tenantId
   if (!tenantId) return NextResponse.json({ error: 'No tenant' }, { status: 400 })
 
   const source = await resolveSource(params.id, params.sourceId, tenantId)

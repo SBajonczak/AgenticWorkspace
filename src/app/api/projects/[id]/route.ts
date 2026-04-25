@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { requireAuth } from '@/lib/authz'
-import { auth } from '@/lib/auth'
 import { ProjectRepository } from '@/db/repositories/projectRepository'
 import { prisma } from '@/db/prisma'
 
@@ -39,8 +38,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   const { session, error } = await requireAuth()
   if (error) return error
 
-  const fullSession = await auth()
-  const tenantId = getTenantId(fullSession) as string | undefined
+  const tenantId = session.user.tenantId
   const identity = getIdentity(session)
 
   const project = await resolveProject(params.id, tenantId, identity)
@@ -67,8 +65,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const { session, error } = await requireAuth()
   if (error) return error
 
-  const fullSession = await auth()
-  const tenantId = getTenantId(fullSession) as string | undefined
+  const tenantId = session.user.tenantId
   const identity = getIdentity(session)
 
   const existing = await resolveProject(params.id, tenantId, identity)
@@ -101,8 +98,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   const { session, error } = await requireAuth()
   if (error) return error
 
-  const fullSession = await auth()
-  const tenantId = getTenantId(fullSession) as string | undefined
+  const tenantId = session.user.tenantId
   const identity = getIdentity(session)
 
   const existing = await resolveProject(params.id, tenantId, identity)
