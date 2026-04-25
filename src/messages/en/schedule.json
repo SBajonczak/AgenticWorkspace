@@ -4,9 +4,7 @@
     "subtitle": "Your timeline and upcoming events",
     "filters": {
       "all": "All Events",
-      "meetings": "Meetings",
-      "deadlines": "Deadlines",
-      "milestones": "Milestones"
+      "meetings": "Meetings"
     },
     "types": {
       "meeting": "Meeting",
@@ -26,6 +24,12 @@
       "thisWeek": "This Week",
       "nextWeek": "Next Week",
       "later": "Later"
+    },
+    "preparation": {
+      "loading": "Loading preparation..."
+    },
+    "errors": {
+      "loadEvents": "Upcoming meetings could not be loaded."
     },
     "empty": "No events scheduled",
     "duration": {

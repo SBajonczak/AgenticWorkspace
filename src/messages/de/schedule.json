@@ -4,9 +4,7 @@
     "subtitle": "Ihre Zeitleiste und bevorstehende Ereignisse",
     "filters": {
       "all": "Alle Ereignisse",
-      "meetings": "Besprechungen",
-      "deadlines": "Fristen",
-      "milestones": "Meilensteine"
+      "meetings": "Besprechungen"
     },
     "types": {
       "meeting": "Besprechung",
@@ -26,6 +24,12 @@
       "thisWeek": "Diese Woche",
       "nextWeek": "Nächste Woche",
       "later": "Später"
+    },
+    "preparation": {
+      "loading": "Vorbereitung wird geladen..."
+    },
+    "errors": {
+      "loadEvents": "Bevorstehende Besprechungen konnten nicht geladen werden."
     },
     "empty": "Keine Ereignisse geplant",
     "duration": {
