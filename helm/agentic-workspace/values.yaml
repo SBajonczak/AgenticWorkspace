@@ -12,6 +12,12 @@ config:
   dryRun: "true"
   openaiModel: "gpt-5.1"
   outputLanguages: "de,en"
+  auth:
+    # Microsoft Entra ID configuration (non-sensitive)
+    entraId: ""
+    entraTenantId: ""
+    azureClientId: ""
+    azureTenantId: ""
 
 secret:
   create: false
@@ -22,12 +28,8 @@ secret:
     NEXTAUTH_URL: ""
     AUTH_URL: ""
     AUTH_TRUST_HOST: "true"
-    AUTH_MICROSOFT_ENTRA_ID_ID: ""
     AUTH_MICROSOFT_ENTRA_ID_SECRET: ""
-    AUTH_MICROSOFT_ENTRA_ID_TENANT_ID: ""
-    AZURE_CLIENT_ID: ""
     AZURE_CLIENT_SECRET: ""
-    AZURE_TENANT_ID: ""
     AZURE_OPENAI_API_KEY: ""
     AZURE_OPENAI_ENDPOINT: ""
     AZURE_OPENAI_DEPLOYMENT: ""

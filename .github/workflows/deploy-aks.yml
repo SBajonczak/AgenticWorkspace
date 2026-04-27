@@ -157,7 +157,11 @@ jobs:
               --set web.image.repository="$ACR_LOGIN_SERVER/$IMAGE_WEB_NAME" \
               --set web.image.tag="$IMAGE_TAG" \
               --set worker.image.repository="$ACR_LOGIN_SERVER/$IMAGE_WORKER_NAME" \
-              --set worker.image.tag="$IMAGE_TAG"
+              --set worker.image.tag="$IMAGE_TAG" \
+              --set config.auth.entraId="${{ secrets.AUTH_MICROSOFT_ENTRA_ID_ID || vars.AUTH_MICROSOFT_ENTRA_ID_ID || '' }}" \
+              --set config.auth.entraTenantId="${{ secrets.AUTH_MICROSOFT_ENTRA_ID_TENANT_ID || secrets.AZURE_TENANT_ID || vars.AZURE_TENANT_ID || '' }}" \
+              --set config.auth.azureClientId="${{ secrets.AZURE_CLIENT_ID || vars.AZURE_CLIENT_ID || '' }}" \
+              --set config.auth.azureTenantId="${{ secrets.AZURE_TENANT_ID || vars.AZURE_TENANT_ID || '' }}"
           }
 
           set +e
@@ -289,7 +293,11 @@ jobs:
               --set web.image.repository="$ACR_LOGIN_SERVER/$IMAGE_WEB_NAME" \
               --set web.image.tag="$IMAGE_TAG" \
               --set worker.image.repository="$ACR_LOGIN_SERVER/$IMAGE_WORKER_NAME" \
-              --set worker.image.tag="$IMAGE_TAG"
+              --set worker.image.tag="$IMAGE_TAG" \
+              --set config.auth.entraId="${{ secrets.AUTH_MICROSOFT_ENTRA_ID_ID || vars.AUTH_MICROSOFT_ENTRA_ID_ID || '' }}" \
+              --set config.auth.entraTenantId="${{ secrets.AUTH_MICROSOFT_ENTRA_ID_TENANT_ID || secrets.AZURE_TENANT_ID || vars.AZURE_TENANT_ID || '' }}" \
+              --set config.auth.azureClientId="${{ secrets.AZURE_CLIENT_ID || vars.AZURE_CLIENT_ID || '' }}" \
+              --set config.auth.azureTenantId="${{ secrets.AZURE_TENANT_ID || vars.AZURE_TENANT_ID || '' }}"
           }
 
           set +e

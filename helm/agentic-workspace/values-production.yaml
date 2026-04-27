@@ -2,6 +2,11 @@ namespace: agentic-production
 
 config:
   nodeEnv: production
+  auth:
+    entraId: ""
+    entraTenantId: ""
+    azureClientId: ""
+    azureTenantId: ""
 
 web:
   ingress:

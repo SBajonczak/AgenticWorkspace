@@ -3,6 +3,11 @@ namespace: agentic-staging
 config:
   nodeEnv: production
   dryRun: "false"
+  auth:
+    entraId: ""
+    entraTenantId: ""
+    azureClientId: ""
+    azureTenantId: ""
 
 web:
   ingress:

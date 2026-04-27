@@ -10,4 +10,17 @@ data:
   DRY_RUN: {{ .Values.config.dryRun | quote }}
   OPENAI_MODEL: {{ .Values.config.openaiModel | quote }}
   OUTPUT_LANGUAGES: {{ .Values.config.outputLanguages | quote }}
+  # Microsoft Entra ID Auth Configuration (non-sensitive values from config)
+  {{- if .Values.config.auth.entraId }}
+  AUTH_MICROSOFT_ENTRA_ID_ID: {{ .Values.config.auth.entraId | quote }}
+  {{- end }}
+  {{- if .Values.config.auth.entraTenantId }}
+  AUTH_MICROSOFT_ENTRA_ID_TENANT_ID: {{ .Values.config.auth.entraTenantId | quote }}
+  {{- end }}
+  {{- if .Values.config.auth.azureClientId }}
+  AZURE_CLIENT_ID: {{ .Values.config.auth.azureClientId | quote }}
+  {{- end }}
+  {{- if .Values.config.auth.azureTenantId }}
+  AZURE_TENANT_ID: {{ .Values.config.auth.azureTenantId | quote }}
+  {{- end }}
 

@@ -82,6 +82,44 @@ describe('UserTokenService', () => {
     expect(mockPrisma.account.update).toHaveBeenCalled()
   })
 
+  it('uses AUTH_MICROSOFT_ENTRA_ID_* fallback vars for token refresh', async () => {
+    process.env = {
+      ...originalEnv,
+      AUTH_MICROSOFT_ENTRA_ID_TENANT_ID: 'tenant-id',
+      AUTH_MICROSOFT_ENTRA_ID_ID: 'client-id',
+      AUTH_MICROSOFT_ENTRA_ID_SECRET: 'client-secret',
+      AZURE_TENANT_ID: '',
+      AZURE_CLIENT_ID: '',
+      AZURE_CLIENT_SECRET: '',
+    }
+
+    mockPrisma.account.findFirst.mockResolvedValue({
+      id: 'acc-1',
+      userId: 'user-1',
+      provider: 'microsoft-entra-id',
+      access_token: 'expired-token',
+      refresh_token: 'refresh-token',
+      expires_at: Math.floor(Date.now() / 1000) - 60,
+      token_type: 'Bearer',
+      scope: 'offline_access',
+    })
+
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: jest.fn().mockResolvedValue({
+        access_token: 'fresh-token',
+        refresh_token: 'new-refresh-token',
+        expires_in: 3600,
+      }),
+    } as any)
+
+    const service = new UserTokenService({
+      setTokenState: jest.fn().mockResolvedValue({}),
+    } as any)
+
+    await expect(service.getValidAccessTokenForUser('user-1')).resolves.toBe('fresh-token')
+  })
+
   it('throws reauth error on invalid_grant', async () => {
     mockPrisma.account.findFirst.mockResolvedValue({
       id: 'acc-1',

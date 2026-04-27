@@ -3,6 +3,18 @@ import { UserSyncStateRepository } from '../db/repositories/userSyncStateReposit
 
 const TOKEN_EXPIRY_SAFETY_WINDOW_SECONDS = 120
 
+function readFirstDefinedEnv(keys: string[]): string | undefined {
+  for (const key of keys) {
+    const raw = process.env[key]
+    if (typeof raw !== 'string') continue
+    const value = raw.trim()
+    if (value.length === 0) continue
+    return value
+  }
+
+  return undefined
+}
+
 export class ReauthRequiredError extends Error {
   constructor(message: string) {
     super(message)
@@ -131,12 +143,14 @@ export class UserTokenService {
   }
 
   private async refreshAccessToken(refreshToken: string): Promise<TokenResponse> {
-    const tenantId = process.env.AZURE_TENANT_ID
-    const clientId = process.env.AZURE_CLIENT_ID
-    const clientSecret = process.env.AZURE_CLIENT_SECRET
+    const tenantId = readFirstDefinedEnv(['AZURE_TENANT_ID', 'AUTH_MICROSOFT_ENTRA_ID_TENANT_ID'])
+    const clientId = readFirstDefinedEnv(['AZURE_CLIENT_ID', 'AUTH_MICROSOFT_ENTRA_ID_ID'])
+    const clientSecret = readFirstDefinedEnv(['AZURE_CLIENT_SECRET', 'AUTH_MICROSOFT_ENTRA_ID_SECRET'])
 
     if (!tenantId || !clientId || !clientSecret) {
-      throw new Error('Missing Azure OAuth configuration for delegated token refresh.')
+      throw new Error(
+        'Missing Azure OAuth configuration for delegated token refresh. Set AZURE_* or AUTH_MICROSOFT_ENTRA_ID_* variables.'
+      )
     }
 
     const params = new URLSearchParams({
