@@ -50,7 +50,20 @@ interface IndexedMeeting {
   graphLastModifiedAt: string | null
 }
 
-type TabKey = 'checkpoint' | 'meetings'
+interface ConsentUserState {
+  userId: string
+  name: string | null
+  email: string | null
+  consentRequired: boolean
+  hasRefreshToken: boolean
+  lastError: string | null
+  lastRunAt: string | null
+  lastSuccessAt: string | null
+  nextRunAt: string | null
+  updatedAt: string | null
+}
+
+type TabKey = 'checkpoint' | 'meetings' | 'users'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -551,6 +564,139 @@ function MeetingsTab({ t }: { t: ReturnType<typeof useTranslations> }) {
   )
 }
 
+function UsersTab({ t }: { t: ReturnType<typeof useTranslations> }) {
+  const [users, setUsers] = useState<ConsentUserState[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchUsers = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const params = new URLSearchParams({
+        onlyNeedsConsent: '1',
+        limit: '200',
+      })
+
+      const res = await fetch(`/api/admin/worker/users?${params.toString()}`)
+      if (!res.ok) {
+        setError(t('worker.users.error'))
+        return
+      }
+
+      const data = await res.json()
+      setUsers(Array.isArray(data.users) ? data.users : [])
+    } catch {
+      setError(t('worker.users.error'))
+    } finally {
+      setLoading(false)
+    }
+  }, [t])
+
+  useEffect(() => {
+    fetchUsers()
+  }, [fetchUsers])
+
+  const triggerReconsent = () => {
+    const target = '/auth/signin?consent=required&reason=consent_required&callbackUrl=/settings'
+    window.open(target, '_blank', 'noopener,noreferrer')
+  }
+
+  const resolveStatus = (user: ConsentUserState): string => {
+    if (user.consentRequired) return t('worker.users.status.consentRequired')
+    if (!user.hasRefreshToken) return t('worker.users.status.missingRefresh')
+    return t('worker.users.status.ok')
+  }
+
+  const statusVariant = (user: ConsentUserState): 'destructive' | 'secondary' | 'outline' => {
+    if (user.consentRequired) return 'destructive'
+    if (!user.hasRefreshToken) return 'secondary'
+    return 'outline'
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <CardTitle className="text-base">{t('worker.users.title')}</CardTitle>
+              <CardDescription>{t('worker.users.description')}</CardDescription>
+            </div>
+            <Button size="sm" variant="outline" onClick={fetchUsers} disabled={loading}>
+              {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
+              {t('worker.users.refresh')}
+            </Button>
+          </div>
+        </CardHeader>
+      </Card>
+
+      {error && (
+        <div className="text-sm text-destructive flex items-center gap-2 px-1">
+          <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+          {error}
+        </div>
+      )}
+
+      {loading && !error && (
+        <div className="flex items-center justify-center py-12 text-muted-foreground gap-2">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          <span className="text-sm">{t('worker.users.loading')}</span>
+        </div>
+      )}
+
+      {!loading && !error && users.length === 0 && (
+        <p className="text-sm text-muted-foreground text-center py-10">{t('worker.users.empty')}</p>
+      )}
+
+      {!loading && users.length > 0 && (
+        <div className="rounded-md border border-border overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50 border-b border-border">
+                <tr>
+                  <th className="text-left px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">{t('worker.users.columns.user')}</th>
+                  <th className="text-left px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">{t('worker.users.columns.status')}</th>
+                  <th className="text-left px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">{t('worker.users.columns.lastRun')}</th>
+                  <th className="text-left px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">{t('worker.users.columns.lastError')}</th>
+                  <th className="text-left px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">{t('worker.users.columns.actions')}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {users.map((u) => (
+                  <tr key={u.userId} className="hover:bg-accent/30 transition-colors">
+                    <td className="px-4 py-3">
+                      <div className="font-medium truncate max-w-[260px]" title={u.email ?? u.userId}>
+                        {u.name ?? u.email ?? u.userId}
+                      </div>
+                      <div className="text-xs text-muted-foreground truncate max-w-[260px]" title={u.email ?? u.userId}>
+                        {u.email ?? u.userId}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <Badge variant={statusVariant(u)}>{resolveStatus(u)}</Badge>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">{formatDateTime(u.lastRunAt)}</td>
+                    <td className="px-4 py-3 text-muted-foreground max-w-[420px] truncate" title={u.lastError ?? '—'}>
+                      {u.lastError ?? '—'}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <Button size="sm" variant="outline" onClick={triggerReconsent}>
+                        <ShieldCheck className="h-3.5 w-3.5 mr-1" />
+                        {t('worker.users.action.reconsent')}
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
@@ -609,7 +755,7 @@ export default function AdminWorkerPage() {
 
         {/* Tabs */}
         <div className="flex gap-1 mb-6 border-b border-border">
-          {(['checkpoint', 'meetings'] as TabKey[]).map((tab) => (
+          {(['checkpoint', 'meetings', 'users'] as TabKey[]).map((tab) => (
             <button
               key={tab}
               type="button"
@@ -631,6 +777,9 @@ export default function AdminWorkerPage() {
         )}
         {activeTab === 'meetings' && (
           <MeetingsTab t={t} />
+        )}
+        {activeTab === 'users' && (
+          <UsersTab t={t} />
         )}
       </main>
     </>

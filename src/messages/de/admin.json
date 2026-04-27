@@ -34,7 +34,8 @@
       "subtitle": "Checkpoint zurücksetzen, fehlende Termine nachziehen und importierte Termine prüfen",
       "tabs": {
         "checkpoint": "Checkpoint",
-        "meetings": "Importierte Termine"
+        "meetings": "Importierte Termine",
+        "users": "Benutzer-Consent"
       },
       "checkpoint": {
         "title": "Tenant-Checkpoint",
@@ -114,6 +115,29 @@
         "noMeetings": "Keine importierten Termine gefunden.",
         "error": "Termine konnten nicht geladen werden.",
         "loading": "Lade Termine …"
+      },
+      "users": {
+        "title": "Benutzer mit fehlendem Consent",
+        "description": "Zeigt Benutzer, die erneut Microsoft-Consent geben oder sich erneut anmelden müssen.",
+        "refresh": "Aktualisieren",
+        "loading": "Lade Benutzerstatus …",
+        "error": "Benutzerstatus konnte nicht geladen werden.",
+        "empty": "Keine Benutzer mit fehlendem Consent gefunden.",
+        "columns": {
+          "user": "Benutzer",
+          "status": "Status",
+          "lastRun": "Letzter Lauf",
+          "lastError": "Letzter Fehler",
+          "actions": "Aktionen"
+        },
+        "status": {
+          "consentRequired": "Consent erforderlich",
+          "missingRefresh": "Refresh Token fehlt",
+          "ok": "OK"
+        },
+        "action": {
+          "reconsent": "Re-Consent starten"
+        }
       }
     }
   }

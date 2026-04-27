@@ -8,11 +8,15 @@ import { Button } from '@/components/ui/button'
 export default function SignInPage() {
   const [callbackUrl, setCallbackUrl] = useState('/dashboard')
   const [forceConsent, setForceConsent] = useState(false)
+  const [showConsentNotice, setShowConsentNotice] = useState(false)
 
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search)
     setCallbackUrl(searchParams.get('callbackUrl') || '/dashboard')
-    setForceConsent(searchParams.get('consent') === 'required')
+    const consentRequired = searchParams.get('consent') === 'required'
+    const consentReason = searchParams.get('reason') === 'consent_required'
+    setForceConsent(consentRequired || consentReason)
+    setShowConsentNotice(consentRequired || consentReason)
   }, [])
 
   return (
@@ -52,10 +56,15 @@ export default function SignInPage() {
           <p className="text-xs text-muted-foreground">
             Access is restricted to meeting participants. Only attendees of a meeting can view its data.
           </p>
-          {forceConsent && (
-            <p className="text-xs text-amber-300">
-              Additional Microsoft consent is required. Please grant the requested permissions.
-            </p>
+          <p className="text-xs text-muted-foreground">
+            Depending on your organization policy, Microsoft may ask you to grant additional permissions.
+          </p>
+          {showConsentNotice && (
+            <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-left">
+              <p className="text-xs text-amber-300">
+                Additional Microsoft consent is required for meeting sync. Please approve all requested permissions.
+              </p>
+            </div>
           )}
         </CardContent>
       </Card>

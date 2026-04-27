@@ -34,7 +34,8 @@
       "subtitle": "Reset the checkpoint, backfill missing meetings, and review imported meetings",
       "tabs": {
         "checkpoint": "Checkpoint",
-        "meetings": "Imported Meetings"
+        "meetings": "Imported Meetings",
+        "users": "User Consent"
       },
       "checkpoint": {
         "title": "Tenant Checkpoint",
@@ -114,6 +115,29 @@
         "noMeetings": "No imported meetings found.",
         "error": "Failed to load meetings.",
         "loading": "Loading meetings…"
+      },
+      "users": {
+        "title": "Users Requiring Consent",
+        "description": "Shows users who must grant Microsoft consent again or sign in again.",
+        "refresh": "Refresh",
+        "loading": "Loading user status…",
+        "error": "Failed to load user status.",
+        "empty": "No users requiring consent were found.",
+        "columns": {
+          "user": "User",
+          "status": "Status",
+          "lastRun": "Last Run",
+          "lastError": "Last Error",
+          "actions": "Actions"
+        },
+        "status": {
+          "consentRequired": "Consent Required",
+          "missingRefresh": "Missing Refresh Token",
+          "ok": "OK"
+        },
+        "action": {
+          "reconsent": "Start Re-Consent"
+        }
       }
     }
   }
