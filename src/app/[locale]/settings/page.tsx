@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useTranslations } from 'next-intl'
+import { signIn } from 'next-auth/react'
 import AppHeader from '@/components/layout/AppHeader'
 import { Link } from '@/i18n/routing'
 import { Button } from '@/components/ui/button'
@@ -200,7 +201,13 @@ export default function SettingsPage() {
     : null
 
   const needsReConsent = Boolean(status?.consentRequired || (status && !status.hasRefreshToken))
-  const reConsentUrl = `/auth/signin?consent=required&reason=consent_required&callbackUrl=${encodeURIComponent('/settings')}`
+  const handleReConsent = () => {
+    const callbackUrl = typeof window !== 'undefined' ? window.location.href : '/settings'
+    void signIn('microsoft-entra-id', {
+      callbackUrl,
+      prompt: 'consent',
+    })
+  }
 
   const weekdayOptions = [
     { value: 0, label: tSettings('schedulePreferences.days.0') },
@@ -318,61 +325,73 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
+    <div className="min-h-screen bg-background">
       <AppHeader activeLink="settings" />
 
       <main className="container mx-auto px-4 py-12">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-          <Link href="/dashboard" className="text-purple-400 hover:text-purple-300 mb-4 inline-block">
+          <Link href="/dashboard" className="text-primary hover:text-primary/80 mb-4 inline-block">
             {tSettings('backToDashboard')}
           </Link>
-          <h1 className="text-4xl font-bold text-white mb-2">{tSettings('title')}</h1>
-          <p className="text-gray-400">{tSettings('subtitle')}</p>
-          {lastUpdatedLabel && <p className="text-[11px] text-gray-500 mt-2">{lastUpdatedLabel}</p>}
+          <h1 className="text-4xl font-bold text-foreground mb-2">{tSettings('title')}</h1>
+          <p className="text-muted-foreground">{tSettings('subtitle')}</p>
+          {lastUpdatedLabel && <p className="text-[11px] text-muted-foreground mt-2">{lastUpdatedLabel}</p>}
         </motion.div>
 
         {error && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-6 rounded-lg bg-red-900/40 border border-red-700/50 px-4 py-3 text-sm text-red-300">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-6 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">
             {error}
-        {needsReConsent && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-6 rounded-xl border border-amber-500/60 bg-amber-500/10 p-5"
-          >
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0">
-                <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-300">
-                  <AlertTriangle className="h-4 w-4" />
-                  Action required
-                </div>
-                <h2 className="text-lg font-semibold text-amber-100">Microsoft consent has to be renewed</h2>
-                <p className="mt-1 text-sm text-amber-200/90">
-                  Meeting sync currently cannot use a valid refresh token. Please start Microsoft sign-in again and approve the requested permissions.
-                </p>
-              </div>
-              <Button
-                type="button"
-                onClick={() => { window.location.href = reConsentUrl }}
-                className="w-full sm:w-auto bg-amber-500 text-gray-950 hover:bg-amber-400"
-              >
-                Renew Microsoft consent
-              </Button>
-            </div>
           </motion.div>
         )}
 
-          </motion.div>
-        )}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`mb-6 rounded-xl border p-5 ${needsReConsent
+            ? 'border-amber-500/60 bg-amber-500/10'
+            : 'border-border bg-card'
+            }`}
+        >
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <div className={`mb-2 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${needsReConsent
+                ? 'border border-amber-400/40 bg-amber-400/10 text-amber-300'
+                : 'border border-border bg-muted text-muted-foreground'
+                }`}>
+                <AlertTriangle className="h-4 w-4" />
+                {needsReConsent ? 'Action required' : 'Microsoft connection'}
+              </div>
+              <h2 className={`text-lg font-semibold ${needsReConsent ? 'text-amber-100' : 'text-foreground'}`}>
+                {needsReConsent ? 'Microsoft consent has to be renewed' : 'Renew Microsoft consent anytime'}
+              </h2>
+              <p className={`mt-1 text-sm ${needsReConsent ? 'text-amber-200/90' : 'text-muted-foreground'}`}>
+                {needsReConsent
+                  ? 'Meeting sync currently cannot use a valid refresh token. Please sign in again and approve the requested permissions.'
+                  : 'If sync permissions change or expire, you can proactively run consent again here. The refresh token is persisted for worker processing.'}
+              </p>
+            </div>
+            <Button
+              type="button"
+              onClick={handleReConsent}
+              className={`w-full sm:w-auto ${needsReConsent
+                ? 'bg-amber-500 text-gray-950 hover:bg-amber-400'
+                : ''
+                }`}
+              variant={needsReConsent ? 'default' : 'secondary'}
+            >
+              {needsReConsent ? 'Renew Microsoft consent' : 'Run Microsoft consent now'}
+            </Button>
+          </div>
+        </motion.div>
 
         <div className="space-y-6">
           {/* Agent Status */}
           {loading ? (
-            <div className="h-40 rounded-xl border border-gray-700 bg-gray-800/40 animate-pulse" />
+            <div className="h-40 rounded-xl border border-border bg-muted/40 animate-pulse" />
           ) : status ? (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl border border-gray-700/50 bg-gray-800/40 backdrop-blur p-6">
-              <h2 className="text-lg font-semibold text-white mb-4">{tSettings('title')}</h2>
-              <div className="space-y-3 text-sm text-gray-200">
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl border border-border bg-card p-6">
+              <h2 className="text-lg font-semibold text-foreground mb-4">{tSettings('title')}</h2>
+              <div className="space-y-3 text-sm text-foreground/90">
                 <p><span className="font-semibold">{tCommon('labels.status')}:</span> {status.isProcessing ? tSettings('status.running') : tSettings('status.idle')}</p>
                 <p><span className="font-semibold">{tSettings('status.nextRun')}:</span> {formatDateTime(status.nextRunAt)}</p>
                 <p><span className="font-semibold">{tSettings('status.lastRun')}:</span> {formatDateTime(status.lastRunAt)}</p>
@@ -385,9 +404,9 @@ export default function SettingsPage() {
 
           {/* Logs */}
           {status && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="rounded-xl border border-gray-700/50 bg-gray-800/40 backdrop-blur p-6">
-              <h2 className="text-lg font-semibold text-white mb-2">{tSettings('logs.title')}</h2>
-              <p className={`text-sm ${status.lastError ? 'text-amber-300' : 'text-gray-400'}`}>
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="rounded-xl border border-border bg-card p-6">
+              <h2 className="text-lg font-semibold text-foreground mb-2">{tSettings('logs.title')}</h2>
+              <p className={`text-sm ${status.lastError ? 'text-amber-500' : 'text-muted-foreground'}`}>
                 {status.lastError || tSettings('logs.empty')}
               </p>
             </motion.div>

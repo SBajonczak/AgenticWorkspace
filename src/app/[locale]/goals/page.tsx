@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useTranslations } from 'next-intl'
+import { signIn } from 'next-auth/react'
 import { Link } from '@/i18n/routing'
 import AppHeader from '@/components/layout/AppHeader'
 import { mockGoals, mockMarketSignals, MarketSignal } from '@/mocks'
@@ -27,7 +28,13 @@ export default function GoalsPage() {
   }, [])
 
   const needsReConsent = Boolean(agentStatus?.consentRequired || (agentStatus && !agentStatus.hasRefreshToken))
-  const reConsentUrl = `/auth/signin?consent=required&reason=consent_required&callbackUrl=${encodeURIComponent('/goals')}`
+  const handleReConsent = () => {
+    const callbackUrl = typeof window !== 'undefined' ? window.location.href : '/goals'
+    void signIn('microsoft-entra-id', {
+      callbackUrl,
+      prompt: 'consent',
+    })
+  }
 
   const getImpactBadgeClass = (impact: MarketSignal['impact']) => {
     switch (impact) {
@@ -98,7 +105,7 @@ export default function GoalsPage() {
               </div>
               <Button
                 type="button"
-                onClick={() => { window.location.href = reConsentUrl }}
+                onClick={handleReConsent}
                 className="w-full sm:w-auto bg-amber-500 text-gray-950 hover:bg-amber-400"
               >
                 Renew Microsoft consent

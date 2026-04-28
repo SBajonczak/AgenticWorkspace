@@ -3,10 +3,11 @@
 import { useState, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { useTheme } from 'next-themes'
+import { signIn } from 'next-auth/react'
 import { Link } from '@/i18n/routing'
 import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
 import { cn } from '@/lib/utils'
-import { Sun, Moon, Menu, X, ShieldCheck } from 'lucide-react'
+import { Sun, Moon, Menu, X, ShieldCheck, ShieldAlert } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 type ActiveLink = 'dashboard' | 'meetings' | 'projects' | 'schedule' | 'goals' | 'settings' | 'admin'
@@ -40,6 +41,14 @@ export default function AppHeader({ activeLink }: AppHeaderProps) {
       })
       .catch(() => {/* silently ignore */})
   }, [])
+
+  const triggerReConsent = () => {
+    const callbackUrl = typeof window !== 'undefined' ? window.location.href : '/dashboard'
+    void signIn('microsoft-entra-id', {
+      callbackUrl,
+      prompt: 'consent',
+    })
+  }
 
   return (
     <header className="border-b border-border bg-background/95 backdrop-blur-md sticky top-0 z-50">
@@ -82,6 +91,16 @@ export default function AppHeader({ activeLink }: AppHeaderProps) {
               </>
             )}
             <div className="ml-2 flex items-center gap-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={triggerReConsent}
+                className="hidden lg:inline-flex items-center gap-1.5"
+              >
+                <ShieldAlert className="h-3.5 w-3.5" />
+                Microsoft Consent
+              </Button>
               <LanguageSwitcher />
               <Button
                 variant="ghost"
@@ -153,6 +172,19 @@ export default function AppHeader({ activeLink }: AppHeaderProps) {
               {(tCommon as any)('navigation.admin')}
             </Link>
           )}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setMobileOpen(false)
+              triggerReConsent()
+            }}
+            className="mt-1 justify-start gap-1.5"
+          >
+            <ShieldAlert className="h-3.5 w-3.5" />
+            Microsoft Consent erneuern
+          </Button>
           <div className="pt-2 border-t border-border mt-1">
             <LanguageSwitcher />
           </div>
