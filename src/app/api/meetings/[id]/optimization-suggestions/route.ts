@@ -205,7 +205,7 @@ export async function GET(
     }
 
     const userId = session.user.id
-    const tenantId = session.user.tenantId
+    const tenantId = (session.user as { tenantId?: string }).tenantId
     const userEmail = session.user.email.toLowerCase()
 
     const syncRepo = new UserSyncStateRepository()
