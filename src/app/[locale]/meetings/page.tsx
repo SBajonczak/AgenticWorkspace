@@ -22,7 +22,7 @@ function buildApiUrl(params: {
   indexingStatus: IndexingStatusFilter
 }): string {
   const search = new URLSearchParams({
-    scope: 'tenant',
+    scope: 'user',
     limit: '100',
     hasTranscript: params.hasTranscript ? 'true' : 'false',
   })

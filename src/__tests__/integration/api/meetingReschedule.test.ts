@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 jest.mock('@/lib/authz', () => ({
-  requireTenantMember: jest.fn(),
+  requireMeetingParticipant: jest.fn(),
 }))
 jest.mock('@/db/repositories/meetingRepository')
 jest.mock('@/graph/userTokenService')
@@ -16,14 +16,14 @@ jest.mock('@/db/prisma', () => ({
   },
 }))
 
-import { requireTenantMember } from '@/lib/authz'
+import { requireMeetingParticipant } from '@/lib/authz'
 import { MeetingRepository } from '@/db/repositories/meetingRepository'
 import { UserTokenService } from '@/graph/userTokenService'
 import { MeetingsClient } from '@/graph/meetings'
 import { prisma } from '@/db/prisma'
 import { POST } from '@/app/api/meetings/[id]/reschedule/route'
 
-const mockRequireTenantMember = requireTenantMember as jest.MockedFunction<typeof requireTenantMember>
+const mockRequireMeetingParticipant = requireMeetingParticipant as jest.MockedFunction<typeof requireMeetingParticipant>
 const MockMeetingRepo = MeetingRepository as jest.MockedClass<typeof MeetingRepository>
 const MockUserTokenService = UserTokenService as jest.MockedClass<typeof UserTokenService>
 const MockMeetingsClient = MeetingsClient as jest.MockedClass<typeof MeetingsClient>
@@ -59,7 +59,7 @@ describe('POST /api/meetings/[id]/reschedule', () => {
     MockUserTokenService.mockImplementation(() => tokenService as any)
     MockMeetingsClient.mockImplementation(() => meetingsClient as any)
 
-    mockRequireTenantMember.mockResolvedValue({
+    mockRequireMeetingParticipant.mockResolvedValue({
       session: {
         user: {
           id: 'user-1',
@@ -85,7 +85,7 @@ describe('POST /api/meetings/[id]/reschedule', () => {
   })
 
   it('returns auth error when tenant membership check fails', async () => {
-    mockRequireTenantMember.mockResolvedValueOnce({
+    mockRequireMeetingParticipant.mockResolvedValueOnce({
       session: null,
       error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }),
     })

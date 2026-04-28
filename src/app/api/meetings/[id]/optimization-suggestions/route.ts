@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { MeetingRepository } from '@/db/repositories/meetingRepository'
 import { UserSyncStateRepository } from '@/db/repositories/userSyncStateRepository'
-import { requireTenantMember } from '@/lib/authz'
+import { requireMeetingParticipant } from '@/lib/authz'
 import { MeetingOptimizationResponse, MeetingOptimizationSuggestion } from '@/types/meetings'
 
 const DEFAULT_WORK_DAY_START = '09:00'
@@ -194,7 +194,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { session, error } = await requireTenantMember(params.id)
+    const { session, error } = await requireMeetingParticipant(params.id)
     if (error) return error
 
     const meetingRepo = new MeetingRepository()

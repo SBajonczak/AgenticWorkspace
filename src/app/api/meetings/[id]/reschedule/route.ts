@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { MeetingRepository } from '@/db/repositories/meetingRepository'
 import { UserTokenService } from '@/graph/userTokenService'
 import { MeetingsClient } from '@/graph/meetings'
-import { requireTenantMember } from '@/lib/authz'
+import { requireMeetingParticipant } from '@/lib/authz'
 import { MeetingRescheduleResponse } from '@/types/meetings'
 import { prisma } from '@/db/prisma'
 
@@ -22,7 +22,7 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { session, error } = await requireTenantMember(params.id)
+    const { session, error } = await requireMeetingParticipant(params.id)
     if (error) return error
 
     let body: unknown

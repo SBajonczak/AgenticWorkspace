@@ -1,18 +1,18 @@
 /** @jest-environment node */
 
 jest.mock('@/lib/authz', () => ({
-  requireTenantMember: jest.fn(),
+  requireMeetingParticipant: jest.fn(),
 }))
 jest.mock('@/db/repositories/meetingRepository')
 jest.mock('@/db/repositories/userSyncStateRepository')
 
 import { NextResponse } from 'next/server'
-import { requireTenantMember } from '@/lib/authz'
+import { requireMeetingParticipant } from '@/lib/authz'
 import { MeetingRepository } from '@/db/repositories/meetingRepository'
 import { UserSyncStateRepository } from '@/db/repositories/userSyncStateRepository'
 import { GET } from '@/app/api/meetings/[id]/optimization-suggestions/route'
 
-const mockRequireTenantMember = requireTenantMember as jest.MockedFunction<typeof requireTenantMember>
+const mockRequireMeetingParticipant = requireMeetingParticipant as jest.MockedFunction<typeof requireMeetingParticipant>
 const MockMeetingRepo = MeetingRepository as jest.MockedClass<typeof MeetingRepository>
 const MockSyncRepo = UserSyncStateRepository as jest.MockedClass<typeof UserSyncStateRepository>
 
@@ -33,7 +33,7 @@ describe('GET /api/meetings/[id]/optimization-suggestions', () => {
     MockMeetingRepo.mockImplementation(() => meetingRepo as any)
     MockSyncRepo.mockImplementation(() => syncRepo as any)
 
-    mockRequireTenantMember.mockResolvedValue({
+    mockRequireMeetingParticipant.mockResolvedValue({
       session: {
         user: {
           id: 'user-1',
@@ -78,7 +78,7 @@ describe('GET /api/meetings/[id]/optimization-suggestions', () => {
   })
 
   it('returns auth error when tenant membership check fails', async () => {
-    mockRequireTenantMember.mockResolvedValueOnce({
+    mockRequireMeetingParticipant.mockResolvedValueOnce({
       session: null,
       error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }),
     })
