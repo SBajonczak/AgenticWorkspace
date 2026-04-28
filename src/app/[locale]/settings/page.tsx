@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useTranslations } from 'next-intl'
+import AppHeader from '@/components/layout/AppHeader'
 import { Link } from '@/i18n/routing'
-import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
 import { Button } from '@/components/ui/button'
 import { AlertTriangle, ChevronRight } from 'lucide-react'
 
@@ -319,20 +319,7 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
-      <header className="border-b border-gray-800 bg-gray-900/50 backdrop-blur">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 text-transparent bg-clip-text">
-              {tCommon('brand.name')}
-            </Link>
-            <nav className="flex gap-6 items-center">
-              <Link href="/dashboard" className="text-gray-400 hover:text-white transition-colors">{tCommon('navigation.dashboard')}</Link>
-              <Link href="/settings" className="text-purple-400 font-semibold">{tCommon('navigation.settings')}</Link>
-              <LanguageSwitcher />
-            </nav>
-          </div>
-        </div>
-      </header>
+      <AppHeader activeLink="settings" />
 
       <main className="container mx-auto px-4 py-12">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">

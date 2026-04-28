@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useTranslations } from 'next-intl'
 import { Link } from '@/i18n/routing'
@@ -9,11 +10,24 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { cn } from '@/lib/utils'
-import { User, ExternalLink, Swords, TrendingUp, Scale, Microscope } from 'lucide-react'
+import { User, ExternalLink, Swords, TrendingUp, Scale, Microscope, AlertTriangle } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 export default function GoalsPage() {
   const tCommon = useTranslations('common')
   const tGoals = useTranslations('goals')
+
+  const [agentStatus, setAgentStatus] = useState<{ consentRequired: boolean; hasRefreshToken: boolean } | null>(null)
+
+  useEffect(() => {
+    fetch('/api/agent/status', { cache: 'no-store' })
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (data) setAgentStatus(data) })
+      .catch(() => {/* silently ignore */})
+  }, [])
+
+  const needsReConsent = Boolean(agentStatus?.consentRequired || (agentStatus && !agentStatus.hasRefreshToken))
+  const reConsentUrl = `/auth/signin?consent=required&reason=consent_required&callbackUrl=${encodeURIComponent('/goals')}`
 
   const getImpactBadgeClass = (impact: MarketSignal['impact']) => {
     switch (impact) {
@@ -64,6 +78,34 @@ export default function GoalsPage() {
           <h1 className="text-4xl font-bold text-foreground mb-2">{tGoals('title')}</h1>
           <p className="text-muted-foreground">{tGoals('subtitle')}</p>
         </motion.div>
+
+        {needsReConsent && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8 rounded-xl border border-amber-500/60 bg-amber-500/10 p-5"
+          >
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-300">
+                  <AlertTriangle className="h-4 w-4" />
+                  Action required
+                </div>
+                <h2 className="text-lg font-semibold text-amber-100">Microsoft consent has to be renewed</h2>
+                <p className="mt-1 text-sm text-amber-200/90">
+                  Meeting sync currently cannot use a valid refresh token. Please start Microsoft sign-in again and approve the requested permissions.
+                </p>
+              </div>
+              <Button
+                type="button"
+                onClick={() => { window.location.href = reConsentUrl }}
+                className="w-full sm:w-auto bg-amber-500 text-gray-950 hover:bg-amber-400"
+              >
+                Renew Microsoft consent
+              </Button>
+            </div>
+          </motion.div>
+        )}
 
         {/* Company Goals */}
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="mb-12">

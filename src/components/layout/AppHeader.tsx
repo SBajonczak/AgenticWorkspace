@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils'
 import { Sun, Moon, Menu, X, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
-type ActiveLink = 'dashboard' | 'meetings' | 'projects' | 'schedule' | 'goals' | 'admin'
+type ActiveLink = 'dashboard' | 'meetings' | 'projects' | 'schedule' | 'goals' | 'settings' | 'admin'
 
 interface AppHeaderProps {
   activeLink?: ActiveLink
@@ -21,6 +21,7 @@ const navItems: { key: ActiveLink; href: string; labelKey: string }[] = [
   { key: 'projects', href: '/projects', labelKey: 'navigation.projects' },
   { key: 'schedule', href: '/schedule', labelKey: 'navigation.schedule' },
   { key: 'goals', href: '/goals', labelKey: 'navigation.goals' },
+  { key: 'settings', href: '/settings', labelKey: 'navigation.settings' },
 ]
 
 export default function AppHeader({ activeLink }: AppHeaderProps) {
@@ -77,15 +78,6 @@ export default function AppHeader({ activeLink }: AppHeaderProps) {
                 >
                   <ShieldCheck className="h-3.5 w-3.5" />
                   {(tCommon as any)('navigation.admin')}
-                </Link>
-                <Link
-                  href="/admin/worker"
-                  className={cn(
-                    'px-3 py-2 rounded-md text-sm font-medium transition-colors',
-                    'text-muted-foreground hover:text-foreground hover:bg-accent'
-                  )}
-                >
-                  {(tCommon as any)('navigation.adminWorker')}
                 </Link>
               </>
             )}
