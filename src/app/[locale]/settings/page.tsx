@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl'
 import { Link } from '@/i18n/routing'
 import LanguageSwitcher from '@/components/ui/LanguageSwitcher'
 import { Button } from '@/components/ui/button'
-import { ChevronRight } from 'lucide-react'
+import { AlertTriangle, ChevronRight } from 'lucide-react'
 
 const SETTINGS_STATUS_REFRESH_MS = 15000
 
@@ -199,6 +199,9 @@ export default function SettingsPage() {
     ? tSettings('updatedAt', { time: new Date(updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) })
     : null
 
+  const needsReConsent = Boolean(status?.consentRequired || (status && !status.hasRefreshToken))
+  const reConsentUrl = `/auth/signin?consent=required&reason=consent_required&callbackUrl=${encodeURIComponent('/settings')}`
+
   const weekdayOptions = [
     { value: 0, label: tSettings('schedulePreferences.days.0') },
     { value: 1, label: tSettings('schedulePreferences.days.1') },
@@ -344,6 +347,34 @@ export default function SettingsPage() {
         {error && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-6 rounded-lg bg-red-900/40 border border-red-700/50 px-4 py-3 text-sm text-red-300">
             {error}
+        {needsReConsent && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 rounded-xl border border-amber-500/60 bg-amber-500/10 p-5"
+          >
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-300">
+                  <AlertTriangle className="h-4 w-4" />
+                  Action required
+                </div>
+                <h2 className="text-lg font-semibold text-amber-100">Microsoft consent has to be renewed</h2>
+                <p className="mt-1 text-sm text-amber-200/90">
+                  Meeting sync currently cannot use a valid refresh token. Please start Microsoft sign-in again and approve the requested permissions.
+                </p>
+              </div>
+              <Button
+                type="button"
+                onClick={() => { window.location.href = reConsentUrl }}
+                className="w-full sm:w-auto bg-amber-500 text-gray-950 hover:bg-amber-400"
+              >
+                Renew Microsoft consent
+              </Button>
+            </div>
+          </motion.div>
+        )}
+
           </motion.div>
         )}
 
