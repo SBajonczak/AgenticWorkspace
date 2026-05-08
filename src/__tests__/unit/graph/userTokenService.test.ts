@@ -80,6 +80,13 @@ describe('UserTokenService', () => {
     const token = await service.getValidAccessTokenForUser('user-1')
     expect(token).toBe('fresh-token')
     expect(mockPrisma.account.update).toHaveBeenCalled()
+
+    const fetchCall = (global.fetch as jest.Mock).mock.calls[0]
+    expect(fetchCall).toBeDefined()
+    const requestInit = fetchCall[1] as RequestInit
+    const requestBody = requestInit.body as URLSearchParams
+    expect(requestBody.get('scope')).toContain('Calendars.Read')
+    expect(requestBody.get('scope')).not.toContain('Calendars.ReadWrite')
   })
 
   it('uses AUTH_MICROSOFT_ENTRA_ID_* fallback vars for token refresh', async () => {

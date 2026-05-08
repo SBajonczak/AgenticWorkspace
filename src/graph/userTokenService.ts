@@ -166,7 +166,6 @@ export class UserTokenService {
         'User.Read',
         'People.Read',
         'Calendars.Read',
-        'Calendars.ReadWrite',
         'OnlineMeetings.Read',
         'OnlineMeetingTranscript.Read.All',
       ].join(' '),

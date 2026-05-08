@@ -164,7 +164,8 @@ export class MeetingProcessor {
     projectRepo?: ProjectRepository
   ) {
     this.projectRepo = projectRepo ?? new ProjectRepository()
-
+    console.log(`[Processor] use multi-agent pipeline: ${process.env.USE_MULTI_AGENT_PIPELINE}`);
+    
     if (process.env.USE_MULTI_AGENT_PIPELINE === 'true') {
       const openai = (this.llmClient as any).client as import('openai').default
       const model = (this.llmClient as any).model as string
