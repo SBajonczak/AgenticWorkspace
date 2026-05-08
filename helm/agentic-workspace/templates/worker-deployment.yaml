@@ -24,6 +24,9 @@ spec:
           imagePullPolicy: {{ .Values.worker.image.pullPolicy }}
           command:
 {{ toYaml .Values.worker.command | indent 12 }}
+          env:
+            - name: USE_MULTI_AGENT_PIPELINE
+              value: {{ .Values.config.useMultiAgentPipeline | default "true" | quote }}
           envFrom:
             - configMapRef:
                 name: {{ include "agentic-workspace.configMapName" . }}

@@ -10,6 +10,7 @@ config:
   databaseProvider: postgresql
   workerIntervalMinutes: "30"
   dryRun: "true"
+  useMultiAgentPipeline: "true"
   openaiModel: "gpt-5.1"
   outputLanguages: "de,en"
   auth:

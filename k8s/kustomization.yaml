@@ -6,4 +6,4 @@ resources:
   - cert-manager-issuers.yaml
   - configmap.yaml
   - web.yaml
-  - worker-cronjob.yaml
+  - worker-deployment.yaml
