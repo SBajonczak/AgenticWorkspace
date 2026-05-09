@@ -1,4 +1,5 @@
 import type { Client as McpClient } from '@modelcontextprotocol/sdk/client/index.js'
+import type { MeetingDecisionItem } from '@/lib/meetingDecisions'
 
 // Re-export for convenience
 export type { McpClient }
@@ -31,7 +32,7 @@ export interface MeetingContext {
 
 export interface SummarizationOutput {
   summary: string
-  decisions: string[]
+  decisions: MeetingDecisionItem[]
   minutesPerLanguage: Record<string, string>
   tokensUsed: number
 }

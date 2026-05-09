@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { useTranslations } from 'next-intl'
 import { Link } from '@/i18n/routing'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { getDecisionTopics, parseDecisionItems } from '@/lib/meetingDecisions'
 
 interface Meeting {
   id: string
@@ -23,7 +24,7 @@ interface MeetingSummaryCardProps {
 export default function MeetingSummaryCard({ meeting }: MeetingSummaryCardProps) {
   const tMeetings = useTranslations('meetings')
   const tCommon = useTranslations('common')
-  const decisions = JSON.parse(meeting.decisions)
+  const decisions = getDecisionTopics(parseDecisionItems(meeting.decisions))
   const startTime = new Date(meeting.startTime)
   const endTime = new Date(meeting.endTime)
   const duration = Math.round((endTime.getTime() - startTime.getTime()) / 1000 / 60)

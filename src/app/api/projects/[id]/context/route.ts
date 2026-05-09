@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/authz'
 import { ProjectRepository } from '@/db/repositories/projectRepository'
 import { prisma } from '@/db/prisma'
+import {
+  getDecisionTopics,
+  parseDecisionItems,
+} from '@/lib/meetingDecisions'
 
 const repo = new ProjectRepository()
 
@@ -28,13 +32,7 @@ function getIdentity(session: any): { oid?: string; tid?: string } {
 }
 
 function parseDecisions(value: string | null): string[] {
-  if (!value) return []
-  try {
-    const parsed = JSON.parse(value)
-    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : []
-  } catch {
-    return []
-  }
+  return getDecisionTopics(parseDecisionItems(value))
 }
 
 /** GET /api/projects/[id]/context — aggregated project data for the detail page */
@@ -130,6 +128,10 @@ export async function GET(
         date: m.startTime,
       }))
     )
+    .filter((entry, index, self) => {
+      const key = entry.text.trim().toLowerCase()
+      return key.length > 0 && self.findIndex((candidate) => candidate.text.trim().toLowerCase() === key) === index
+    })
     .slice(0, 20)
 
   const openTodosKb = meetings

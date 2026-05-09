@@ -40,6 +40,7 @@
     "detail": {
       "backToList": "Back to meetings",
       "tabs": {
+        "insights": "Insights",
         "summary": "Summary",
         "decisions": "Decisions",
         "actions": "Actions",
@@ -86,6 +87,7 @@
       },
       "decisions": {
         "title": "Key Decisions",
+        "whyIdentified": "Why identified?",
         "count": "decision",
         "count_plural": "decisions",
         "noDecisions": "No decisions recorded"

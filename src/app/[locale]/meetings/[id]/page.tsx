@@ -13,6 +13,7 @@ import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 import {
   ChevronLeft,
+  ChevronDown,
   User,
   Calendar,
   Clock,
@@ -24,6 +25,7 @@ import {
   Info,
 } from 'lucide-react'
 import { MeetingPreparationResponse } from '@/types/meetings'
+import { parseDecisionItems, type MeetingDecisionItem } from '@/lib/meetingDecisions'
 
 type UiTodoStatus = 'open' | 'in_progress' | 'done'
 
@@ -141,7 +143,7 @@ export default function MeetingDetailPage() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState('summary')
+  const [activeTab, setActiveTab] = useState('insights')
   const [preparation, setPreparation] = useState<MeetingPreparationResponse | null>(null)
   const [preparationLoading, setPreparationLoading] = useState(false)
   const [preparationError, setPreparationError] = useState<string | null>(null)
@@ -276,12 +278,9 @@ export default function MeetingDetailPage() {
     [projects, tDetail]
   )
 
-  const decisions = useMemo<string[]>(() => {
+  const decisions = useMemo<MeetingDecisionItem[]>(() => {
     if (!meeting?.decisions) return []
-    try {
-      const parsed = JSON.parse(meeting.decisions)
-      return Array.isArray(parsed) ? parsed : []
-    } catch { return [] }
+    return parseDecisionItems(meeting.decisions)
   }, [meeting?.decisions])
 
   const getConfidenceClass = (c: number) =>
@@ -462,28 +461,10 @@ export default function MeetingDetailPage() {
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-col w-full">
               <TabsList className="border-b border-border rounded-none bg-transparent w-full justify-start gap-1 h-auto pb-0 mb-0">
                 <TabsTrigger
-                  value="summary"
+                  value="insights"
                   className="rounded-none border-b-2 border-transparent data-active:border-primary data-active:text-primary data-active:bg-transparent pb-2 px-4 text-sm font-medium text-muted-foreground data-active:text-foreground"
                 >
-                  {tDetail('tabs.summary')}
-                </TabsTrigger>
-                <TabsTrigger
-                  value="decisions"
-                  className="rounded-none border-b-2 border-transparent data-active:border-primary data-active:text-primary data-active:bg-transparent pb-2 px-4 text-sm font-medium text-muted-foreground data-active:text-foreground"
-                >
-                  {tDetail('tabs.decisions')}
-                  {decisions.length > 0 && (
-                    <span className="ml-1.5 text-xs text-muted-foreground">({decisions.length})</span>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger
-                  value="actions"
-                  className="rounded-none border-b-2 border-transparent data-active:border-primary data-active:text-primary data-active:bg-transparent pb-2 px-4 text-sm font-medium text-muted-foreground data-active:text-foreground"
-                >
-                  {tDetail('tabs.actions')}
-                  {meeting.todos.length > 0 && (
-                    <span className="ml-1.5 text-xs text-muted-foreground">({meeting.todos.length})</span>
-                  )}
+                  {tDetail('tabs.insights')}
                 </TabsTrigger>
                 <TabsTrigger
                   value="preparation"
@@ -630,118 +611,148 @@ export default function MeetingDetailPage() {
                 </motion.div>
               </TabsContent>
 
-              {/* Summary */}
-              <TabsContent value="summary" className="pt-6">
+              {/* Insights */}
+              <TabsContent value="insights" className="pt-6">
                 <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
-                  <h2 className="text-lg font-semibold text-foreground mb-3">{tDetail('summary.title')}</h2>
-                  {meeting.summary ? (
-                    <p className="text-muted-foreground leading-relaxed">{meeting.summary}</p>
-                  ) : (
-                    <p className="text-muted-foreground text-center py-12">—</p>
-                  )}
-                </motion.div>
-              </TabsContent>
+                  <section className="mb-4">
+                    <h2 className="text-lg font-semibold text-foreground mb-3">{tDetail('summary.title')}</h2>
+                    {meeting.summary ? (
+                      <p className="text-muted-foreground leading-relaxed">{meeting.summary}</p>
+                    ) : (
+                      <p className="text-muted-foreground text-center py-8">—</p>
+                    )}
+                  </section>
 
-              {/* Decisions */}
-              <TabsContent value="decisions" className="pt-6">
-                <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
-                  <h2 className="text-lg font-semibold text-foreground mb-3">
-                    {tDetail('decisions.title')} ({decisions.length})
-                  </h2>
-                  {decisions.length === 0 ? (
-                    <p className="text-muted-foreground text-center py-12">{tDetail('decisions.noDecisions')}</p>
-                  ) : (
-                    <ul className="space-y-2">
-                      {decisions.map((decision, index) => (
-                        <li key={index} className="flex items-start gap-3 bg-muted/40 rounded-lg p-4">
-                          <CheckCircle className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
-                          <span className="text-muted-foreground">{decision}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </motion.div>
-              </TabsContent>
-
-              {/* Actions */}
-              <TabsContent value="actions" className="pt-6">
-                <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
-                  <h2 className="text-lg font-semibold text-foreground mb-3">{tDetail('actions.title')}</h2>
-                  {projectUpdateError && (
-                    <p className="text-sm text-destructive mb-3">{projectUpdateError}</p>
-                  )}
-                  {meeting.todos.length === 0 ? (
-                    <p className="text-muted-foreground text-center py-12">{tDetail('actions.noActions')}</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {meeting.todos.map((todo) => (
-                        <Card key={todo.id} className="hover:border-primary/40 transition-colors">
-                          <CardContent className="p-5">
-                            <div className="flex items-start justify-between mb-2">
-                              <h3 className="text-base font-semibold text-foreground flex-1 leading-snug">
-                                {todo.title}
-                              </h3>
-                              <div className="flex items-center gap-2 ml-3 shrink-0">
-                                <span className={cn('text-xs font-medium', getConfidenceClass(todo.confidence))}>
-                                  {getConfidenceLabel(todo.confidence)} ({Math.round(todo.confidence * 100)}%)
-                                </span>
-                                {todo.jiraSync?.status === 'synced' && (
-                                  <Badge className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20 gap-1 text-xs">
-                                    <ExternalLink className="h-3 w-3" />
-                                    {todo.jiraSync.jiraIssueKey}
-                                  </Badge>
-                                )}
+                  <details open className="group mb-4 rounded-lg border border-border bg-muted/20">
+                    <summary className="list-none cursor-pointer flex items-center justify-between gap-3 px-4 py-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                      <span className="text-base font-semibold text-foreground">
+                        {tDetail('decisions.title')}
+                        <span className="ml-1.5 text-xs text-muted-foreground">({decisions.length})</span>
+                      </span>
+                      <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
+                    </summary>
+                    <div className="px-4 pb-4 pt-1">
+                      {decisions.length === 0 ? (
+                        <p className="text-muted-foreground text-center py-8">{tDetail('decisions.noDecisions')}</p>
+                      ) : (
+                        <ul className="space-y-2">
+                          {decisions.map((decision, index) => (
+                            <li key={index} className="bg-background rounded-lg border border-border/70 p-4">
+                              <div className="flex items-start gap-3">
+                                <CheckCircle className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                                <span className="text-muted-foreground">{decision.topic}</span>
                               </div>
-                            </div>
-
-                            <p className="text-sm text-muted-foreground mb-3">{todo.description}</p>
-
-                            <div className="mb-3">
-                              <label className="block text-xs text-muted-foreground mb-1">
-                                {tDetail('actions.project.label')}
-                              </label>
-                              <select
-                                className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                                value={todo.projectId ?? ''}
-                                disabled={projectsLoading || projectUpdateInFlightId === todo.id}
-                                onChange={(event) => {
-                                  const value = event.target.value
-                                  void updateTodoProject(todo.id, value.length > 0 ? value : null)
-                                }}
-                              >
-                                <option value="">{tDetail('actions.project.unassigned')}</option>
-                                {projects.map((project) => (
-                                  <option key={project.id} value={project.id}>
-                                    {project.name}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-
-                            <div className="flex items-center justify-between text-xs">
-                              <div className="flex items-center gap-3">
-                                {todo.assigneeHint && (
-                                  <span className="flex items-center gap-1.5 text-muted-foreground">
-                                    <User className="h-3 w-3" />
-                                    <span className="text-foreground">{todo.assigneeHint}</span>
-                                  </span>
-                                )}
-                                <Badge variant="outline" className={cn(getStatusBadgeClass(todo.status))}>
-                                  {tDetail(`actions.status.${todo.status}`)}
-                                </Badge>
-                              </div>
-                              {todo.jiraSync?.status === 'failed' && (
-                                <span className="flex items-center gap-1 text-destructive">
-                                  <AlertTriangle className="h-3 w-3" />
-                                  {tDetail('actions.jira.failed')}
-                                </span>
+                              {(decision.rationale || decision.quote) && (
+                                <details className="group mt-3 rounded-md border border-border/60 bg-muted/30 px-3 py-2">
+                                  <summary className="list-none cursor-pointer flex items-center justify-between gap-3 text-xs text-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                                    <span>{tDetail('decisions.whyIdentified')}</span>
+                                    <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
+                                  </summary>
+                                  <div className="mt-2 space-y-2">
+                                    {decision.rationale && (
+                                      <p className="text-sm text-foreground/90">{decision.rationale}</p>
+                                    )}
+                                    {decision.quote && (
+                                      <blockquote className="border-l-2 border-primary/40 pl-3 text-xs text-muted-foreground italic">
+                                        "{decision.quote}"
+                                      </blockquote>
+                                    )}
+                                  </div>
+                                </details>
                               )}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
-                  )}
+                  </details>
+
+                  <details open className="group rounded-lg border border-border bg-muted/20">
+                    <summary className="list-none cursor-pointer flex items-center justify-between gap-3 px-4 py-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                      <span className="text-base font-semibold text-foreground">
+                        {tDetail('actions.title')}
+                        <span className="ml-1.5 text-xs text-muted-foreground">({meeting.todos.length})</span>
+                      </span>
+                      <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
+                    </summary>
+                    <div className="px-4 pb-4 pt-1">
+                      {projectUpdateError && (
+                        <p className="text-sm text-destructive mb-3">{projectUpdateError}</p>
+                      )}
+                      {meeting.todos.length === 0 ? (
+                        <p className="text-muted-foreground text-center py-8">{tDetail('actions.noActions')}</p>
+                      ) : (
+                        <div className="space-y-3">
+                          {meeting.todos.map((todo) => (
+                            <Card key={todo.id} className="hover:border-primary/40 transition-colors">
+                              <CardContent className="p-5">
+                                <div className="flex items-start justify-between mb-2">
+                                  <h3 className="text-base font-semibold text-foreground flex-1 leading-snug">
+                                    {todo.title}
+                                  </h3>
+                                  <div className="flex items-center gap-2 ml-3 shrink-0">
+                                    <span className={cn('text-xs font-medium', getConfidenceClass(todo.confidence))}>
+                                      {getConfidenceLabel(todo.confidence)} ({Math.round(todo.confidence * 100)}%)
+                                    </span>
+                                    {todo.jiraSync?.status === 'synced' && (
+                                      <Badge className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20 gap-1 text-xs">
+                                        <ExternalLink className="h-3 w-3" />
+                                        {todo.jiraSync.jiraIssueKey}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <p className="text-sm text-muted-foreground mb-3">{todo.description}</p>
+
+                                <div className="mb-3">
+                                  <label className="block text-xs text-muted-foreground mb-1">
+                                    {tDetail('actions.project.label')}
+                                  </label>
+                                  <select
+                                    className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                                    value={todo.projectId ?? ''}
+                                    disabled={projectsLoading || projectUpdateInFlightId === todo.id}
+                                    onChange={(event) => {
+                                      const value = event.target.value
+                                      void updateTodoProject(todo.id, value.length > 0 ? value : null)
+                                    }}
+                                  >
+                                    <option value="">{tDetail('actions.project.unassigned')}</option>
+                                    {projects.map((project) => (
+                                      <option key={project.id} value={project.id}>
+                                        {project.name}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+
+                                <div className="flex items-center justify-between text-xs">
+                                  <div className="flex items-center gap-3">
+                                    {todo.assigneeHint && (
+                                      <span className="flex items-center gap-1.5 text-muted-foreground">
+                                        <User className="h-3 w-3" />
+                                        <span className="text-foreground">{todo.assigneeHint}</span>
+                                      </span>
+                                    )}
+                                    <Badge variant="outline" className={cn(getStatusBadgeClass(todo.status))}>
+                                      {tDetail(`actions.status.${todo.status}`)}
+                                    </Badge>
+                                  </div>
+                                  {todo.jiraSync?.status === 'failed' && (
+                                    <span className="flex items-center gap-1 text-destructive">
+                                      <AlertTriangle className="h-3 w-3" />
+                                      {tDetail('actions.jira.failed')}
+                                    </span>
+                                  )}
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </details>
                 </motion.div>
               </TabsContent>
 

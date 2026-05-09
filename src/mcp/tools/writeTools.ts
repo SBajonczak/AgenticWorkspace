@@ -6,6 +6,7 @@ import { MeetingMinutesRepository } from '@/db/repositories/meetingMinutesReposi
 import { ProjectStatusRepository } from '@/db/repositories/projectStatusRepository'
 import { ProjectRepository } from '@/db/repositories/projectRepository'
 import { prisma } from '@/db/prisma'
+import { serializeDecisionItems } from '@/lib/meetingDecisions'
 
 function extractEmailCandidate(value: string | null | undefined): string | null {
   if (!value) return null
@@ -67,12 +68,24 @@ export function registerWriteTools(
     {
       meetingDbId: z.string(),
       summary: z.string(),
-      decisions: z.array(z.string()),
+      decisions: z.array(
+        z.union([
+          z.string(),
+          z.object({
+            topic: z.string(),
+            rationale: z.string().default(''),
+            quote: z.string().default(''),
+            speaker: z.string().nullable().optional(),
+            timestamp: z.string().nullable().optional(),
+            confidence: z.number().min(0).max(1).nullable().optional(),
+          }),
+        ])
+      ),
     },
     async ({ meetingDbId, summary, decisions }) => {
       await deps.meetingRepo.update(meetingDbId, {
         summary,
-        decisions: JSON.stringify(decisions),
+        decisions: serializeDecisionItems(decisions),
         processedAt: new Date(),
       })
       return { content: [{ type: 'text' as const, text: 'ok' }] }

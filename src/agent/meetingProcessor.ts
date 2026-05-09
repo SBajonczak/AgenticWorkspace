@@ -264,7 +264,7 @@ export class MeetingProcessor {
       const agentResponse: AgentResponse = {
         meetingSummary: {
           summary: summaryValue?.summary ?? '',
-          decisions: summaryValue?.decisions ?? [],
+          decisions: (summaryValue?.decisions ?? []).map((item) => item.topic),
         },
         projectStatuses: [],
         todos: [],

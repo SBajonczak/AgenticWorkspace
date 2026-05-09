@@ -40,6 +40,7 @@
     "detail": {
       "backToList": "Zurück zu Besprechungen",
       "tabs": {
+        "insights": "Einblicke",
         "summary": "Zusammenfassung",
         "decisions": "Entscheidungen",
         "actions": "Aktionen",
@@ -86,6 +87,7 @@
       },
       "decisions": {
         "title": "Wichtige Entscheidungen",
+        "whyIdentified": "Warum identifiziert?",
         "count": "Entscheidung",
         "count_plural": "Entscheidungen",
         "noDecisions": "Keine Entscheidungen erfasst"

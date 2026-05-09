@@ -5,6 +5,7 @@ import { Client as McpClient } from '@modelcontextprotocol/sdk/client/index.js'
 import type { Agent, MeetingContext, SummarizationOutput } from '../types'
 import { SummarizationResponseSchema } from './schema'
 import { callTool } from '@/mcp/client'
+import { dedupeDecisionItems } from '@/lib/meetingDecisions'
 
 export class SummarizationAgent implements Agent<MeetingContext, SummarizationOutput> {
   readonly name = 'SummarizationAgent'
@@ -55,16 +56,17 @@ Return JSON with fields: summary, decisions, minutes.`
     if (!responseText) throw new Error(`[${this.name}] No response from LLM`)
 
     const parsed = SummarizationResponseSchema.parse(JSON.parse(responseText))
+    const decisions = dedupeDecisionItems(parsed.decisions)
 
     console.log(
-      `[${this.name}] Summary: ${parsed.summary.length} chars | Decisions: ${parsed.decisions.length} | Minutes languages: ${Object.keys(parsed.minutes).join(', ')}`
+      `[${this.name}] Summary: ${parsed.summary.length} chars | Decisions: ${decisions.length} | Minutes languages: ${Object.keys(parsed.minutes).join(', ')}`
     )
 
     // Persist via MCP tools
     await callTool(client, 'save_summary', {
       meetingDbId: context.meetingDbId,
       summary: parsed.summary,
-      decisions: parsed.decisions,
+      decisions,
     })
 
     await callTool(client, 'save_minutes', {
@@ -74,7 +76,7 @@ Return JSON with fields: summary, decisions, minutes.`
 
     return {
       summary: parsed.summary,
-      decisions: parsed.decisions,
+      decisions,
       minutesPerLanguage: parsed.minutes,
       tokensUsed,
     }

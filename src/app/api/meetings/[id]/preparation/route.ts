@@ -9,6 +9,11 @@ import {
   MeetingPreparationResponse,
 } from '@/types/meetings'
 import { searchProjectSources } from '@/lib/projectSourceSearch'
+import {
+  dedupeDecisionItems,
+  getDecisionTopics,
+  parseDecisionItems,
+} from '@/lib/meetingDecisions'
 
 type CadenceType = 'daily' | 'jourfix' | 'recurring' | 'other'
 
@@ -17,13 +22,7 @@ function overlaps(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date): boolean {
 }
 
 function parseDecisions(value: string | null): string[] {
-  if (!value) return []
-  try {
-    const parsed = JSON.parse(value)
-    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : []
-  } catch {
-    return []
-  }
+  return getDecisionTopics(parseDecisionItems(value))
 }
 
 function clampLookaheadDays(value: unknown): number {
@@ -291,7 +290,9 @@ export async function GET(
       })),
     }))
 
-    const flattenedDecisions = relatedPayload.flatMap((meetingItem) => meetingItem.decisions)
+    const flattenedDecisions = getDecisionTopics(
+      dedupeDecisionItems(relatedPayload.flatMap((meetingItem) => meetingItem.decisions))
+    )
     const flattenedOpenTodoTitles = relatedPayload.flatMap((meetingItem) =>
       meetingItem.openTodos.map((todo) => todo.title)
     )
@@ -343,14 +344,11 @@ export async function GET(
           take: 5,
         })
 
-        const decisions = recentStatuses.flatMap((s) => {
-          try {
-            const d = JSON.parse(s.meeting.decisions ?? '[]')
-            return Array.isArray(d) ? d.filter((x): x is string => typeof x === 'string') : []
-          } catch {
-            return []
-          }
-        })
+        const decisions = getDecisionTopics(
+          dedupeDecisionItems(
+            recentStatuses.flatMap((statusItem) => parseDecisionItems(statusItem.meeting.decisions))
+          )
+        )
 
         const openTodos = recentStatuses
           .flatMap((s) => s.meeting.todos.filter((t) => t.status !== 'done'))
