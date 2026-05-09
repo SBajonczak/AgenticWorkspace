@@ -71,7 +71,7 @@ export class AzureDevOpsTicketProvider implements ITicketProvider {
     try {
       const encoded = encodeURIComponent(nameOrEmail)
       const url =
-        `https://vssps.dev.azure.com/${this.config.organization}/_apis/` +
+        `https://dev.azure.com/${this.config.organization}/_apis/` +
         `identities?searchFilter=General&filterValue=${encoded}&api-version=${API_VERSION}`
 
       const res = await fetch(url, {
